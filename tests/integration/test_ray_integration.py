@@ -5,7 +5,7 @@ Integration test for Ray-based distributed training.
 import pytest
 import pandas as pd
 import numpy as np
-from smolmodels.models import Model
+from plexe.models import Model
 
 
 @pytest.fixture
@@ -26,7 +26,7 @@ def test_model_with_ray(sample_dataset):
     """Test building a model with Ray-based distributed execution."""
     # Skip this test if Ray is not installed
 
-    from smolmodels.config import config
+    from plexe.config import config
 
     # Make sure Ray is enabled
     config.ray.enabled = True

@@ -3,8 +3,8 @@ import pytest
 import pandas as pd
 import ray
 
-from smolmodels.internal.models.execution.ray_executor import RayExecutor
-from smolmodels.internal.common.datasets.tabular import TabularDataset
+from plexe.internal.models.execution.ray_executor import RayExecutor
+from plexe.internal.common.datasets.tabular import TabularDataset
 
 
 @pytest.fixture
