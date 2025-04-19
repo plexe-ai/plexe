@@ -1,4 +1,4 @@
-"""Integration test for multiclass classification models using smolmodels.
+"""Integration test for multiclass classification models using plexe.
 
 This test covers:
 1. Creating a multiclass classification model for sentiment analysis
@@ -11,7 +11,7 @@ import os
 import pytest
 from pathlib import Path
 from pydantic import create_model
-import smolmodels as sm
+import plexe
 from tests.utils.utils import verify_prediction, cleanup_files, verify_model_description, generate_sentiment_data
 
 
@@ -54,7 +54,7 @@ def run_around_tests(model_dir):
 def test_multiclass_classification(sentiment_data, sentiment_input_schema, sentiment_output_schema):
     """Test multiclass classification for sentiment analysis."""
     # Create a model for sentiment analysis
-    model = sm.Model(
+    model = plexe.Model(
         intent="Classify text sentiment into positive, negative, or neutral categories",
         input_schema=sentiment_input_schema,
         output_schema=sentiment_output_schema,
@@ -95,7 +95,7 @@ def test_multiclass_classification(sentiment_data, sentiment_input_schema, senti
 def test_dataset_generation_and_multiclass(sentiment_input_schema, sentiment_output_schema):
     """Test multiclass classification with dataset generation."""
     # Create a dataset generator for sentiment data
-    dataset = sm.DatasetGenerator(
+    dataset = plexe.DatasetGenerator(
         description="A dataset of text reviews with positive, negative, and neutral sentiment labels",
         provider="openai/gpt-4o",
         schema=create_model("SentimentData", **{"text": str, "sentiment": str}),
@@ -105,7 +105,7 @@ def test_dataset_generation_and_multiclass(sentiment_input_schema, sentiment_out
     dataset.generate(15)  # Generate 15 samples
 
     # Create a model using the generated dataset
-    model = sm.Model(
+    model = plexe.Model(
         intent="Classify text sentiment into positive, negative, or neutral categories",
         input_schema=sentiment_input_schema,
         output_schema=sentiment_output_schema,

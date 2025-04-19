@@ -11,9 +11,9 @@ This module verifies:
 import pytest
 import pandas as pd
 
-from smolmodels.internal.common.datasets.adapter import DatasetAdapter
-from smolmodels.internal.common.datasets.interface import Dataset, DatasetStructure
-from smolmodels.internal.common.datasets.tabular import TabularDataset
+from plexe.internal.common.datasets.adapter import DatasetAdapter
+from plexe.internal.common.datasets.interface import Dataset, DatasetStructure
+from plexe.internal.common.datasets.tabular import TabularDataset
 
 
 class MockDataset(Dataset):

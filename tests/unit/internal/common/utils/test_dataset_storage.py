@@ -10,8 +10,8 @@ This module verifies:
 import os
 import pytest
 
-from smolmodels.internal.common.datasets.tabular import TabularDataset
-from smolmodels.internal.common.utils.dataset_storage import (
+from plexe.internal.common.datasets.tabular import TabularDataset
+from plexe.internal.common.utils.dataset_storage import (
     write_dataset_to_file,
     read_dataset_from_file,
     dataset_to_shared_memory,

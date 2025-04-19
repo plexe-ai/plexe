@@ -23,9 +23,9 @@ import pandas as pd
 import pyarrow
 import pytest
 
-from smolmodels.internal.common.datasets.tabular import TabularDataset
-from smolmodels.internal.models.execution.executor import ExecutionResult
-from smolmodels.internal.models.execution.process_executor import ProcessExecutor
+from plexe.internal.common.datasets.tabular import TabularDataset
+from plexe.internal.models.execution.executor import ExecutionResult
+from plexe.internal.models.execution.process_executor import ProcessExecutor
 
 
 class TestProcessExecutor:

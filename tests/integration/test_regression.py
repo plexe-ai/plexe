@@ -1,4 +1,4 @@
-"""Integration test for regression models using smolmodels.
+"""Integration test for regression models using plexe.
 
 This test covers:
 1. Creating a regression model for house price prediction
@@ -11,7 +11,7 @@ import os
 import pytest
 from pathlib import Path
 from pydantic import create_model
-import smolmodels as sm
+import plexe
 from tests.utils.utils import generate_house_prices_data, verify_prediction, cleanup_files, verify_model_description
 
 
@@ -66,7 +66,7 @@ def run_around_tests(model_dir):
 def test_house_price_regression(house_data, house_input_schema, house_output_schema):
     """Test regression for house price prediction."""
     # Create a model for house price prediction
-    model = sm.Model(
+    model = plexe.Model(
         intent="Predict the price of a house based on its features",
         input_schema=house_input_schema,
         output_schema=house_output_schema,
@@ -104,8 +104,8 @@ def test_house_price_regression(house_data, house_input_schema, house_output_sch
     verify_model_description(description)
 
     # Test model saving and loading
-    model_path = sm.save_model(model, "house_price_model.tar.gz")
-    loaded_model = sm.load_model(model_path)
+    model_path = plexe.save_model(model, "house_price_model.tar.gz")
+    loaded_model = plexe.load_model(model_path)
     loaded_prediction = loaded_model.predict(test_input)
 
     # Verify the loaded model's prediction
@@ -118,7 +118,7 @@ def test_house_price_regression(house_data, house_input_schema, house_output_sch
 def test_house_price_schema_inference(house_data):
     """Test regression with schema inference."""
     # Create a model with only intent
-    model = sm.Model(
+    model = plexe.Model(
         intent="""
         Predict the price of a house in thousands of dollars based on features like 
         area, number of bedrooms and bathrooms, etc.

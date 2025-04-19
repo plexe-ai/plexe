@@ -8,14 +8,14 @@ import os
 API_URL = os.environ.get("API_URL", "http://localhost:8000")
 
 st.set_page_config(
-    page_title="smolmodels UI",
+    page_title="plexe UI",
     page_icon="✨",
     layout="wide",
     initial_sidebar_state="expanded",
 )
 
 # Sidebar navigation
-st.sidebar.title("smolmodels")
+st.sidebar.title("plexe")
 st.sidebar.caption("✨ Natural Language ML Platform")
 page = st.sidebar.radio("Navigation", ["Create Model", "Models", "Predictions"])
 
@@ -296,4 +296,4 @@ elif page == "Predictions":
 
 # Footer
 st.sidebar.markdown("---")
-st.sidebar.caption("smolmodels © 2025")
+st.sidebar.caption("plexe © 2025")

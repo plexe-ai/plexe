@@ -12,7 +12,7 @@ def run_command(command):
 
 def main():
     print("Installing dependencies...")
-    print("Note: This installs the lightweight version of smolmodels by default.")
+    print("Note: This installs the lightweight version of plexe by default.")
     print("Available installation options:")
     print("  poetry install                    # Default lightweight installation")
     print("  poetry install -E lightweight     # Explicitly install lightweight version")

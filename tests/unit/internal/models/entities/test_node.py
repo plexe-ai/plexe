@@ -12,7 +12,7 @@ The test suite is designed to prevent regressions and ensure consistent behaviou
 as the library evolves.
 """
 
-from smolmodels.internal.models.entities.node import Node, Edge
+from plexe.internal.models.entities.node import Node, Edge
 
 
 def test_node_initialization():

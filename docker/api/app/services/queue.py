@@ -27,7 +27,7 @@ class QueueService:
         job_data = {"job_id": job_id, "type": job_type, "data": data, "created_at": datetime.utcnow().isoformat()}
 
         # Add job to Redis queue
-        cls.redis_client.lpush("smolmodels:jobs", json.dumps(job_data))
+        cls.redis_client.lpush("plexe:jobs", json.dumps(job_data))
 
         # Create job entry in metadata store
         MetadataService.create_job_entry(job_id, job_type, data)

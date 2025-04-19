@@ -1,0 +1,49 @@
+Analyse the ML model information provided below and provide an analysis of the model. Your response must include
+the following information. Every field must be populated based only on the provided information, or marked as "Unknown"
+if insufficient detail is available:
+
+{
+  "framework": string,                     // ML framework used (e.g. PyTorch, TensorFlow, Scikit-Learn)
+  "model_type": string,                    // Type of model or algorithm (e.g. CNN, XGBoost, Transformer)
+
+  "task_type": string,                     // e.g. classification, regression, generation
+  "domain": string,                        // e.g. NLP, computer vision, tabular, multimodal
+  "behavior": string,                      // What the model 'does', i.e. what relationships in the data it's likely learning based on how it was trained
+
+  "preprocessing_summary": string,         // Summary of data preprocessing (normalization, tokenization, etc.)
+  "architecture_summary": string,          // Overview of model structure, key components/layers
+  "training_procedure": string,            // Optimizer, loss function, batch size, epoch count, etc.
+  "evaluation_metrics": list of strings,   // Metrics used to assess model performance (e.g. accuracy, F1)
+
+  "inference_behavior": string,            // Description of how inference is handled, inputs and outputs
+  "strengths": list of strings,            // Where the model is likely to perform well
+  "limitations": list of strings,          // Known or inferred limitations, assumptions, or risks
+
+  "selection_rationale": string            // Summary of why this model was appropriate for the task
+}
+
+Keep explanations concise but insightful. Do not fabricate beyond the code or solution plan. If details are unclear or missing, say "Unknown".
+
+---
+
+MODEL INTENT:
+{{ intent }}
+
+INPUT SCHEMA:
+{{ input_schema }}
+
+OUTPUT SCHEMA:
+{{ output_schema }}
+
+SOLUTION PLAN:
+{{ solution_plan }}
+
+TRAINING CODE:
+```python
+{{ training_code }}
+```
+
+INFERENCE CODE:
+```python
+{{ inference_code }}
+```

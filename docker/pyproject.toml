@@ -1,7 +1,7 @@
 [tool.poetry]
-name = "smolmodels-docker"
+name = "plexe-docker"
 version = "0.1.0"
-description = "Platform for creating and serving ML models using smolmodels"
+description = "Platform for creating and serving ML models using plexe"
 authors = [
     "marcellodebernardi <marcello.debernardi@outlook.com>",
     "vaibs-d <vaibhavatlamarts@gmail.com>"
@@ -17,7 +17,7 @@ pydantic = "2.9.2"
 redis = "5.0.1"
 pymongo = "4.5.0"
 python-dotenv = "1.0.0"
-smolmodels = "0.9.2"
+plexe = "0.9.2"
 httpx = "0.25.0"
 tenacity = "9.0.0"
 python-multipart = "0.0.6"

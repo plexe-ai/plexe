@@ -1,0 +1,43 @@
+Fix the previous solution based on the following information.
+
+# PLAN:
+{{plan}}
+
+# CODE:
+{{training_code}}
+
+# ISSUES:
+{{review}}
+
+# ERRORS:
+{{problems}}
+
+# INSTRUCTIONS
+Correct the code with the specified fixes. Only return the code to train the model, no explanations outside the code.
+
+The script must assume that the data to be used for training is in the following files
+relative to the current directory: {{ training_data_files }}
+
+{% if use_validation_files %}
+- The script must assume that the data to be used for validation is in the following files
+relative to the current directory: {{ validation_data_files }}
+{% endif %}
+
+- The script must train the model, compute and print the final evaluation metric to standard output,
+and **save all model files directly in the CURRENT directory** with descriptive names.
+Do not create any subdirectories. Do not print ANY other text to standard output than the metric. Print the
+metric in the format `metric_name: metric_value`.
+
+- Use only {{ allowed_packages }}. Do NOT use any packages that are not part of this list of the Python standard library.
+
+- Do not skip steps or combine preprocessors and models in the same joblib file.
+
+{% if use_validation_files %}
+IMPORTANT: You MUST use the training datasets for training the model and the validation datasets for evaluating
+the model performance. DO NOT mix these datasets during training.
+    1. Load training data from the training_data_files
+    2. Load validation data from the validation_data_files
+    3. Train your model using ONLY the training data
+    4. Evaluate your model using ONLY the validation data
+    5. Compute the performance on the validation data
+{% endif %}

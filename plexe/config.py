@@ -1,0 +1,406 @@
+"""
+Configuration for the plexe library.
+"""
+
+import importlib
+import logging
+import warnings
+from dataclasses import dataclass, field
+from importlib.resources import files
+from typing import List
+from functools import cached_property
+from jinja2 import Environment, FileSystemLoader
+import sys
+from pathlib import Path
+
+from plexe import templates as template_module
+
+
+TEMPLATE_DIR = files("plexe").joinpath("templates/prompts")
+
+
+# configure warnings
+warnings.filterwarnings("ignore", category=FutureWarning)
+warnings.filterwarnings("ignore", category=DeprecationWarning)
+
+
+def is_package_available(package_name: str) -> bool:
+    """Check if a Python package is available/installed."""
+    try:
+        importlib.import_module(package_name)
+        return True
+    except ImportError:
+        return False
+
+
+@dataclass(frozen=True)
+class _Config:
+    @dataclass(frozen=True)
+    class _FileStorageConfig:
+        model_cache_dir: str = field(default=".smolcache/")
+        model_dir: str = field(default="model_files/")
+
+    @dataclass(frozen=True)
+    class _LoggingConfig:
+        level: str = field(default="INFO")
+        format: str = field(default="[%(asctime)s - %(name)s - %(levelname)s - (%(threadName)-10s)]: - %(message)s")
+
+    @dataclass(frozen=True)
+    class _ModelSearchConfig:
+        initial_nodes: int = field(default=3)
+        max_nodes: int = field(default=15)
+        max_fixing_attempts_train: int = field(default=3)
+        max_fixing_attempts_predict: int = field(default=10)
+        max_time_elapsed: int = field(default=600)
+
+    @dataclass(frozen=True)
+    class _ExecutionConfig:
+        runfile_name: str = field(default="execution_script.py")
+
+    @dataclass(frozen=True)
+    class _CodeGenerationConfig:
+        # Base ML packages that are always available
+        _base_packages: List[str] = field(
+            default_factory=lambda: [
+                "pandas",
+                "numpy",
+                "scikit-learn",
+                "sklearn",
+                "joblib",
+                "mlxtend",
+                "xgboost",
+                "pyarrow",
+                "statsmodels",
+            ]
+        )
+
+        # Deep learning packages that are optional
+        _deep_learning_packages: List[str] = field(
+            default_factory=lambda: [
+                "torch",
+                "transformers",
+                "tokenizers",
+                "accelerate",
+                "safetensors",
+            ]
+        )
+
+        # Additional standard library modules for agent execution
+        _standard_lib_modules: List[str] = field(
+            default_factory=lambda: [
+                "pathlib",
+                "typing",
+                "dataclasses",
+                "json",
+                "time",
+                "datetime",
+                "os",
+                "sys",
+                "math",
+                "random",
+                "itertools",
+                "collections",
+                "functools",
+                "operator",
+                "re",
+                "copy",
+                "warnings",
+                "logging",
+                "importlib",
+                "types",
+            ]
+        )
+
+        @property
+        def allowed_packages(self) -> List[str]:
+            """Dynamically determine which packages are available and can be used."""
+            available_packages = self._base_packages.copy()
+
+            # Check if deep learning packages are installed and add them if they are
+            for package in self._deep_learning_packages:
+                if is_package_available(package):
+                    available_packages.append(package)
+
+            return available_packages
+
+        @property
+        def authorized_agent_imports(self) -> List[str]:
+            """Return the combined list of allowed packages and standard library modules for agent execution."""
+            # Start with allowed packages
+            imports = self.allowed_packages.copy()
+
+            # Add additional ML packages that might not be in allowed_packages
+            additional_ml_packages = ["lightgbm", "catboost", "tensorflow"]
+            for package in additional_ml_packages:
+                if package not in imports:
+                    imports.append(package)
+
+            # Add standard library modules
+            imports.extend(self._standard_lib_modules)
+
+            return imports
+
+        @property
+        def deep_learning_available(self) -> bool:
+            """Check if deep learning packages are available."""
+            return any(is_package_available(pkg) for pkg in self._deep_learning_packages)
+
+        k_fold_validation: int = field(default=5)
+
+    @dataclass(frozen=True)
+    class _DataGenerationConfig:
+        pass  # todo: implement
+
+    @dataclass(frozen=True)
+    class _RayConfig:
+        address: str = field(default=None)  # None for local, Ray address for remote
+        num_cpus: int = field(default=None)  # None for auto-detect
+        num_gpus: int = field(default=None)  # None for auto-detect
+
+    # configuration objects
+    file_storage: _FileStorageConfig = field(default_factory=_FileStorageConfig)
+    logging: _LoggingConfig = field(default_factory=_LoggingConfig)
+    model_search: _ModelSearchConfig = field(default_factory=_ModelSearchConfig)
+    code_generation: _CodeGenerationConfig = field(default_factory=_CodeGenerationConfig)
+    execution: _ExecutionConfig = field(default_factory=_ExecutionConfig)
+    data_generation: _DataGenerationConfig = field(default_factory=_DataGenerationConfig)
+    ray: _RayConfig = field(default_factory=_RayConfig)
+
+
+@dataclass(frozen=True)
+class _CodeTemplates:
+    predictor_interface: str = field(
+        default=Path(importlib.import_module("plexe.internal.models.interfaces.predictor").__file__).read_text()
+    )
+    predictor_template: str = field(
+        default=files(template_module).joinpath("models").joinpath("predictor.tmpl.py").read_text()
+    )
+
+
+@dataclass(frozen=True)
+class _PromptTemplates:
+    template_dir: str = field(default=TEMPLATE_DIR)
+
+    @cached_property
+    def env(self) -> Environment:
+        return Environment(loader=FileSystemLoader(str(self.template_dir)))
+
+    def _render(self, template_name: str, **kwargs) -> str:
+        template = self.env.get_template(template_name)
+        return template.render(**kwargs)
+
+    def planning_system(self) -> str:
+        return self._render("planning/system_prompt.jinja")
+
+    def planning_select_metric(self, problem_statement) -> str:
+        return self._render("planning/select_metric.jinja", problem_statement=problem_statement)
+
+    def planning_generate(self, problem_statement, metric_to_optimise) -> str:
+        return self._render(
+            "planning/generate.jinja",
+            problem_statement=problem_statement,
+            metric_to_optimise=metric_to_optimise,
+            allowed_packages=config.code_generation.allowed_packages,
+            deep_learning_available=config.code_generation.deep_learning_available,
+        )
+
+    def schema_base(self) -> str:
+        return self._render("schemas/base.jinja")
+
+    def schema_identify_target(self, columns, intent) -> str:
+        return self._render("schemas/identify_target.jinja", columns=columns, intent=intent)
+
+    def schema_generate_from_intent(self, intent, input_schema="input_schema", output_schema="output_schema") -> str:
+        return self._render(
+            "schemas/generate_from_intent.jinja", intent=intent, input_schema=input_schema, output_schema=output_schema
+        )
+
+    def training_system(self) -> str:
+        return self._render("training/system_prompt.jinja")
+
+    def training_generate(
+        self, problem_statement, plan, history, allowed_packages, training_data_files, validation_data_files
+    ) -> str:
+        return self._render(
+            "training/generate.jinja",
+            problem_statement=problem_statement,
+            plan=plan,
+            history=history,
+            allowed_packages=allowed_packages,
+            training_data_files=training_data_files,
+            validation_data_files=validation_data_files,
+            use_validation_files=len(validation_data_files) > 0,
+        )
+
+    def training_fix(
+        self, training_code, plan, review, problems, allowed_packages, training_data_files, validation_data_files
+    ) -> str:
+        return self._render(
+            "training/fix.jinja",
+            training_code=training_code,
+            plan=plan,
+            review=review,
+            problems=problems,
+            allowed_packages=allowed_packages,
+            training_data_files=training_data_files,
+            validation_data_files=validation_data_files,
+            use_validation_files=len(validation_data_files) > 0,
+        )
+
+    def training_review(self, problem_statement, plan, training_code, problems, allowed_packages) -> str:
+        return self._render(
+            "training/review.jinja",
+            problem_statement=problem_statement,
+            plan=plan,
+            training_code=training_code,
+            problems=problems,
+            allowed_packages=allowed_packages,
+        )
+
+    def inference_system(self) -> str:
+        return self._render("inference/system_prompt.jinja")
+
+    def inference_load(self, predictor_template, training_code) -> str:
+        return self._render(
+            "inference/load.jinja",
+            predictor_template=predictor_template,
+            training_code=training_code,
+        )
+
+    def inference_preprocess(self, inference_code, input_schema, training_code) -> str:
+        return self._render(
+            "inference/preprocess.jinja",
+            inference_code=inference_code,
+            input_schema=input_schema,
+            training_code=training_code,
+        )
+
+    def inference_postprocess(self, inference_code, output_schema, training_code) -> str:
+        return self._render(
+            "inference/postprocess.jinja",
+            inference_code=inference_code,
+            output_schema=output_schema,
+            training_code=training_code,
+        )
+
+    def inference_predict(self, output_schema, input_schema, training_code, inference_code) -> str:
+        return self._render(
+            "inference/predict.jinja",
+            output_schema=output_schema,
+            input_schema=input_schema,
+            training_code=training_code,
+            inference_code=inference_code,
+        )
+
+    def inference_combine(self, inference_code, predictor_interface_source) -> str:
+        return self._render(
+            "inference/combine.jinja",
+            inference_code=inference_code,
+            predictor_interface_source=predictor_interface_source,
+        )
+
+    def inference_fix(self, predictor_interface_source, predictor_template, inference_code, review, problems) -> str:
+        return self._render(
+            "inference/fix.jinja",
+            predictor_interface_source=predictor_interface_source,
+            predictor_template=predictor_template,
+            inference_code=inference_code,
+            review=review,
+            problems=problems,
+        )
+
+    def inference_review(
+        self,
+        predictor_interface_source,
+        predictor_template,
+        inference_code,
+        input_schema,
+        output_schema,
+        training_code,
+        problems,
+    ) -> str:
+        return self._render(
+            "inference/review.jinja",
+            predictor_interface_source=predictor_interface_source,
+            predictor_template=predictor_template,
+            inference_code=inference_code,
+            input_schema=input_schema,
+            output_schema=output_schema,
+            training_code=training_code,
+            problems=problems,
+        )
+
+    def review_system(self) -> str:
+        return self._render("review/system_prompt.jinja")
+
+    def review_model(
+        self,
+        intent: str,
+        input_schema: str,
+        output_schema: str,
+        solution_plan: str,
+        training_code: str,
+        inference_code: str,
+    ) -> str:
+        return self._render(
+            "review/model.jinja",
+            intent=intent,
+            input_schema=input_schema,
+            output_schema=output_schema,
+            solution_plan=solution_plan,
+            training_code=training_code,
+            inference_code=inference_code,
+        )
+
+    def agent_builder_prompt(
+        self,
+        intent: str,
+        input_schema: str,
+        output_schema: str,
+        datasets: List[str],
+        working_dir: str,
+        max_iterations: int = None,
+    ) -> str:
+        return self._render(
+            "agent/agent_manager_prompt.jinja",
+            intent=intent,
+            input_schema=input_schema,
+            output_schema=output_schema,
+            datasets=datasets,
+            working_dir=working_dir,
+            max_iterations=max_iterations,
+        )
+
+
+# Instantiate configuration and templates
+config: _Config = _Config()
+code_templates: _CodeTemplates = _CodeTemplates()
+prompt_templates: _PromptTemplates = _PromptTemplates()
+
+
+# Default logging configuration
+def configure_logging(level: str | int = logging.INFO, file: str = None) -> None:
+    # Configure the library's root logger
+    sm_root_logger = logging.getLogger("plexe")
+    sm_root_logger.setLevel(level)
+
+    # Clear existing handlers to avoid duplicate logs
+    sm_root_logger.handlers = []
+
+    # Define a common formatter
+    formatter = logging.Formatter(config.logging.format)
+
+    stream_handler = logging.StreamHandler()
+    # Only apply reconfigure if the stream supports it
+    if hasattr(sys.stdout, "reconfigure"):
+        sys.stdout.reconfigure(encoding="utf-8")
+    stream_handler.setFormatter(formatter)
+    sm_root_logger.addHandler(stream_handler)
+
+    if file:
+        file_handler = logging.FileHandler(file, encoding="utf-8")
+        file_handler.setFormatter(formatter)
+        sm_root_logger.addHandler(file_handler)
+
+
+configure_logging(level=config.logging.level)

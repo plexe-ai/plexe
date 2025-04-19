@@ -1,6 +1,6 @@
-# Contributing to smolmodels
+# Contributing to plexe
 
-Thank you for considering contributing to smolmodels! Your contributions help improve this project for everyone.
+Thank you for considering contributing to plexe! Your contributions help improve this project for everyone.
 
 ## Table of Contents
 
@@ -60,8 +60,8 @@ To set up the development environment:
 1. **Clone the Repository**:
 
     ```bash
-    git clone https://github.com/plexe-ai/smolmodels.git
-    cd smolmodels
+    git clone https://github.com/plexe-ai/plexe.git
+    cd plexe
     ```
 
 2. **Install Dependencies**:

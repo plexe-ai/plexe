@@ -1,4 +1,4 @@
-# smolmodels/internal/models/search/test_random_policy.py:
+# plexe/internal/models/search/test_random_policy.py:
 
 """
 Unit tests for the RandomSearchPolicy class.
@@ -18,9 +18,9 @@ Dependencies:
 
 import pytest
 
-from smolmodels.internal.models.entities.graph import Graph
-from smolmodels.internal.models.entities.node import Node
-from smolmodels.internal.models.search.random_policy import RandomSearchPolicy
+from plexe.internal.models.entities.graph import Graph
+from plexe.internal.models.entities.node import Node
+from plexe.internal.models.search.random_policy import RandomSearchPolicy
 
 
 @pytest.fixture

@@ -1,4 +1,4 @@
-name: smolmodels
+name: plexe
 
 services:
   api:
@@ -14,7 +14,7 @@ services:
       - redis
       - mongodb
     networks:
-      - smolmodels-network
+      - plexe-network
 
   worker:
     build:
@@ -27,7 +27,7 @@ services:
       - redis
       - mongodb
     networks:
-      - smolmodels-network
+      - plexe-network
 
   ui:
     build:
@@ -38,7 +38,7 @@ services:
     depends_on:
       - api
     networks:
-      - smolmodels-network
+      - plexe-network
 
   redis:
     image: redis:alpine
@@ -47,7 +47,7 @@ services:
     volumes:
       - redis_data:/data
     networks:
-      - smolmodels-network
+      - plexe-network
 
   mongodb:
     image: mongo:latest
@@ -56,10 +56,10 @@ services:
     volumes:
       - mongodb_data:/data/db
     networks:
-      - smolmodels-network
+      - plexe-network
 
 networks:
-  smolmodels-network:
+  plexe-network:
     driver: bridge
 
 volumes:

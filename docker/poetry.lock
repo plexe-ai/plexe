@@ -3984,15 +3984,15 @@ files = [
 ]
 
 [[package]]
-name = "smolmodels"
+name = "plexe"
 version = "0.9.2"
 description = "A framework for building ML models from natural language"
 optional = false
 python-versions = "<4.0,>=3.12"
 groups = ["main"]
 files = [
-    {file = "smolmodels-0.9.2-py3-none-any.whl", hash = "sha256:468287ed3c673da6a198258b97a9bfe92713afaba494d831be530c81bd709249"},
-    {file = "smolmodels-0.9.2.tar.gz", hash = "sha256:a87535425def15d2e7d9c8ffd7f76af29883c4a26f93bc5baae5adbcdc976532"},
+    {file = "plexe-0.9.2-py3-none-any.whl", hash = "sha256:468287ed3c673da6a198258b97a9bfe92713afaba494d831be530c81bd709249"},
+    {file = "plexe-0.9.2.tar.gz", hash = "sha256:a87535425def15d2e7d9c8ffd7f76af29883c4a26f93bc5baae5adbcdc976532"},
 ]
 
 [package.dependencies]

@@ -20,7 +20,7 @@ class MLEBenchRunner:
 
     def setup(self, cli_args):
         """Set up the MLE-bench environment"""
-        print("🚀 Starting the MLE-bench Runner with SmolModels...")
+        print("🚀 Starting the MLE-bench Runner with Plexe...")
 
         # Get the absolute path for the config file
         config_path = Path(cli_args.config).absolute()

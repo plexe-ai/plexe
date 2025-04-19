@@ -9,7 +9,7 @@ This module verifies:
 """
 
 import pytest
-from smolmodels.internal.common.datasets.interface import Dataset, DatasetStructure
+from plexe.internal.common.datasets.interface import Dataset, DatasetStructure
 
 
 def test_dataset_structure_creation():

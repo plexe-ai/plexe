@@ -1,7 +1,7 @@
 import pandas as pd
 import numpy as np
 
-from smolmodels.internal.datasets.core.generation.utils.oversampling import oversample_with_smote
+from plexe.internal.datasets.core.generation.utils.oversampling import oversample_with_smote
 
 
 class TestSMOTEOversampling:

@@ -1,16 +1,16 @@
 [tool.poetry]
-name = "smolmodels"
-version = "0.14.0"
-description = "A framework for building ML models from natural language"
+name = "plexe"
+version = "0.16.1"
+description = "An agentic framework for building ML models from natural language"
 authors = [
     "marcellodebernardi <marcello.debernardi@outlook.com>",
     "vaibs-d <vaibhavatlamarts@gmail.com>"
 ]
 license = "Apache-2.0"
 readme = "README.md"
-repository = "https://github.com/plexe-ai/smolmodels"
-homepage = "https://github.com/plexe-ai/smolmodels"
-packages = [{ include = "smolmodels" }]
+repository = "https://github.com/plexe-ai/plexe"
+homepage = "https://github.com/plexe-ai/plexe"
+packages = [{ include = "plexe" }]
 classifiers = [
     "Development Status :: 3 - Alpha",
     "Intended Audience :: Developers",
@@ -21,7 +21,10 @@ classifiers = [
     "Topic :: Scientific/Engineering :: Artificial Intelligence",
     "Topic :: Software Development :: Libraries :: Python Modules"
 ]
-keywords = ["custom ai", "llm", "machine learning model", "data generation"]
+keywords = ["agent", "custom ai", "llm", "machine learning", "data generation"]
+
+[tool.poetry.scripts]
+plexe = "plexe.main:main"
 
 [tool.poetry.dependencies]
 python = ">=3.11,<3.13"
@@ -50,7 +53,7 @@ jinja2 = "^3.1.6"
 platformdirs = "^4.3.7"
 mlflow = "^2.21.3"
 ray = "^2.9.0"
-
+smolagents = {extras = ["gradio"], version = "1.13.0"}
 
 # Deep learning dependencies
 torch = { version = ">=2.0.0,<2.3.0", optional = true }

@@ -1,12 +1,12 @@
-# MLE-Bench Runner for SmolModels
+# MLE-Bench Runner for Plexe
 
-This script benchmarks `smolmodels` on the `mle-bench` test suite released by OpenAI. It automates the process of running the SmolModels library on Kaggle competitions and evaluating the results using the MLE-Bench framework. See the [mle bench repository](https://github.com/openai/mle-bench) or the [mle-bench paper](https://openai.com/index/mle-bench/) for more information.
+This script benchmarks `plexe` on the `mle-bench` test suite released by OpenAI. It automates the process of running the Plexe library on Kaggle competitions and evaluating the results using the MLE-Bench framework. See the [mle bench repository](https://github.com/openai/mle-bench) or the [mle-bench paper](https://openai.com/index/mle-bench/) for more information.
 
 ## Prerequisites
 
 To run the benchmark, you need to complete these steps:
 
-1. Clone the `smolmodels` repository: `git clone https://github.com/plexe-ai/smolmodels.git`
+1. Clone the `plexe` repository: `git clone https://github.com/plexe-ai/plexe.git`
 2. Install `git lfs` on your machine ([installation instructions](https://git-lfs.com/))
 3. Create a Kaggle account, create an API key, and save it in `~/.kaggle/kaggle.json` ([Kaggle API instructions](https://www.kaggle.com/docs/api))
 4. Install Python `3.11.0` or later
@@ -37,7 +37,7 @@ When you run the script for the first time, you will be prompted to:
 The script will then:
 1. Clone the `mle-bench` repository
 2. Download the Kaggle datasets (by default, only the spaceship-titanic challenge)
-3. Run SmolModels on the datasets
+3. Run Plexe on the datasets
 4. Generate predictions and submission files
 5. Evaluate the results using MLE-Bench
 
@@ -65,7 +65,7 @@ Configuration options:
 - `repo_url`: The GitHub repository URL for MLE-bench
 - `repo_dir`: Local directory to clone MLE-bench into
 - `datasets`: List of Kaggle competitions to run (for initial testing, only spaceship-titanic is used)
-- `provider`: LLM provider to use with SmolModels (format: "provider/model")
+- `provider`: LLM provider to use with Plexe (format: "provider/model")
 - `max_iterations`: Maximum number of model solutions to explore
 - `timeout`: Maximum time in seconds for model building
 

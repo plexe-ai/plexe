@@ -1,1 +1,1 @@
-"""MLE Bench runner package for SmolModels."""
+"""MLE Bench runner package for Plexe."""

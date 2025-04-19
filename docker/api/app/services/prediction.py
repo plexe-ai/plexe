@@ -1,4 +1,4 @@
-import smolmodels as sm
+import plexe
 
 
 class PredictionService:
@@ -12,7 +12,7 @@ class PredictionService:
         # Try to get model from cache
         if model_id not in cls._model_cache:
             # Load model from disk
-            model = sm.load_model(f"model-{model_id}")
+            model = plexe.load_model(f"model-{model_id}")
             cls._model_cache[model_id] = model
         else:
             model = cls._model_cache[model_id]

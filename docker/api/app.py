@@ -17,8 +17,8 @@ from api.app.routes import models, predictions, jobs
 
 # Create FastAPI app
 app = FastAPI(
-    title="smolmodels API",
-    description="API for managing ML models using smolmodels",
+    title="plexe API",
+    description="API for managing ML models using plexe",
     version="0.1.0",
     redirect_slashes=False,
 )

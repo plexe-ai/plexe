@@ -4,7 +4,7 @@ import numpy as np
 import pandas as pd
 import pytest
 
-from smolmodels import DatasetGenerator
+from plexe import DatasetGenerator
 
 
 @pytest.fixture
@@ -36,9 +36,7 @@ class TestDataGeneration:
     def setup_mocks(self):
         """Setup all required mocks for the test class"""
         # Mock the data generation function
-        self.mock_generate_data = patch(
-            "smolmodels.datasets.DataGenerator.generate", return_value=pd.DataFrame()
-        ).start()
+        self.mock_generate_data = patch("plexe.datasets.DataGenerator.generate", return_value=pd.DataFrame()).start()
 
         yield
 

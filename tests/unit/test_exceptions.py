@@ -1,5 +1,5 @@
 """
-Tests for the custom exception classes defined in the smolmodels.errors module.
+Tests for the custom exception classes defined in the plexe.errors module.
 
 These tests primarily validate the inheritance relationships between exceptions and ensure
 that the exceptions can be raised and caught correctly. While these classes currently lack
@@ -8,8 +8,8 @@ custom fields or methods, these tests help prevent regressions in the definition
 
 import pytest
 
-from smolmodels.exceptions import (
-    SmolmodelsError,
+from plexe.exceptions import (
+    PlexeError,
     SpecificationError,
     InsufficientSpecificationError,
     AmbiguousSpecificationError,
@@ -20,8 +20,8 @@ from smolmodels.exceptions import (
 
 
 def test_base_error():
-    with pytest.raises(SmolmodelsError) as exc_info:
-        raise SmolmodelsError("Base error")
+    with pytest.raises(PlexeError) as exc_info:
+        raise PlexeError("Base error")
     assert str(exc_info.value) == "Base error"
 
 
@@ -57,13 +57,13 @@ def test_constraint_errors():
 
 def test_inheritance_relationships():
     # Check SpecificationError hierarchy
-    assert issubclass(SpecificationError, SmolmodelsError)
+    assert issubclass(SpecificationError, PlexeError)
     assert issubclass(InsufficientSpecificationError, SpecificationError)
     assert issubclass(AmbiguousSpecificationError, SpecificationError)
     assert issubclass(InvalidSchemaError, SpecificationError)
 
     # Check InstructionError hierarchy
-    assert issubclass(InstructionError, SmolmodelsError)
+    assert issubclass(InstructionError, PlexeError)
 
     # Check ConstraintError hierarchy
-    assert issubclass(ConstraintError, SmolmodelsError)
+    assert issubclass(ConstraintError, PlexeError)

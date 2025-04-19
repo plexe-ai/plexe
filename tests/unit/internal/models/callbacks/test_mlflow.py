@@ -9,10 +9,10 @@ from unittest.mock import MagicMock, patch
 import pytest
 from pydantic import BaseModel
 
-from smolmodels.callbacks import BuildStateInfo
-from smolmodels.internal.models.callbacks.mlflow import MLFlowCallback
-from smolmodels.internal.models.entities.metric import Metric, MetricComparator, ComparisonMethod
-from smolmodels.internal.models.entities.node import Node
+from plexe.callbacks import BuildStateInfo
+from plexe.internal.models.callbacks.mlflow import MLFlowCallback
+from plexe.internal.models.entities.metric import Metric, MetricComparator, ComparisonMethod
+from plexe.internal.models.entities.node import Node
 
 
 @pytest.fixture

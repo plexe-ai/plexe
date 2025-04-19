@@ -1,4 +1,4 @@
-"""Integration test for time series forecasting models using smolmodels.
+"""Integration test for time series forecasting models using plexe.
 
 This test covers:
 1. Creating a time series forecasting model for sales prediction
@@ -10,7 +10,7 @@ import os
 import pytest
 from pathlib import Path
 from pydantic import create_model
-import smolmodels as sm
+import plexe
 from tests.utils.utils import generate_time_series_data, verify_prediction, cleanup_files, verify_model_description
 
 
@@ -70,7 +70,7 @@ def test_time_series_forecasting(sales_data_copy, sales_input_schema, sales_outp
     sales_data_copy["date"] = sales_data_copy["date"].dt.strftime("%Y-%m-%d")
 
     # Create a model for sales forecasting
-    model = sm.Model(
+    model = plexe.Model(
         intent="Predict daily sales based on the date, promotions, holidays, and day of the week",
         input_schema=sales_input_schema,
         output_schema=sales_output_schema,

@@ -8,7 +8,7 @@ class MetadataService:
 
     # Connect to MongoDB
     client = MongoClient(os.getenv("MONGODB_URI", "mongodb://localhost:27017/"))
-    db = client[os.getenv("MONGODB_DB", "smolmodels")]
+    db = client[os.getenv("MONGODB_DB", "plexe")]
 
     @classmethod
     def _serialize_metrics(cls, metrics):
@@ -20,7 +20,7 @@ class MetadataService:
         if isinstance(metrics, dict):
             return metrics
 
-        # Handle Metric objects from smolmodels
+        # Handle Metric objects from plexe
         serialized = {}
         if hasattr(metrics, "name"):
             serialized["name"] = metrics.name

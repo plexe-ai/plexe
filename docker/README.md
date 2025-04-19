@@ -1,12 +1,12 @@
-# smolmodels
+# plexe
 
-A docker container for creating and running machine learning models using the [smolmodels](https://github.com/plexe-ai/smolmodels) library.
+A docker container for creating and running machine learning models using the [plexe](https://github.com/plexe-ai/plexe) library.
 
 > **Warning**: This is an early alpha release. Expect bugs and limitations. More features are coming in future releases!
 
 ## Overview
 
-smolmodels provides a comprehensive API-driven solution for building, managing, and deploying machine learning models with minimal code. It transforms the capabilities of smolmodels into a platform that supports:
+plexe provides a comprehensive API-driven solution for building, managing, and deploying machine learning models with minimal code. It transforms the capabilities of plexe into a platform that supports:
 
 - Natural language model definition
 - Automated model training and evaluation
@@ -24,7 +24,7 @@ smolmodels provides a comprehensive API-driven solution for building, managing, 
 
 1. Clone the repository:
 ```bash
-git clone https://github.com/plexe-ai/smolmodels.git
+git clone https://github.com/plexe-ai/plexe.git
 cd docker
 ```
 

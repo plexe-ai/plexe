@@ -1,4 +1,4 @@
-"""Integration test for binary classification models using smolmodels.
+"""Integration test for binary classification models using plexe.
 
 This test covers:
 1. Creating a binary classification model for heart disease prediction
@@ -11,7 +11,7 @@ import os
 import pytest
 from pathlib import Path
 from pydantic import create_model
-import smolmodels as sm
+import plexe
 from tests.utils.utils import generate_heart_data, verify_prediction, cleanup_files, verify_model_description
 
 
@@ -71,7 +71,7 @@ def run_around_tests(model_dir):
 def test_heart_disease_classification(heart_data, heart_input_schema, heart_output_schema):
     """Test binary classification for heart disease prediction."""
     # Create a model for heart disease prediction
-    model = sm.Model(
+    model = plexe.Model(
         intent="Predict whether a patient is likely to have heart disease based on their medical features",
         input_schema=heart_input_schema,
         output_schema=heart_output_schema,
@@ -114,11 +114,11 @@ def test_heart_disease_classification(heart_data, heart_input_schema, heart_outp
     verify_model_description(description)
 
     # Test model saving
-    model_path = sm.save_model(model, "heart_disease_model.tar.gz")
+    model_path = plexe.save_model(model, "heart_disease_model.tar.gz")
     assert Path(model_path).exists(), f"Model file {model_path} not created"
 
     # Test model loading
-    loaded_model = sm.load_model(model_path)
+    loaded_model = plexe.load_model(model_path)
     # Use dictionary for prediction with the loaded model
     loaded_prediction = loaded_model.predict(test_input)
 

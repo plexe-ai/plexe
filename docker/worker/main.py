@@ -3,7 +3,7 @@ import time
 import logging
 from pathlib import Path
 from dotenv import load_dotenv
-import smolmodels as sm
+import plexe
 import pandas as pd
 import shutil
 
@@ -79,8 +79,8 @@ def process_model_creation(data):
         input_schema = convert_schema_types(data.get("input_schema"))
         output_schema = convert_schema_types(data.get("output_schema"))
 
-        # Create model using smolmodels
-        model = sm.Model(intent=data["intent"], input_schema=input_schema, output_schema=output_schema)
+        # Create model using plexe
+        model = plexe.Model(intent=data["intent"], input_schema=input_schema, output_schema=output_schema)
 
         # Process datasets if available
         datasets = []
@@ -92,7 +92,7 @@ def process_model_creation(data):
         # If no datasets provided, generate synthetic data
         if not datasets and input_schema and output_schema:
             logger.info("No datasets provided, creating a synthetic dataset generator")
-            dataset_gen = sm.DatasetGenerator(
+            dataset_gen = plexe.DatasetGenerator(
                 description=data["intent"],
                 provider=os.getenv("LLM_PROVIDER", "openai/gpt-4o-mini"),
                 schema={**input_schema, **output_schema},
@@ -110,7 +110,7 @@ def process_model_creation(data):
 
         # Save the model
         logger.info(f"Saving model {model_id}...")
-        model_path = sm.save_model(model, model_id)
+        model_path = plexe.save_model(model, model_id)
         logger.info(f"Model saved to {model_path}")
 
         # Make sure model is also saved in the expected location for prediction service

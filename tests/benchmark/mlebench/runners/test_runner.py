@@ -8,18 +8,18 @@ from typing import List
 
 import pandas as pd
 import platformdirs
-import smolmodels as sm
+import plexe
 from tqdm import tqdm
 
 from mlebench.core.models import TestResult, SubmissionInfo
 from mlebench.utils.error import ErrorHandler
 
-# Sklearn often throws warnings when used in smolmodels
+# Sklearn often throws warnings when used in plexe
 warnings.filterwarnings("ignore", category=UserWarning, module="sklearn")
 
 
 class TestRunner:
-    """Class to run tests using smolmodels"""
+    """Class to run tests using plexe"""
 
     def __init__(self, config):
         self.config = config
@@ -78,9 +78,9 @@ class TestRunner:
         return test_data_info
 
     def build_model(self, test_name, test_data_info):
-        """Build a model using smolmodels"""
+        """Build a model using plexe"""
         print(f"🤖 Creating model for {test_name}...")
-        model = sm.Model(
+        model = plexe.Model(
             intent=test_data_info["task_description"],
         )
 
@@ -172,7 +172,7 @@ class TestRunner:
         """Save model for future reference"""
         model_save_path = output_dir / f"{test_name}_model.tar.gz"
         try:
-            sm.save_model(model, str(model_save_path))
+            plexe.save_model(model, str(model_save_path))
             print(f"✅ Model saved to {model_save_path}")
             return model_save_path
         except Exception as e:
@@ -180,8 +180,8 @@ class TestRunner:
             return None
 
     def run_tests(self) -> List[SubmissionInfo]:
-        """Run tests from the configuration file using smolmodels"""
-        print("🏁 Starting test execution with smolmodels...")
+        """Run tests from the configuration file using plexe"""
+        print("🏁 Starting test execution with plexe...")
         test_results = []
         submissions = []
 

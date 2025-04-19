@@ -1,5 +1,5 @@
 import pytest
-from smolmodels.internal.models.validation.primitives.syntax import SyntaxValidator
+from plexe.internal.models.validation.primitives.syntax import SyntaxValidator
 
 
 @pytest.fixture

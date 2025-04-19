@@ -1,4 +1,4 @@
-"""Integration test for recommendation models using smolmodels.
+"""Integration test for recommendation models using plexe.
 
 This test covers:
 1. Creating a recommendation model for product cross-selling
@@ -11,7 +11,7 @@ import os
 import pytest
 from pathlib import Path
 from pydantic import create_model
-import smolmodels as sm
+import plexe
 from tests.utils.utils import (
     generate_product_recommendation_data,
     verify_prediction,
@@ -59,7 +59,7 @@ def run_around_tests(model_dir):
 def test_product_recommendation(product_data, recommendation_input_schema, recommendation_output_schema):
     """Test recommendation model for suggesting related products."""
     # Create a model for product recommendations
-    model = sm.Model(
+    model = plexe.Model(
         intent="""
         Given a product style code, recommend up to 3 other product styles that are frequently 
         purchased together with it based on transaction history. Use the order_id to identify 
@@ -103,11 +103,11 @@ def test_product_recommendation(product_data, recommendation_input_schema, recom
     verify_model_description(description)
 
     # Test model saving
-    model_path = sm.save_model(model, "recommendation_model.tar.gz")
+    model_path = plexe.save_model(model, "recommendation_model.tar.gz")
     assert Path(model_path).exists(), f"Model file {model_path} not created"
 
     # Test model loading
-    loaded_model = sm.load_model(model_path)
+    loaded_model = plexe.load_model(model_path)
     loaded_prediction = loaded_model.predict(test_input)
 
     # Verify the loaded model's prediction

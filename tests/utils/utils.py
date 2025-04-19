@@ -4,7 +4,7 @@ import pandas as pd
 import shutil
 from pathlib import Path
 
-from smolmodels.internal.models.entities.description import ModelDescription
+from plexe.internal.models.entities.description import ModelDescription
 
 
 def generate_heart_data(n_samples=30, random_seed=42):
@@ -413,7 +413,7 @@ def verify_model_description(description):
 def cleanup_files(model_dir=None):
     """Clean up any files created during tests."""
     files_to_clean = [
-        "smolmodels.log",
+        "plexe.log",
         "*.pmb",
         "*.tar.gz",
     ]

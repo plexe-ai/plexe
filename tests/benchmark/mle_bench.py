@@ -1,13 +1,13 @@
 #!/usr/bin/env python3
 """
-This script automates the setup, execution, and grading process for the "mle-bench" framework using smolmodels.
+This script automates the setup, execution, and grading process for the "mle-bench" framework using plexe.
 
 Usage:
     python mle_bench.py --config CONFIG_PATH --rebuild
 
 Description:
     The script clones and sets up "mle-bench", prepares datasets, reads a configuration file
-    to determine the tests to run, executes models using smolmodels, and grades their performance. The
+    to determine the tests to run, executes models using plexe, and grades their performance. The
     --rebuild flag forces the script to re-clone the "mle-bench" repository and reinstall dependencies.
 
 Ensure that your environment has the required permissions and Kaggle API credentials configured.

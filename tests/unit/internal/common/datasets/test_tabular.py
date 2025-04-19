@@ -15,9 +15,9 @@ import pytest
 import pandas as pd
 import numpy as np
 
-from smolmodels.internal.common.datasets.tabular import TabularDataset
-from smolmodels.internal.common.datasets.interface import DatasetStructure
-from smolmodels.internal.common.utils.dataset_storage import write_dataset_to_file, read_dataset_from_file
+from plexe.internal.common.datasets.tabular import TabularDataset
+from plexe.internal.common.datasets.interface import DatasetStructure
+from plexe.internal.common.utils.dataset_storage import write_dataset_to_file, read_dataset_from_file
 
 
 def test_tabular_dataset_creation():

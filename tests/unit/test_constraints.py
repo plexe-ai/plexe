@@ -1,5 +1,5 @@
 """
-Tests for the Constraint class in smolmodels.constraints.
+Tests for the Constraint class in plexe.constraints.
 
 This module verifies:
 1. Validation of conditions during initialization.
@@ -8,7 +8,7 @@ This module verifies:
 """
 
 import pytest
-from smolmodels.constraints import Constraint
+from plexe.constraints import Constraint
 
 
 def test_valid_condition():

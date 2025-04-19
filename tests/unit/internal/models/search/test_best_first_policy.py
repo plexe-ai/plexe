@@ -1,4 +1,4 @@
-# smolmodels/internal/models/search/test_best_first_policy.py:
+# plexe/internal/models/search/test_best_first_policy.py:
 
 """
 Unit tests for the BestFirstSearchPolicy class.
@@ -18,10 +18,10 @@ Dependencies:
 
 import pytest
 
-from smolmodels.internal.models.entities.graph import Graph
-from smolmodels.internal.models.entities.metric import Metric, MetricComparator, ComparisonMethod
-from smolmodels.internal.models.entities.node import Node
-from smolmodels.internal.models.search.best_first_policy import BestFirstSearchPolicy
+from plexe.internal.models.entities.graph import Graph
+from plexe.internal.models.entities.metric import Metric, MetricComparator, ComparisonMethod
+from plexe.internal.models.entities.node import Node
+from plexe.internal.models.search.best_first_policy import BestFirstSearchPolicy
 
 
 @pytest.fixture

@@ -1,4 +1,4 @@
-"""Integration test for customer churn prediction models using smolmodels.
+"""Integration test for customer churn prediction models using plexe.
 
 This test covers:
 1. Creating a model for predicting customer churn
@@ -14,7 +14,7 @@ from pathlib import Path
 import pytest
 from pydantic import create_model, Field
 
-import smolmodels as sm
+import plexe
 from tests.utils.utils import generate_customer_churn_data, verify_prediction, cleanup_files, verify_model_description
 
 
@@ -78,7 +78,7 @@ def run_around_tests(model_dir):
 def test_customer_churn_prediction(churn_data, churn_input_schema, churn_output_schema):
     """Test customer churn prediction with probability output."""
     # Create a model for churn prediction
-    model = sm.Model(
+    model = plexe.Model(
         intent="""
         Predict the probability that a customer will churn (leave the company) based on their 
         service usage and contract details. Return both the probability of churning (0-1) and 
@@ -146,8 +146,8 @@ def test_customer_churn_prediction(churn_data, churn_input_schema, churn_output_
     verify_model_description(description)
 
     # Test model saving and loading
-    model_path = sm.save_model(model, "churn_model.tar.gz")
-    loaded_model = sm.load_model(model_path)
+    model_path = plexe.save_model(model, "churn_model.tar.gz")
+    loaded_model = plexe.load_model(model_path)
 
     # Verify loaded model predictions
     for test_input in test_inputs:
@@ -158,7 +158,7 @@ def test_customer_churn_prediction(churn_data, churn_input_schema, churn_output_
 def test_customer_churn_schema_inference(churn_data):
     """Test customer churn prediction with schema inference."""
     # Create a model with only intent
-    model = sm.Model(
+    model = plexe.Model(
         intent="""
         Predict whether a customer will churn (leave the company) based on their 
         service usage and contract details. Return a binary prediction (0=will not churn, 1=will churn).

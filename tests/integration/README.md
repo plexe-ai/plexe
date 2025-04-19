@@ -1,8 +1,8 @@
-# SmolModels Integration Tests
+# Plexe Integration Tests
 
 
 ## 1. Overview
-This directory contains integration tests validating the end-to-end functionality of SmolModels across various ML tasks.
+This directory contains integration tests validating the end-to-end functionality of Plexe across various ML tasks.
 
 
 ## 2. Test Suite
@@ -22,7 +22,7 @@ This directory contains integration tests validating the end-to-end functionalit
 
 ## 3. Execution
 ### 3.1 Prerequisites
-- SmolModels installed with development dependencies.
+- Plexe installed with development dependencies.
 - `OPENAI_API_KEY` set as an environment variable.
 
 ### 3.2 Running Tests

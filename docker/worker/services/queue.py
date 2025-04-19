@@ -17,7 +17,7 @@ class QueueService:
     @classmethod
     def dequeue_job(cls, timeout=30):
         """Get a job from the queue"""
-        result = cls.redis_client.brpop("smolmodels:jobs", timeout)
+        result = cls.redis_client.brpop("plexe:jobs", timeout)
 
         if result:
             job_data = json.loads(result[1])

@@ -86,7 +86,7 @@ class ConfigManager:
         # Parse the rendered config
         config_yaml = yaml.safe_load(config_content)
 
-        # Add smolmodels configurations to the config
+        # Add plexe configurations to the config
         config_yaml["provider"] = variables["provider"]
         config_yaml["max_iterations"] = int(variables["max_iterations"])
         config_yaml["timeout"] = int(variables["timeout"])
