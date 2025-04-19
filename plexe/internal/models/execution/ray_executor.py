@@ -113,7 +113,7 @@ class RayExecutor(Executor):
 
         # Initialize Ray if not already done
         if not ray.is_initialized():
-            from smolmodels.config import config
+            from plexe.config import config
 
             ray.init(
                 address=getattr(config.ray, "address", None) if hasattr(config, "ray") else None,
