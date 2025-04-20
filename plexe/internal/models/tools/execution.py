@@ -32,6 +32,7 @@ def execute_training_code(
     timeout: int,
     metric_to_optimise_name: str,
     metric_to_optimise_comparison_method: str,
+    distributed: bool = False,
 ) -> Dict:
     """Executes training code in an isolated environment.
 
@@ -43,6 +44,7 @@ def execute_training_code(
         timeout: Maximum execution time in seconds
         metric_to_optimise_name: The name of the metric to optimize for
         metric_to_optimise_comparison_method: The comparison method for the metric
+        distributed: Whether to use distributed execution with Ray (default: False)
 
     Returns:
         A dictionary containing execution results with model artifacts and their registry names
@@ -91,14 +93,42 @@ def execute_training_code(
         # Import here to avoid circular imports
         from plexe.config import config
 
-        executor = ProcessExecutor(
-            execution_id=execution_id,
-            code=code,
-            working_dir=working_dir,
-            datasets=datasets,
-            timeout=timeout,
-            code_execution_file_name=config.execution.runfile_name,
-        )
+        # Choose executor based on distributed flag
+        if distributed:
+            try:
+                # Try to import Ray executor
+                from plexe.internal.models.execution.ray_executor import RayExecutor
+                
+                logger.info(f"Using Ray for distributed execution with execution ID: {execution_id}")
+                executor = RayExecutor(
+                    execution_id=execution_id,
+                    code=code,
+                    working_dir=working_dir,
+                    datasets=datasets,
+                    timeout=timeout,
+                    code_execution_file_name=config.execution.runfile_name,
+                )
+            except ImportError:
+                # Fall back to process executor if Ray is not available
+                logger.warning(f"Ray not available, falling back to ProcessExecutor for execution ID: {execution_id}")
+                executor = ProcessExecutor(
+                    execution_id=execution_id,
+                    code=code,
+                    working_dir=working_dir,
+                    datasets=datasets,
+                    timeout=timeout,
+                    code_execution_file_name=config.execution.runfile_name,
+                )
+        else:
+            # Use ProcessExecutor for non-distributed execution
+            executor = ProcessExecutor(
+                execution_id=execution_id,
+                code=code,
+                working_dir=working_dir,
+                datasets=datasets,
+                timeout=timeout,
+                code_execution_file_name=config.execution.runfile_name,
+            )
 
         logger.debug(f"Executing node {node} using executor {executor}")
         result = executor.run()

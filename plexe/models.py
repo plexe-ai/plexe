@@ -259,6 +259,7 @@ class Model:
                     "max_iterations": max_iterations,
                     "timeout": timeout,
                     "run_timeout": run_timeout,
+                    "distributed": self.distributed,  # Pass distributed flag to tools
                 },
             )
 
