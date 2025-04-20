@@ -360,7 +360,6 @@ class _PromptTemplates:
         datasets: List[str],
         working_dir: str,
         max_iterations: int = None,
-        distributed: bool = False,
     ) -> str:
         return self._render(
             "agent/agent_manager_prompt.jinja",
@@ -370,7 +369,6 @@ class _PromptTemplates:
             datasets=datasets,
             working_dir=working_dir,
             max_iterations=max_iterations,
-            distributed=distributed,
         )
 
 
