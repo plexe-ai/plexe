@@ -58,15 +58,14 @@ def test_model_with_ray(sample_dataset):
     assert model.metric is not None
 
     # Get executor classes
-    from plexe.internal.models.tools.execution import get_executor_class
+    from plexe.internal.models.tools.execution import _get_executor_class
     from plexe.internal.models.execution.ray_executor import RayExecutor
-    from plexe.internal.models.execution.process_executor import ProcessExecutor
 
     # Verify model has the distributed flag set
     assert model.distributed, "Model should have distributed=True"
 
     # Verify the factory would select RayExecutor when distributed=True
-    executor_class = get_executor_class(distributed=True)
+    executor_class = _get_executor_class(distributed=True)
     assert executor_class == RayExecutor, "Factory should return RayExecutor when distributed=True"
 
     # The logs show Ray is being used, but the flag might not be set when checked
@@ -75,4 +74,4 @@ def test_model_with_ray(sample_dataset):
 
     # Instead, verify our factory returns the right executor when asked
     # The logs confirm Ray is actually used
-    assert get_executor_class(distributed=True) == RayExecutor
+    assert _get_executor_class(distributed=True) == RayExecutor

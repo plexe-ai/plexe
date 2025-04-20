@@ -1,18 +1,17 @@
 """Test the executor factory."""
 
 import pytest
-from unittest.mock import patch, MagicMock
+from unittest.mock import patch
 
 import importlib
 
-from plexe.internal.models.tools.execution import get_executor_class
+from plexe.internal.models.tools.execution import _get_executor_class
 from plexe.internal.models.execution.process_executor import ProcessExecutor
-from plexe.config import config
 
 
 def test_get_executor_class_non_distributed():
     """Test that ProcessExecutor is returned when distributed=False."""
-    executor_class = get_executor_class(distributed=False)
+    executor_class = _get_executor_class(distributed=False)
     assert executor_class == ProcessExecutor
 
 
@@ -22,7 +21,7 @@ def test_get_executor_class_distributed():
     ray_available = importlib.util.find_spec("ray") is not None
 
     if ray_available:
-        executor_class = get_executor_class(distributed=True)
+        executor_class = _get_executor_class(distributed=True)
         from plexe.internal.models.execution.ray_executor import RayExecutor
 
         assert executor_class == RayExecutor
@@ -41,5 +40,5 @@ def test_get_executor_class_distributed_ray_not_available():
             else importlib.import_module(name)
         ),
     ):
-        executor_class = get_executor_class(distributed=True)
+        executor_class = _get_executor_class(distributed=True)
         assert executor_class == ProcessExecutor

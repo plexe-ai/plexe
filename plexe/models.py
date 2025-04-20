@@ -247,6 +247,7 @@ class Model:
                 ml_ops_engineer_model_id=provider_config.ops_provider,
                 verbose=verbose,
                 max_steps=30,
+                distributed=self.distributed,
             )
             generated = agent.run(
                 agent_prompt,
@@ -259,7 +260,6 @@ class Model:
                     "max_iterations": max_iterations,
                     "timeout": timeout,
                     "run_timeout": run_timeout,
-                    "distributed": self.distributed,  # Pass distributed flag to tools
                 },
             )
 
