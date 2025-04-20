@@ -20,10 +20,10 @@ import pyarrow as pa
 from pathlib import Path
 from typing import Dict, List
 
-from smolmodels.internal.common.datasets.interface import TabularConvertible
-from smolmodels.internal.common.utils.response import extract_performance
-from smolmodels.internal.models.execution.executor import ExecutionResult, Executor
-from smolmodels.config import config
+from plexe.internal.common.datasets.interface import TabularConvertible
+from plexe.internal.common.utils.response import extract_performance
+from plexe.internal.models.execution.executor import ExecutionResult, Executor
+from plexe.config import config
 
 logger = logging.getLogger(__name__)
 
