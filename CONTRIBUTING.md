@@ -74,7 +74,7 @@ poetry env info        # View environment info
 poetry --version       # Confirm Poetry is installed correctly
 
 python setup.py
-    ```
+ ```
 
 3. **Run Tests**:
 
