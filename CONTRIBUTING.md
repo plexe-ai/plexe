@@ -66,16 +66,14 @@ To set up the development environment:
 
 2. **Install Dependencies**:
 
-```
+ ```bash
 pip install poetry or poetry install
 
 poetry shell           # Activate the virtual environment
 poetry env info        # View environment info
 poetry --version       # Confirm Poetry is installed correctly
-```
 
-    ```bash
-    python setup.py
+python setup.py
     ```
 
 3. **Run Tests**:
