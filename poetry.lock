@@ -7553,4 +7553,4 @@ lightweight = []
 [metadata]
 lock-version = "2.1"
 python-versions = ">=3.11,<3.13"
-content-hash = "7e6ded14b506859b5fe486b4e6cdf589a819d6136d2ec25c510f248175801c45"
+content-hash = "ba7ba1493eeece6ce398ce250b86487c131953bbf9b2778a1b8d998462554755"
