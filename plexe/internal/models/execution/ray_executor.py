@@ -85,6 +85,7 @@ def _run_code(code: str, working_dir: str, dataset_files: List[str], timeout: in
 
 class RayExecutor(Executor):
     """Execute Python code snippets on a Ray cluster."""
+
     _ray_was_used = False
 
     def __init__(

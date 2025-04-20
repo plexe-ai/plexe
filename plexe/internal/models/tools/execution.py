@@ -26,10 +26,10 @@ logger = logging.getLogger(__name__)
 
 def get_executor_class(distributed: bool = False) -> Type:
     """Get the appropriate executor class based on the distributed flag.
-    
+
     Args:
         distributed: Whether to use distributed execution if available
-        
+
     Returns:
         Executor class (not instance) appropriate for the environment
     """
@@ -39,13 +39,14 @@ def get_executor_class(distributed: bool = False) -> Type:
         try:
             # Try to import Ray executor
             from plexe.internal.models.execution.ray_executor import RayExecutor
+
             logger.info("Using Ray for distributed execution")
             return RayExecutor
         except ImportError:
             # Fall back to process executor if Ray is not available
             logger.warning("Ray not available, falling back to ProcessExecutor")
             return ProcessExecutor
-    
+
     # Default to ProcessExecutor for non-distributed execution
     logger.info("Using ProcessExecutor (non-distributed)")
     return ProcessExecutor
@@ -79,7 +80,7 @@ def execute_training_code(
     """
     # Log the distributed flag
     logger.info(f"execute_training_code called with distributed={distributed}")
-    
+
     from plexe.callbacks import BuildStateInfo
 
     object_registry = ObjectRegistry()
@@ -126,7 +127,7 @@ def execute_training_code(
 
         # Get the appropriate executor class via the factory
         executor_class = get_executor_class(distributed=distributed)
-        
+
         # Create an instance of the executor
         logger.info(f"Creating {executor_class.__name__} for execution ID: {execution_id}")
         executor = executor_class(
