@@ -98,7 +98,7 @@ def execute_training_code(
             try:
                 # Try to import Ray executor
                 from plexe.internal.models.execution.ray_executor import RayExecutor
-                
+
                 logger.info(f"Using Ray for distributed execution with execution ID: {execution_id}")
                 executor = RayExecutor(
                     execution_id=execution_id,

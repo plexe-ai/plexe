@@ -24,17 +24,12 @@ def sample_dataset():
 
 def test_model_with_ray(sample_dataset):
     """Test building a model with Ray-based distributed execution."""
-    # Skip this test if Ray is not installed
-    try:
-        import ray
-    except ImportError:
-        pytest.skip("Ray is not installed")
-    
     # Skip this test if no API key is available
     import os
+
     if not os.environ.get("OPENAI_API_KEY"):
         pytest.skip("OpenAI API key not available")
-        
+
     # Ray is already initialized in the RayExecutor when needed
 
     # Create a model with distributed=True
