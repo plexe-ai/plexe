@@ -19,8 +19,36 @@ from plexe.internal.models.entities.artifact import Artifact
 from plexe.internal.models.entities.metric import Metric, MetricComparator, ComparisonMethod
 from plexe.internal.models.entities.node import Node
 from plexe.internal.models.execution.process_executor import ProcessExecutor
+from typing import Type
 
 logger = logging.getLogger(__name__)
+
+
+def get_executor_class(distributed: bool = False) -> Type:
+    """Get the appropriate executor class based on the distributed flag.
+    
+    Args:
+        distributed: Whether to use distributed execution if available
+        
+    Returns:
+        Executor class (not instance) appropriate for the environment
+    """
+    # Log the distributed flag
+    logger.info(f"get_executor_class using distributed={distributed}")
+    if distributed:
+        try:
+            # Try to import Ray executor
+            from plexe.internal.models.execution.ray_executor import RayExecutor
+            logger.info("Using Ray for distributed execution")
+            return RayExecutor
+        except ImportError:
+            # Fall back to process executor if Ray is not available
+            logger.warning("Ray not available, falling back to ProcessExecutor")
+            return ProcessExecutor
+    
+    # Default to ProcessExecutor for non-distributed execution
+    logger.info("Using ProcessExecutor (non-distributed)")
+    return ProcessExecutor
 
 
 @tool
@@ -49,6 +77,9 @@ def execute_training_code(
     Returns:
         A dictionary containing execution results with model artifacts and their registry names
     """
+    # Log the distributed flag
+    logger.info(f"execute_training_code called with distributed={distributed}")
+    
     from plexe.callbacks import BuildStateInfo
 
     object_registry = ObjectRegistry()
@@ -93,42 +124,19 @@ def execute_training_code(
         # Import here to avoid circular imports
         from plexe.config import config
 
-        # Choose executor based on distributed flag
-        if distributed:
-            try:
-                # Try to import Ray executor
-                from plexe.internal.models.execution.ray_executor import RayExecutor
-
-                logger.info(f"Using Ray for distributed execution with execution ID: {execution_id}")
-                executor = RayExecutor(
-                    execution_id=execution_id,
-                    code=code,
-                    working_dir=working_dir,
-                    datasets=datasets,
-                    timeout=timeout,
-                    code_execution_file_name=config.execution.runfile_name,
-                )
-            except ImportError:
-                # Fall back to process executor if Ray is not available
-                logger.warning(f"Ray not available, falling back to ProcessExecutor for execution ID: {execution_id}")
-                executor = ProcessExecutor(
-                    execution_id=execution_id,
-                    code=code,
-                    working_dir=working_dir,
-                    datasets=datasets,
-                    timeout=timeout,
-                    code_execution_file_name=config.execution.runfile_name,
-                )
-        else:
-            # Use ProcessExecutor for non-distributed execution
-            executor = ProcessExecutor(
-                execution_id=execution_id,
-                code=code,
-                working_dir=working_dir,
-                datasets=datasets,
-                timeout=timeout,
-                code_execution_file_name=config.execution.runfile_name,
-            )
+        # Get the appropriate executor class via the factory
+        executor_class = get_executor_class(distributed=distributed)
+        
+        # Create an instance of the executor
+        logger.info(f"Creating {executor_class.__name__} for execution ID: {execution_id}")
+        executor = executor_class(
+            execution_id=execution_id,
+            code=code,
+            working_dir=working_dir,
+            datasets=datasets,
+            timeout=timeout,
+            code_execution_file_name=config.execution.runfile_name,
+        )
 
         logger.debug(f"Executing node {node} using executor {executor}")
         result = executor.run()

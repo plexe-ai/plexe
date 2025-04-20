@@ -28,7 +28,7 @@ plexe = "plexe.main:main"
 
 [tool.poetry.dependencies]
 python = ">=3.11,<3.13"
-pandas = "^2.2.0"
+pandas = "^1.5.0"
 google-generativeai = "^0.8.2"
 imbalanced-learn = "^0.12.4"
 pydantic = "^2.9.2"
