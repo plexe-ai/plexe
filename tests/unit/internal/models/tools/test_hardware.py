@@ -12,8 +12,12 @@ class TestGPUDetection(unittest.TestCase):
     """Tests for GPU detection utility functions."""
     
     @patch("importlib.util.find_spec")
-    def test_pytorch_gpu_available(self, mock_find_spec):
+    @patch("subprocess.run")
+    def test_pytorch_gpu_available(self, mock_subprocess, mock_find_spec):
         """Test GPU detection when PyTorch has GPU."""
+        # Block subprocess from running
+        mock_subprocess.side_effect = Exception("Subprocess blocked")
+        
         # Setup mock for importlib to allow import
         mock_find_spec.return_value = MagicMock()
         
@@ -32,18 +36,26 @@ class TestGPUDetection(unittest.TestCase):
         self.assertEqual(result["count"], 2)
     
     @patch("importlib.util.find_spec")
-    def test_gpu_not_available(self, mock_find_spec):
+    @patch("subprocess.run")
+    def test_gpu_not_available(self, mock_subprocess, mock_find_spec):
         """Test GPU detection when no GPUs are available."""
         # Mock all imports to return None (not found)
         mock_find_spec.return_value = None
+        
+        # Mock subprocess to return error
+        mock_subprocess.side_effect = Exception("No NVIDIA driver found")
         
         result = get_gpu_info()
         
         self.assertFalse(result["available"])
     
     @patch("importlib.util.find_spec")
-    def test_tensorflow_gpu_available(self, mock_find_spec):
+    @patch("subprocess.run")
+    def test_tensorflow_gpu_available(self, mock_subprocess, mock_find_spec):
         """Test GPU detection when TensorFlow has GPU."""
+        # Block subprocess from running
+        mock_subprocess.side_effect = Exception("Subprocess blocked")
+        
         # Return None for PyTorch import
         def find_spec_side_effect(name):
             if name == "torch":
@@ -105,6 +117,26 @@ class TestGPUDetection(unittest.TestCase):
             result = get_ray_info()
         
         self.assertFalse(result["available"])
+    
+    @patch("importlib.util.find_spec")
+    @patch("subprocess.run")
+    def test_system_gpu_available(self, mock_subprocess, mock_find_spec):
+        """Test GPU detection using nvidia-smi."""
+        # Mock all framework imports to fail
+        mock_find_spec.return_value = None
+        
+        # Setup subprocess mock to simulate NVIDIA GPU
+        mock_process = MagicMock()
+        mock_process.returncode = 0
+        mock_process.stdout = "Quadro RTX 4000\n"
+        mock_subprocess.return_value = mock_process
+        
+        result = get_gpu_info()
+        
+        self.assertTrue(result["available"])
+        self.assertEqual(result["framework"], "system")
+        self.assertEqual(result["device"], "nvidia-gpu")
+        self.assertEqual(result["count"], 1)
 
 
 if __name__ == "__main__":
