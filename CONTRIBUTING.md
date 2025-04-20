@@ -66,6 +66,14 @@ To set up the development environment:
 
 2. **Install Dependencies**:
 
+```
+pip install poetry
+poetry install     
+poetry shell
+poetry env info  
+poetry --version
+```
+
     ```bash
     python setup.py
     ```
