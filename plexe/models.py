@@ -238,7 +238,6 @@ class Model:
                 datasets=list(self.training_data.keys()),
                 working_dir=self.working_dir,
                 max_iterations=max_iterations,
-                distributed=self.distributed,
             )
             agent = PlexeAgent(
                 orchestrator_model_id=provider_config.orchestrator_provider,
