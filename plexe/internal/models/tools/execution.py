@@ -228,32 +228,35 @@ def _get_executor_class() -> Type:
     except ImportError:
         logger.warning("Ray not available, using ProcessExecutor")
         return ProcessExecutor
-    
+
     # Check if Ray is initialized
     if ray.is_initialized():
         try:
             # Try to import Ray executor
             from plexe.internal.models.execution.ray_executor import RayExecutor
+
             logger.info("Using Ray for execution (Ray is initialized)")
             return RayExecutor
         except ImportError:
             # Fall back to process executor if Ray executor is not available
             logger.warning("Ray initialized but RayExecutor not found, falling back to ProcessExecutor")
             return ProcessExecutor
-    
+
     # Fall back to configuration-based decision if Ray is not initialized
     # This maintains backward compatibility
     from plexe.config import config
+
     ray_configured = hasattr(config, "ray") and (
-        getattr(config.ray, "address", None) is not None or 
-        getattr(config.ray, "num_gpus", None) is not None or
-        getattr(config.ray, "num_cpus", None) is not None
+        getattr(config.ray, "address", None) is not None
+        or getattr(config.ray, "num_gpus", None) is not None
+        or getattr(config.ray, "num_cpus", None) is not None
     )
-    
+
     if ray_configured:
         try:
             # Try to import Ray executor
             from plexe.internal.models.execution.ray_executor import RayExecutor
+
             logger.info("Using Ray for execution based on configuration")
             return RayExecutor
         except ImportError:

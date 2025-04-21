@@ -18,11 +18,13 @@ import plexe.config as config_module
 # Create a new RayConfig class that's not frozen
 from dataclasses import dataclass
 
+
 @dataclass
 class TestRayConfig:
     address: str = None
     num_cpus: int = None
     num_gpus: int = None
+
 
 # Store original
 original_ray_config = config_module.config.ray
@@ -51,16 +53,18 @@ logger.info(f"Selected executor: {executor_class.__name__}")
 # Initialize Ray if not already
 try:
     import ray
+
     if not ray.is_initialized():
         logger.info("Initializing Ray")
         ray.init(num_cpus=2)
-    
+
     # Test Ray info
     logger.info("\nRay Cluster Information:")
     ray_info = get_ray_info()
     import json
+
     logger.info(json.dumps(ray_info, indent=2))
-    
+
     # Shutdown Ray
     ray.shutdown()
     logger.info("Ray shutdown complete")

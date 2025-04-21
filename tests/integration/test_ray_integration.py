@@ -33,29 +33,25 @@ def test_model_with_ray(sample_dataset):
 
     # Initialize Ray explicitly
     import ray
-    
+
     # Ensure Ray is not already running
     if ray.is_initialized():
         ray.shutdown()
-    
+
     # Initialize with specific resources
-    ray.init(
-        num_cpus=2, 
-        num_gpus=0, 
-        ignore_reinit_error=True
-    )
-    
+    ray.init(num_cpus=2, num_gpus=0, ignore_reinit_error=True)
+
     # Import classes needed for assertions
     from plexe.internal.models.tools.execution import _get_executor_class
     from plexe.internal.models.execution.ray_executor import RayExecutor
-    
+
     # Verify Ray is initialized
     assert ray.is_initialized(), "Ray should be initialized before the test"
-    
+
     # Verify the factory correctly detects Ray
     executor_class = _get_executor_class()
     assert executor_class == RayExecutor, "Ray executor should be selected when Ray is initialized"
-    
+
     try:
         # Create a model for testing (with shorter timeouts for testing)
         model = Model(intent="Predict the target variable given 5 numerical features")
@@ -67,31 +63,31 @@ def test_model_with_ray(sample_dataset):
             timeout=300,  # 5 minutes max
             run_timeout=60,  # 1 minute per run
         )
-        
+
         # Check if Ray is still initialized after model build
         if not ray.is_initialized():
             print("Warning: Ray was shut down during model building, trying to reinitialize")
             ray.init(num_cpus=2, num_gpus=0, ignore_reinit_error=True)
-        
+
         # Test a prediction
         input_data = {f"feature_{i}": 0.5 for i in range(5)}
         prediction = model.predict(input_data)
-        
+
         # Verify prediction worked
         assert prediction is not None
         assert "target" in prediction
-        
+
         # Verify model built successfully
         assert model.metric is not None
-        
+
         # Check if Ray was used (but don't fail the test if not)
         if hasattr(RayExecutor, "_ray_was_used"):
             print(f"Ray executor was used: {RayExecutor._ray_was_used}")
-        
+
     finally:
         # Print Ray status before shutdown for debugging
         print(f"Ray status before shutdown: initialized={ray.is_initialized()}")
-        
+
         # Clean up Ray resources
         if ray.is_initialized():
             ray.shutdown()
