@@ -38,10 +38,10 @@ graph TD
     User([User]) --> |"Intent & Datasets"| Model["Model Class"]
     
     subgraph "Multi-Agent System"
-        Model --> |build()| Orchestrator["Manager Agent<br>(Orchestrator)"]
-        Orchestrator --> |"Plan Task"| MLS["ML Research<br>Scientist"]
+        Model --> |build()| Orchestrator["Manager Agent\n(Orchestrator)"]
+        Orchestrator --> |"Plan Task"| MLS["ML Research\nScientist"]
         Orchestrator --> |"Implement Task"| MLE["ML Engineer"]
-        Orchestrator --> |"Create Inference Task"| MLOPS["ML Operations<br>Engineer"]
+        Orchestrator --> |"Create Inference Task"| MLOPS["ML Operations\nEngineer"]
         
         MLS --> |"Solution Plans"| Orchestrator
         MLE --> |"Training Code & Artifacts"| Orchestrator
