@@ -98,7 +98,7 @@ poetry install
 
 2. Activate the Poetry virtual environment
 ```
-poetry shell
+poetry env activate
 ```
 
 3. Check environment info and version
