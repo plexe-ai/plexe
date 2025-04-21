@@ -68,7 +68,6 @@ class PlexeAgent:
         ml_ops_engineer_model_id: str = "anthropic/claude-3-7-sonnet-20250219",
         verbose: bool = False,
         max_steps: int = 30,
-        distributed: bool = False,
     ):
         """
         Initialize the multi-agent ML engineering system.
@@ -77,7 +76,6 @@ class PlexeAgent:
             orchestrator_model_id: Model ID for the orchestrator agent
             verbose: Whether to display detailed agent logs
             max_steps: Maximum number of steps for the orchestrator agent
-            distributed: Whether to run the agents in a distributed environment
         """
         self.orchestrator_model_id = orchestrator_model_id
         self.ml_researcher_model_id = ml_researcher_model_id
@@ -85,7 +83,6 @@ class PlexeAgent:
         self.ml_ops_engineer_model_id = ml_ops_engineer_model_id
         self.verbose = verbose
         self.max_steps = max_steps
-        self.distributed = distributed
 
         # Set verbosity levels
         self.orchestrator_verbosity = 2 if verbose else 1
@@ -130,7 +127,7 @@ class PlexeAgent:
                 generate_training_code,
                 validate_training_code,
                 fix_training_code,
-                get_executor_tool(distributed),
+                get_executor_tool(),
                 format_final_mle_agent_response,
             ],
             add_base_tools=False,

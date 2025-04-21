@@ -17,7 +17,7 @@ def sample_dataset():
     X = np.random.randn(n_samples, 5)
     y = 2 + 3 * X[:, 0] + 0.5 * X[:, 1] - X[:, 2] + np.random.randn(n_samples) * 0.1
 
-    # Create a DataFrame with feature and target columns
+    # Create a DataFrame with feature and target columnsokay it passes
     df = pd.DataFrame(data=np.column_stack([X, y]), columns=[f"feature_{i}" for i in range(5)] + ["target"])
     return df
 
@@ -26,52 +26,75 @@ def test_model_with_ray(sample_dataset):
     """Test building a model with Ray-based distributed execution."""
     # Skip this test if no API key is available
     import os
+    import time
 
     if not os.environ.get("OPENAI_API_KEY"):
         pytest.skip("OpenAI API key not available")
 
-    # Ray is already initialized in the RayExecutor when needed
-
-    # Create a model with distributed=True
-    model = Model(intent="Predict the target variable given 5 numerical features", distributed=True)
-
-    # Set a short timeout for testing
-    model.build(
-        datasets=[sample_dataset],
-        provider="openai/gpt-4o-mini",
-        timeout=300,  # 5 minutes max
-        run_timeout=60,  # 1 minute per run
+    # Initialize Ray explicitly
+    import ray
+    
+    # Ensure Ray is not already running
+    if ray.is_initialized():
+        ray.shutdown()
+    
+    # Initialize with specific resources
+    ray.init(
+        num_cpus=2, 
+        num_gpus=0, 
+        ignore_reinit_error=True
     )
-
-    # Test a prediction
-    input_data = {f"feature_{i}": 0.5 for i in range(5)}
-    prediction = model.predict(input_data)
-
-    # Verify that prediction has expected structure
-    assert prediction is not None
-    assert "target" in prediction
-
-    # Verify that Ray was used in training
-    assert model.distributed
-
-    # Verify model built successfully
-    assert model.metric is not None
-
-    # Get executor classes
+    
+    # Import classes needed for assertions
     from plexe.internal.models.tools.execution import _get_executor_class
     from plexe.internal.models.execution.ray_executor import RayExecutor
+    
+    # Verify Ray is initialized
+    assert ray.is_initialized(), "Ray should be initialized before the test"
+    
+    # Verify the factory correctly detects Ray
+    executor_class = _get_executor_class()
+    assert executor_class == RayExecutor, "Ray executor should be selected when Ray is initialized"
+    
+    try:
+        # Create a model for testing (with shorter timeouts for testing)
+        model = Model(intent="Predict the target variable given 5 numerical features")
 
-    # Verify model has the distributed flag set
-    assert model.distributed, "Model should have distributed=True"
-
-    # Verify the factory would select RayExecutor when distributed=True
-    executor_class = _get_executor_class(distributed=True)
-    assert executor_class == RayExecutor, "Factory should return RayExecutor when distributed=True"
-
-    # The logs show Ray is being used, but the flag might not be set when checked
-    # Let's just print the status for diagnostics but not fail the test on it
-    print(f"Ray executor was used: {RayExecutor._ray_was_used}")
-
-    # Instead, verify our factory returns the right executor when asked
-    # The logs confirm Ray is actually used
-    assert _get_executor_class(distributed=True) == RayExecutor
+        # Set a shorter timeout for testing
+        model.build(
+            datasets=[sample_dataset],
+            provider="openai/gpt-4o-mini",
+            timeout=300,  # 5 minutes max
+            run_timeout=60,  # 1 minute per run
+        )
+        
+        # Check if Ray is still initialized after model build
+        if not ray.is_initialized():
+            print("Warning: Ray was shut down during model building, trying to reinitialize")
+            ray.init(num_cpus=2, num_gpus=0, ignore_reinit_error=True)
+        
+        # Test a prediction
+        input_data = {f"feature_{i}": 0.5 for i in range(5)}
+        prediction = model.predict(input_data)
+        
+        # Verify prediction worked
+        assert prediction is not None
+        assert "target" in prediction
+        
+        # Verify model built successfully
+        assert model.metric is not None
+        
+        # Check if Ray was used (but don't fail the test if not)
+        if hasattr(RayExecutor, "_ray_was_used"):
+            print(f"Ray executor was used: {RayExecutor._ray_was_used}")
+        
+    finally:
+        # Print Ray status before shutdown for debugging
+        print(f"Ray status before shutdown: initialized={ray.is_initialized()}")
+        
+        # Clean up Ray resources
+        if ray.is_initialized():
+            ray.shutdown()
+            print("Ray shutdown completed")
+        else:
+            print("Ray was already shut down")
