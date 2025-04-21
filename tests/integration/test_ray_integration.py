@@ -17,7 +17,7 @@ def sample_dataset():
     X = np.random.randn(n_samples, 5)
     y = 2 + 3 * X[:, 0] + 0.5 * X[:, 1] - X[:, 2] + np.random.randn(n_samples) * 0.1
 
-    # Create a DataFrame with feature and target columnsokay it passes
+    # Create a DataFrame with feature and target columns
     df = pd.DataFrame(data=np.column_stack([X, y]), columns=[f"feature_{i}" for i in range(5)] + ["target"])
     return df
 
