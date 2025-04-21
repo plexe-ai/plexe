@@ -10,7 +10,7 @@ license = "Apache-2.0"
 readme = "README.md"
 repository = "https://github.com/plexe-ai/plexe"
 homepage = "https://github.com/plexe-ai/plexe"
-packages = [{ include = "plexe" },{ include = "mlebench" }]
+packages = [{ include = "plexe" }]
 classifiers = [
     "Development Status :: 3 - Alpha",
     "Intended Audience :: Developers",
