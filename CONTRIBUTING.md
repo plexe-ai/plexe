@@ -69,13 +69,15 @@ To set up the development environment:
     WINDOWS
       - pip install poetry
       - poetry shell
-      - poetry env info && poetry --version
+      - poetry env info 
+      - poetry --version
       - python setup.py
 
     MAC
       - poetry install
       - poetry env activate
-      - poetry env info && poetry --version
+      - poetry env info
+      - poetry --version
       - python setup.py  
 
 
