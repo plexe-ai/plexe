@@ -66,14 +66,14 @@ To set up the development environment:
 
 2. **Install Dependencies**:
 
-    WINDOWS
+    Windows:
       - pip install poetry
       - poetry shell
       - poetry env info 
       - poetry --version
       - python setup.py
 
-    MAC
+    Mac:
       - poetry install
       - poetry env activate
       - poetry --version
