@@ -66,7 +66,7 @@ To set up the development environment:
 
 2. **Install Dependencies**:
 
-    *WINDOWS*
+    ***WINDOWS***
     1. pip install poetry
     2. poetry shell
     3. poetry env info && poetry --version
