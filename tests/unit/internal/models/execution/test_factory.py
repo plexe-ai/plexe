@@ -23,7 +23,6 @@ def test_get_executor_class_with_ray_initialized():
     ray_available = importlib.util.find_spec("ray") is not None
 
     if ray_available:
-        import ray
 
         # Create mock for Ray
         ray_mock = MagicMock()
@@ -44,7 +43,6 @@ def test_get_executor_class_with_ray_not_initialized():
     ray_available = importlib.util.find_spec("ray") is not None
 
     if ray_available:
-        import ray
 
         # Create mock for Ray with no configuration
         ray_mock = MagicMock()
@@ -70,7 +68,6 @@ def test_get_executor_class_with_ray_config_fallback():
     ray_available = importlib.util.find_spec("ray") is not None
 
     if ray_available:
-        import ray
 
         # Create mock for Ray with no initialization
         ray_mock = MagicMock()

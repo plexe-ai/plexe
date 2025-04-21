@@ -6,7 +6,6 @@ Test script for Ray configuration and execution.
 import logging
 import sys
 from pathlib import Path
-import os
 
 # Add the project root to the path
 root_dir = Path(__file__).resolve().parent.parent
@@ -39,7 +38,7 @@ config_module.config.ray = test_ray_config
 
 # Now import our code that uses the config
 from plexe.internal.models.tools.execution import _get_executor_class
-from plexe.internal.models.tools.hardware import get_gpu_info, get_ray_info
+from plexe.internal.models.tools.hardware import get_ray_info
 
 # Set up logging
 logging.basicConfig(level=logging.INFO, format="%(message)s")

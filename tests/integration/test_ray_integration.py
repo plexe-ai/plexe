@@ -26,7 +26,6 @@ def test_model_with_ray(sample_dataset):
     """Test building a model with Ray-based distributed execution."""
     # Skip this test if no API key is available
     import os
-    import time
 
     if not os.environ.get("OPENAI_API_KEY"):
         pytest.skip("OpenAI API key not available")
