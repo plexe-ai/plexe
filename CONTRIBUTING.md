@@ -76,7 +76,6 @@ To set up the development environment:
     MAC
       - poetry install
       - poetry env activate
-      - poetry env info
       - poetry --version
       - python setup.py  
 
