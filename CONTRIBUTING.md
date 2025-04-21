@@ -93,7 +93,7 @@ python setup.py
 
 1. Install Poetry (if not installed)
 ```
-pip install poetry
+poetry install
 ```
 
 2. Activate the Poetry virtual environment
