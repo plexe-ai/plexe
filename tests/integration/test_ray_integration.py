@@ -22,6 +22,9 @@ def sample_dataset():
     return df
 
 
+# No need for ray_config fixture anymore, we'll use the new parameter
+
+
 def test_model_with_ray(sample_dataset):
     """Test building a model with Ray-based distributed execution."""
     # Skip this test if no API key is available
@@ -30,18 +33,28 @@ def test_model_with_ray(sample_dataset):
     if not os.environ.get("OPENAI_API_KEY"):
         pytest.skip("OpenAI API key not available")
 
-    # Ray is already initialized in the RayExecutor when needed
+    # Initialize Ray explicitly
+    import ray
+    
+    if ray.is_initialized():
+        ray.shutdown()
+    
+    ray.init(num_cpus=2, num_gpus=0, ignore_reinit_error=True)
+    
+    try:
+        # Create a model for testing
+        model = Model(intent="Predict the target variable given 5 numerical features")
 
-    # Create a model with distributed=True
-    model = Model(intent="Predict the target variable given 5 numerical features", distributed=True)
-
-    # Set a short timeout for testing
-    model.build(
-        datasets=[sample_dataset],
-        provider="openai/gpt-4o-mini",
-        timeout=300,  # 5 minutes max
-        run_timeout=60,  # 1 minute per run
-    )
+        # Set a short timeout for testing
+        model.build(
+            datasets=[sample_dataset],
+            provider="openai/gpt-4o-mini",
+            timeout=300,  # 5 minutes max
+            run_timeout=60,  # 1 minute per run
+        )
+    finally:
+        # Clean up Ray resources
+        ray.shutdown()
 
     # Test a prediction
     input_data = {f"feature_{i}": 0.5 for i in range(5)}
@@ -51,9 +64,6 @@ def test_model_with_ray(sample_dataset):
     assert prediction is not None
     assert "target" in prediction
 
-    # Verify that Ray was used in training
-    assert model.distributed
-
     # Verify model built successfully
     assert model.metric is not None
 
@@ -61,17 +71,10 @@ def test_model_with_ray(sample_dataset):
     from plexe.internal.models.tools.execution import _get_executor_class
     from plexe.internal.models.execution.ray_executor import RayExecutor
 
-    # Verify model has the distributed flag set
-    assert model.distributed, "Model should have distributed=True"
-
-    # Verify the factory would select RayExecutor when distributed=True
-    executor_class = _get_executor_class(distributed=True)
-    assert executor_class == RayExecutor, "Factory should return RayExecutor when distributed=True"
+    # Verify the factory would select RayExecutor with our config
+    executor_class = _get_executor_class()
+    assert executor_class == RayExecutor, "Factory should return RayExecutor when Ray is configured"
 
     # The logs show Ray is being used, but the flag might not be set when checked
     # Let's just print the status for diagnostics but not fail the test on it
     print(f"Ray executor was used: {RayExecutor._ray_was_used}")
-
-    # Instead, verify our factory returns the right executor when asked
-    # The logs confirm Ray is actually used
-    assert _get_executor_class(distributed=True) == RayExecutor
