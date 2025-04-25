@@ -66,18 +66,9 @@ To set up the development environment:
 
 2. **Install Dependencies**:
 
-    Windows:
-      - pip install poetry
-      - poetry shell
-      - poetry env info 
-      - poetry --version
-      - python setup.py
-
-    Mac:
-      - poetry install
-      - poetry env activate
-      - poetry --version
-      - python setup.py  
+  -pip install poetry
+  -poetry env activate or poetry shell depending on the Poetry version being used
+  -python setup.py
 
 
 3. **Run Tests**:
