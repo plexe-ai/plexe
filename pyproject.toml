@@ -58,6 +58,7 @@ transformers = { version = "4.35.2", optional = true }
 tokenizers = { version = "^0.15.1", optional = true }
 accelerate = { version = "0.24.1", optional = true }
 safetensors = { version = "^0.4.1", optional = true }
+gradio = "^5.26.0"
 
 [tool.poetry.extras]
 all = ["torch", "transformers", "tokenizers", "accelerate", "safetensors"]
