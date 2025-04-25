@@ -150,6 +150,9 @@ class PlexeUI:
         """
 
         with gr.Blocks(theme=UI_THEME, title="Plexe Chat", fill_width=True) as demo:
+            # Session state to store persistent agent instance
+            session_state = gr.State({})
+            
             gr.HTML("<h1 style='text-align: center; margin-bottom: 1rem;'>Plexe: Build ML Models with Chat</h1>")
 
             with gr.Row(equal_height=True, height="85vh"):
@@ -187,68 +190,73 @@ class PlexeUI:
             # Set up event handlers
             send_btn.click(
                 self.handle_message,
-                inputs=[msg_input, self.chatbot],
+                inputs=[msg_input, self.chatbot, session_state],
                 outputs=[msg_input, self.chatbot, self.cot_output],
-                show_progress=True,
+                show_progress="minimal",
             )
 
             msg_input.submit(
                 self.handle_message,
-                inputs=[msg_input, self.chatbot],
+                inputs=[msg_input, self.chatbot, session_state],
                 outputs=[msg_input, self.chatbot, self.cot_output],
-                show_progress=True,
+                show_progress="minimal",
             )
 
         return demo
 
-    def handle_message(self, message: str, history: List[Dict[str, str]]) -> tuple:
+    def handle_message(self, message: str, history: List[Dict[str, str]], session_state: dict):
         """
-        Handle a user message.
-        
+        Handle a user message with persistent session state.
+
         Args:
             message: The user message
             history: The chat history in the message format (list of dicts with 'role' and 'content')
-            
+            session_state: Dictionary to store persistent state across messages
+
         Returns:
-            Tuple of (empty message, updated history, updated CoT logs)
+            Generator for tuple of (empty message, updated history, updated CoT logs)
         """
         if not message.strip():
-            return "", history, self.emitter.get_logs()
+            yield "", history, self.emitter.get_logs()
+            return
 
-        # Add user message to history immediately using the messages format
-        # Check if history is None and initialize if needed
         if history is None:
             history = []
 
-        # Add user message
+        # 1. Add user message and yield immediately
         history.append({"role": "user", "content": message})
+        yield "", history, self.emitter.get_logs()
 
-        # Get response from agent
         try:
-            # Process the message with the agent to get the result
-            step_result = self.agent.run(message)
+            # Ensure persistent agent in this session
+            if "agent" not in session_state:
+                session_state["agent"] = self.agent  # Store agent in session state
 
+            agent = session_state["agent"]  # Use session-specific agent
+
+            # Construct prompt from full history
+            prompt = "\n".join(f"{m['role'].capitalize()}: {m['content']}" for m in history)
+
+            # 2. Run agent with full conversation history
+            step_result = agent.run(prompt)
             history.append({"role": "assistant", "content": step_result})
 
         except Exception as e:
             import traceback
             error_traceback = traceback.format_exc()
 
-            # Add error response in the messages format
             error_message = f"Error: {str(e)}"
             history.append({"role": "assistant", "content": error_message})
 
-            # Log the error to the chain of thought, but keep it concise
             self.emitter.emit_thought("System", f"Error: {str(e)}")
-            # Log just the first few lines of the traceback to avoid overwhelming the UI
             short_traceback = "\n".join(error_traceback.split("\n")[:10])
             if len(error_traceback.split("\n")) > 10:
                 short_traceback += "\n... (traceback truncated)"
             self.emitter.emit_thought("System", f"Details: {short_traceback}")
-            # Full traceback to console
             print(f"Error in agent: {error_traceback}")
 
-        return "", history, self.emitter.get_logs()
+        # 3. Yield final history + CoT
+        yield "", history, self.emitter.get_logs()
 
     @staticmethod
     def update_cot(logs: str) -> str:
