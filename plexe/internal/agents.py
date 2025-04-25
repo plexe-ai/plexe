@@ -174,6 +174,7 @@ class PlexeAgent:
 
         # Create orchestrator agent - coordinates the workflow
         self.manager_agent = CodeAgent(
+            name="Orchestrator",
             model=LiteLLMModel(model_id=self.orchestrator_model_id),
             tools=[
                 select_target_metric,

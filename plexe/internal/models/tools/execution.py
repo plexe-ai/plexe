@@ -52,7 +52,7 @@ def get_executor_tool(distributed: bool = False) -> Callable:
             A dictionary containing execution results with model artifacts and their registry names
         """
         # Log the distributed flag
-        logger.info(f"execute_training_code called with distributed={distributed}")
+        logger.debug(f"execute_training_code called with distributed={distributed}")
 
         from plexe.callbacks import BuildStateInfo
 
@@ -102,7 +102,7 @@ def get_executor_tool(distributed: bool = False) -> Callable:
             executor_class = _get_executor_class(distributed=distributed)
 
             # Create an instance of the executor
-            logger.info(f"Creating {executor_class.__name__} for execution ID: {execution_id}")
+            logger.debug(f"Creating {executor_class.__name__} for execution ID: {execution_id}")
             executor = executor_class(
                 execution_id=execution_id,
                 code=code,
@@ -227,13 +227,13 @@ def _get_executor_class(distributed: bool = False) -> Type:
         Executor class (not instance) appropriate for the environment
     """
     # Log the distributed flag
-    logger.info(f"get_executor_class using distributed={distributed}")
+    logger.debug(f"get_executor_class using distributed={distributed}")
     if distributed:
         try:
             # Try to import Ray executor
             from plexe.internal.models.execution.ray_executor import RayExecutor
 
-            logger.info("Using Ray for distributed execution")
+            logger.debug("Using Ray for distributed execution")
             return RayExecutor
         except ImportError:
             # Fall back to process executor if Ray is not available
@@ -241,5 +241,5 @@ def _get_executor_class(distributed: bool = False) -> Type:
             return ProcessExecutor
 
     # Default to ProcessExecutor for non-distributed execution
-    logger.info("Using ProcessExecutor (non-distributed)")
+    logger.debug("Using ProcessExecutor (non-distributed)")
     return ProcessExecutor

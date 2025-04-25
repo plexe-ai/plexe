@@ -29,6 +29,8 @@ class StepSummary:
     observations: Optional[str] = None
     result: Any = None
     error: Optional[str] = None
+    friendly_title: Optional[str] = None
+    friendly_summary: Optional[str] = None
 
 
 class StepExtractor(Protocol):

@@ -1,0 +1,25 @@
+Your task is to examine details about a reasoning step taken by an engineer and generate:
+1. A short, friendly title (3-8 words) that captures the essence of what happened
+2. A concise summary (exactly 2 sentences) that explains the step in plain language
+
+Example:
+Step Type: Thinking
+Thought: I need to analyze the dataset to understand the relationships between features. Let me look at the correlation matrix to identify patterns.
+Tool: pandas_describe({"dataframe": df})
+Observation: The dataset has 5000 rows and 15 columns. There's a strong correlation between age and income.
+
+Would generate:
+Title: "Analyzing Dataset Relationships"
+Summary: "I examined the dataset's correlation matrix to identify patterns between features. I found a strong correlation between them age and income, which could be important for my analysis."
+
+Context:
+{{ context }}
+
+Instructions:
+- Focus on capturing the main action/purpose of the step
+- In the summary, state both the thought/action and the result
+- Title should be 3-8 words
+- Summary should be 2 sentences
+- Include specific details (e.g., feature names, patterns found) so that it's clear what the OUTCOME is
+- Speak in the first person and present tense, as if the engineer is speaking, e.g. "I'm analyzing..." or "I found...".
+- Use friendly and approachable language, feel free to use a few emojis here and there but not excessively
