@@ -28,7 +28,7 @@
 - **Linting**: Ruff with E203/E501/E402 ignored
 - **Typing**: Use type hints and Pydantic models
 - **Naming**: snake_case (functions/vars), CamelCase (classes)
-- **Imports**: Group stdlib, third-party, then local imports; always import at the top of the file
+- **Imports**: Group stdlib, third-party, then local imports; NO LOCAL IMPORTS, always import at the top of the file
 - **__init__.py**: No code in __init__.py files except in plexe/__init__.py for convenience
 - **Docstrings**: Required for public modules/classes/functions; Sphinx style without type hints
 - **Testing**: Write pytest tests for all new functionality
