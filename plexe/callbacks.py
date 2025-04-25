@@ -9,12 +9,14 @@ or other operations to be performed at key points.
 import logging
 from abc import ABC
 from dataclasses import dataclass
-from typing import Optional, Type, Dict
+from typing import Optional, Type, Dict, List
 
 from pydantic import BaseModel
 
 from plexe.internal.common.datasets.interface import TabularConvertible
 from plexe.internal.models.entities.node import Node
+from plexe.internal.common.utils.chain_of_thought.callable import ChainOfThoughtCallable
+from plexe.internal.common.utils.chain_of_thought.emitters import ConsoleEmitter
 
 logger = logging.getLogger(__name__)
 
@@ -96,11 +98,92 @@ class Callback(ABC):
         pass
 
 
-# At the end of callbacks.py
+class ChainOfThoughtModelCallback(Callback):
+    """
+    Callback that captures and formats the chain of thought for model building.
+    
+    This callback bridges between the Plexe callback system and the
+    chain of thought callback system.
+    """
+    
+    def __init__(self, emitter=None):
+        """
+        Initialize the chain of thought model callback.
+        
+        Args:
+            emitter: The emitter to use for chain of thought output
+        """
+        
+        self.cot_callback = ChainOfThoughtCallable(emitter=emitter or ConsoleEmitter())
+        
+    def on_build_start(self, info: BuildStateInfo) -> None:
+        """
+        Reset the chain of thought at the beginning of the build process.
+        """
+        self.cot_callback.clear()
+        self.cot_callback.emitter.emit_thought(
+            "ModelBuilder",
+            f"🚀 Starting model build for intent: {info.intent[:100]}..."
+        )
+        
+    def on_build_end(self, info: BuildStateInfo) -> None:
+        """
+        Emit completion message at the end of the build process.
+        """
+        self.cot_callback.emitter.emit_thought(
+            "ModelBuilder",
+            "✅ Model build completed"
+        )
+        
+    def on_iteration_start(self, info: BuildStateInfo) -> None:
+        """
+        Emit iteration start message.
+        """
+        self.cot_callback.emitter.emit_thought(
+            "ModelBuilder",
+            f"📊 Starting iteration {info.iteration + 1}"
+        )
+        
+    def on_iteration_end(self, info: BuildStateInfo) -> None:
+        """
+        Emit iteration end message with performance metrics.
+        """
+        if info.node and info.node.performance:
+            self.cot_callback.emitter.emit_thought(
+                "ModelBuilder",
+                f"📋 Iteration {info.iteration + 1} completed: {info.node.performance.name}={info.node.performance.value}"
+            )
+        else:
+            self.cot_callback.emitter.emit_thought(
+                "ModelBuilder",
+                f"📋 Iteration {info.iteration + 1} completed"
+            )
+    
+    def get_chain_of_thought_callback(self):
+        """
+        Get the underlying chain of thought callback.
+        
+        Returns:
+            The chain of thought callback used by this model callback
+        """
+        return self.cot_callback
+    
+    def get_full_chain_of_thought(self) -> List:
+        """
+        Get the full chain of thought captured during model building.
+        
+        Returns:
+            The list of steps in the chain of thought
+        """
+        return self.cot_callback.get_full_chain_of_thought()
+
+
+# Import at the end to avoid circular dependencies
 from plexe.internal.models.callbacks.mlflow import MLFlowCallback
 
 __all__ = [
     "Callback",
     "BuildStateInfo",
     "MLFlowCallback",
+    "ChainOfThoughtModelCallback",
 ]
