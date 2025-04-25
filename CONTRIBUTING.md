@@ -65,10 +65,12 @@ To set up the development environment:
     ```
 
 2. **Install Dependencies**:
-
-  -pip install poetry
-  -poetry env activate or poetry shell depending on the Poetry version being used
-  -python setup.py
+    
+    ```
+   -pip install poetry 
+   -poetry env activate or poetry shell depending on the Poetry version being used 
+   -python setup.py
+   ```
 
 
 3. **Run Tests**:
