@@ -7,7 +7,7 @@ and interactively through a Gradio UI.
 
 import types
 import logging
-from typing import List, Dict
+from typing import List, Dict, Optional, Any
 from dataclasses import dataclass, field
 
 from smolagents import CodeAgent, LiteLLMModel, ToolCallingAgent
@@ -69,15 +69,20 @@ class PlexeAgent:
         verbose: bool = False,
         max_steps: int = 30,
         distributed: bool = False,
+        chain_of_thought_callback: Optional[Any] = None,
     ):
         """
         Initialize the multi-agent ML engineering system.
 
         Args:
             orchestrator_model_id: Model ID for the orchestrator agent
+            ml_researcher_model_id: Model ID for the ML researcher agent
+            ml_engineer_model_id: Model ID for the ML engineer agent
+            ml_ops_engineer_model_id: Model ID for the ML ops engineer agent
             verbose: Whether to display detailed agent logs
             max_steps: Maximum number of steps for the orchestrator agent
             distributed: Whether to run the agents in a distributed environment
+            chain_of_thought_callback: Optional callback for chain of thought logging
         """
         self.orchestrator_model_id = orchestrator_model_id
         self.ml_researcher_model_id = ml_researcher_model_id
@@ -86,10 +91,11 @@ class PlexeAgent:
         self.verbose = verbose
         self.max_steps = max_steps
         self.distributed = distributed
+        self.chain_of_thought_callback = chain_of_thought_callback
 
         # Set verbosity levels
-        self.orchestrator_verbosity = 2 if verbose else 1
-        self.specialist_verbosity = 1 if verbose else 1
+        self.orchestrator_verbosity = 2 if verbose else 0
+        self.specialist_verbosity = 1 if verbose else 0
 
         # Create solution planner agent - plans ML approaches
         self.ml_research_agent = ToolCallingAgent(
@@ -108,6 +114,7 @@ class PlexeAgent:
             add_base_tools=False,
             verbosity_level=self.specialist_verbosity,
             prompt_templates=get_prompt_templates("toolcalling_agent.yaml", "mls_prompt_templates.yaml"),
+            step_callbacks=[self.chain_of_thought_callback]
         )
 
         # Create model trainer agent - implements training code
@@ -136,6 +143,7 @@ class PlexeAgent:
             add_base_tools=False,
             verbosity_level=self.specialist_verbosity,
             prompt_templates=get_prompt_templates("toolcalling_agent.yaml", "mle_prompt_templates.yaml"),
+            step_callbacks=[self.chain_of_thought_callback],
         )
 
         # Create predictor builder agent - creates inference code
@@ -161,6 +169,7 @@ class PlexeAgent:
             verbosity_level=self.specialist_verbosity,
             prompt_templates=get_prompt_templates("toolcalling_agent.yaml", "mlops_prompt_templates.yaml"),
             planning_interval=8,
+            step_callbacks=[self.chain_of_thought_callback],
         )
 
         # Create orchestrator agent - coordinates the workflow
@@ -180,6 +189,7 @@ class PlexeAgent:
             max_steps=self.max_steps,
             prompt_templates=get_prompt_templates("code_agent.yaml", "manager_prompt_templates.yaml"),
             planning_interval=7,
+            step_callbacks=[self.chain_of_thought_callback],
         )
 
     def run(self, task, additional_args: dict) -> ModelGenerationResult:
