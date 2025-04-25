@@ -91,7 +91,7 @@ class ChainOfThoughtCallable:
             # Emit friendly step header with title
             self.emitter.emit_thought(
                 summary.agent_name, 
-                f"💡 {summary.friendly_title}\n💭 {summary.friendly_summary}"
+                f"💡 {summary.friendly_title}\n💭 {summary.friendly_summary}\n"
             )
             return
             
