@@ -13,6 +13,13 @@ from plexe.internal.common.utils.chain_of_thought.callable import ChainOfThought
 from plexe.internal.common.utils.chain_of_thought.emitters import ChainOfThoughtEmitter
 
 
+UI_THEME = gr.themes.Soft(
+    primary_hue="pink",
+    secondary_hue="blue",
+    neutral_hue="neutral"
+)
+
+
 class GradioEmitter(ChainOfThoughtEmitter):
     """Emitter that captures chain of thought for display in the Gradio UI."""
 
@@ -141,51 +148,38 @@ class PlexeUI:
         Returns:
             Gradio Blocks instance
         """
-        with gr.Blocks(theme=gr.themes.Soft(), title="Plexe Chat") as demo:
-            with gr.Row():
-                gr.Markdown("# Plexe: Build ML Models with Chat")
 
-            with gr.Row(equal_height=True):
+        with gr.Blocks(theme=UI_THEME, title="Plexe Chat", fill_width=True) as demo:
+            gr.HTML("<h1 style='text-align: center; margin-bottom: 1rem;'>Plexe: Build ML Models with Chat</h1>")
+
+            with gr.Row(equal_height=True, height="85vh"):
                 # Column 1: Chat Interface
-                with gr.Column(scale=2):  # Make chat wider
-                    gr.Markdown("### 💬 Chat")
+                with gr.Column(scale=1):  # Make chat wider
                     self.chatbot = gr.Chatbot(
-                        label="",
+                        label="💬 Chat",
                         bubble_full_width=False,
-                        height=550,
+                        elem_id="chatbot",
+                        scale=1,
+                        height="85vh",
                         type="messages"  # Fix the deprecation warning
                     )
 
                     with gr.Row():
                         msg_input = gr.Textbox(
-                            label="Your Message",
                             placeholder="Describe the model you want to build or ask a question...",
-                            scale=7  # Make textbox take most width in its row
+                            scale=7,  # Make textbox take most width in its row
+                            container=False
                         )
                         send_btn = gr.Button("Send", scale=1)
 
-                    # Add clear button for chat
-                    with gr.Row():
-                        clear_btn = gr.ClearButton([msg_input, self.chatbot], value="Clear Chat")
-                        # Only clear the CoT when we have the reference to cot_output
-
                 # Column 2: Chain of Thought
                 with gr.Column(scale=1):  # Make CoT narrower
-                    gr.Markdown("### 🧠 Agent Chain of Thought")
                     self.cot_output = gr.Textbox(
-                        label="",
+                        label="🧠 Agent Thoughts",
                         interactive=False,
-                        lines=30,  # Adjust height as needed
-                        max_lines=30,
-                        autoscroll=True
+                        autoscroll=True,
+                        scale=1,
                     )
-
-                    with gr.Row():
-                        clear_cot_btn = gr.Button("Clear Chain of Thought")
-                        clear_cot_btn.click(self.clear_cot, inputs=None, outputs=[self.cot_output])
-
-            # Now add the callback for the clear chat button after cot_output is defined
-            clear_btn.click(self.clear_cot, inputs=None, outputs=[self.cot_output])
 
             # Subscribe the CoT output to the emitter
             self.emitter.subscribe(self.update_cot)
