@@ -53,7 +53,7 @@ class MLFlowCallback(Callback):
 
             os.environ["MLFLOW_HTTP_REQUEST_TIMEOUT"] = str(self.connect_timeout)
             mlflow.set_tracking_uri(tracking_uri)
-            logger.info(f"✅  MLFlow configured with tracking URI '{tracking_uri}'")
+            logger.debug(f"✅  MLFlow configured with tracking URI '{tracking_uri}'")
 
         except Exception as e:
             raise RuntimeError(f"❌  Error setting up MLFlow: {e}") from e
@@ -70,7 +70,8 @@ class MLFlowCallback(Callback):
             self.experiment_id = mlflow.create_experiment(self.experiment_name)
         else:
             self.experiment_id = experiment.experiment_id
-        logger.info(f"✅  MLFlow configured with experiment '{self.experiment_name}' (ID: {self.experiment_id})")
+        logger.debug(f"✅  MLFlow configured with experiment '{self.experiment_name}' (ID: {self.experiment_id})")
+        print(f"✅  MLFlow: tracking URI '{self.tracking_uri}', experiment '{self.experiment_name}'")
         # TODO: Start an MLFlow parent run
 
     def on_build_end(self, info: BuildStateInfo) -> None:
@@ -99,7 +100,7 @@ class MLFlowCallback(Callback):
             run_name=run_name,
             experiment_id=self.experiment_id,
         )
-        logger.info(f"✅  Started MLFlow run: {run_name}")
+        logger.debug(f"✅  Started MLFlow run: {run_name}")
 
         # Log training datasets used
         for name, data in info.datasets.items():
@@ -164,7 +165,7 @@ class MLFlowCallback(Callback):
                     try:
                         mlflow.log_artifact(str(artifact))
                     except Exception as e:
-                        logger.warning(f"Could not log artifact {artifact}: {e}")
+                        logger.debug(f"Could not log artifact {artifact}: {e}")
 
         try:
             is_failed = (
@@ -172,7 +173,7 @@ class MLFlowCallback(Callback):
             )
             mlflow.end_run(status="FAILED" if is_failed else "FINISHED")
         except Exception as e:
-            logger.warning(f"Error ending MLFlow run: {e}")
+            logger.debug(f"Error ending MLFlow run: {e}")
 
     @staticmethod
     def _log_metric(metric: Metric, prefix: str = "", step: int = None) -> None:
@@ -196,6 +197,6 @@ class MLFlowCallback(Callback):
                 else:
                     mlflow.log_metric(metric_name, value)
             except (ValueError, TypeError) as e:
-                logger.warning(f"Could not convert metric {metric.name} value to float: {e}")
+                logger.debug(f"Could not convert metric {metric.name} value to float: {e}")
                 # Try to log as tag instead
                 mlflow.set_tag("performance_is_invalid", True)

@@ -86,30 +86,36 @@ class ChainOfThoughtCallable:
         Args:
             summary: The step summary to emit
         """
-        # If we have friendly title and summary, emit those
+        # If we have friendly title and summary, emit those in a consolidated message
         if summary.friendly_title and summary.friendly_summary:
-            # Emit friendly step header with title
+            # Emit friendly step header with title and summary together
+            # This ensures they appear as a single node in the tree
             self.emitter.emit_thought(
                 summary.agent_name, 
-                f"💡 {summary.friendly_title}\n💭 {summary.friendly_summary}\n"
+                f"💡 {summary.friendly_title}\n💭 {summary.friendly_summary}"
             )
             return
             
         # Fall back to verbose output if friendly version not available
-        # Emit step header
-        self.emitter.emit_thought(
-            summary.agent_name, 
-            f"🧠 {summary.step_type} #{summary.step_number}"
-        )
         
-        # Emit model output if available
+        # Emit step header
+        step_header = f"🧠 {summary.step_type}"
+        if summary.step_number is not None:
+            step_header += f" #{summary.step_number}"
+            
+        self.emitter.emit_thought(summary.agent_name, step_header)
+        
+        # Emit model output separately if available
         if summary.model_output:
+            thought_text = summary.model_output[:500]
+            if len(summary.model_output) > 500:
+                thought_text += "..."
             self.emitter.emit_thought(
                 summary.agent_name,
-                f"💭 Thought: {summary.model_output[:200]}{'...' if len(summary.model_output) > 200 else ''}"
+                f"💭 Thought: {thought_text}"
             )
         
-        # Emit tool calls
+        # Emit tool calls one by one for better visualization
         for call in summary.tool_calls:
             self.emitter.emit_thought(
                 summary.agent_name,
@@ -118,16 +124,22 @@ class ChainOfThoughtCallable:
         
         # Emit observations
         if summary.observations:
+            observation_text = summary.observations[:500]
+            if len(summary.observations) > 500:
+                observation_text += "..."
             self.emitter.emit_thought(
                 summary.agent_name,
-                f"📡 Observed: {summary.observations[:200]}{'...' if len(summary.observations) > 200 else ''}"
+                f"📡 Observed: {observation_text}"
             )
         
         # Emit result
         if summary.result:
+            result_text = str(summary.result)[:500]
+            if len(str(summary.result)) > 500:
+                result_text += "..."
             self.emitter.emit_thought(
                 summary.agent_name,
-                f"📦 Result: {str(summary.result)[:200]}{'...' if len(str(summary.result)) > 200 else ''}"
+                f"📦 Result: {result_text}"
             )
         
         # Emit error if any

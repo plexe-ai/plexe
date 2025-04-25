@@ -122,8 +122,8 @@ class ChainOfThoughtModelCallback(Callback):
         """
         self.cot_callback.clear()
         self.cot_callback.emitter.emit_thought(
-            "ModelBuilder",
-            f"🚀 Starting model build for intent: {info.intent[:100]}..."
+            "System",
+            f"🚀 Starting model build for intent: {info.intent[:40]}..."
         )
         
     def on_build_end(self, info: BuildStateInfo) -> None:
@@ -131,7 +131,7 @@ class ChainOfThoughtModelCallback(Callback):
         Emit completion message at the end of the build process.
         """
         self.cot_callback.emitter.emit_thought(
-            "ModelBuilder",
+            "System",
             "✅ Model build completed"
         )
         
@@ -140,7 +140,7 @@ class ChainOfThoughtModelCallback(Callback):
         Emit iteration start message.
         """
         self.cot_callback.emitter.emit_thought(
-            "ModelBuilder",
+            "System",
             f"📊 Starting iteration {info.iteration + 1}"
         )
         
@@ -150,13 +150,13 @@ class ChainOfThoughtModelCallback(Callback):
         """
         if info.node and info.node.performance:
             self.cot_callback.emitter.emit_thought(
-                "ModelBuilder",
+                "System",
                 f"📋 Iteration {info.iteration + 1} completed: {info.node.performance.name}={info.node.performance.value}"
             )
         else:
             self.cot_callback.emitter.emit_thought(
-                "ModelBuilder",
-                f"📋 Iteration {info.iteration + 1} completed"
+                "System",
+                f"📋 Iteration {info.iteration + 1} failed: No performance metrics available"
             )
     
     def get_chain_of_thought_callback(self):

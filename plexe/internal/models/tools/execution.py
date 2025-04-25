@@ -220,9 +220,6 @@ def get_executor_tool(distributed: bool = False) -> Callable:
             import traceback
             logger.debug(f"Error executing training code: {str(e)}\n{traceback.format_exc()}")
             
-            # Log a shorter message at error level
-            logger.error(f"Error executing training code: {str(e)[:50]}")
-            
             return {
                 "success": False,
                 "performance": None,
