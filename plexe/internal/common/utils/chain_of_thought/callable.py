@@ -72,7 +72,12 @@ class ChainOfThoughtCallable:
             self._emit_step(summary)
             
         except Exception as e:
-            logger.warning(f"Error processing agent step: {str(e)}")
+            # Log full stack trace at debug level
+            import traceback
+            logger.debug(f"Error processing agent step: {str(e)}\n{traceback.format_exc()}")
+            
+            # Log a shorter message at warning level
+            logger.warning(f"Error processing agent step: {str(e)[:50]}")
     
     def _emit_step(self, summary: StepSummary) -> None:
         """
@@ -200,5 +205,11 @@ def _generate_friendly_summary(summary: StepSummary) -> Tuple[str, str]:
         response_data = json.loads(response)
         return response_data["title"], response_data["summary"]
     except Exception as e:
-        logger.warning(f"Error generating friendly summary: {str(e)}")
+        # Log full stack trace at debug level
+        import traceback
+        logger.debug(f"Error generating friendly summary: {str(e)}\n{traceback.format_exc()}")
+        
+        # Log shorter message at warning level
+        logger.warning(f"Error generating friendly summary: {str(e)[:50]}")
+        
         return f"{summary.step_type}", f"Step {summary.step_number or 0} of type {summary.step_type}"

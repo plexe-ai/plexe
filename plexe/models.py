@@ -249,7 +249,12 @@ class Model:
                         )
                     )
                 except Exception as e:
-                    logger.warning(f"Error in callback {callback.__class__.__name__}.on_build_start: {e}")
+                    # Log full stack trace at debug level
+                    import traceback
+                    logger.debug(f"Error in callback {callback.__class__.__name__}.on_build_start: {e}\n{traceback.format_exc()}")
+                    
+                    # Log a shorter message at warning level
+                    logger.warning(f"Error in callback {callback.__class__.__name__}.on_build_start: {str(e)[:50]}")
 
             # Step 3: generate model
             # Start the model generation run
@@ -305,7 +310,12 @@ class Model:
                         )
                     )
                 except Exception as e:
-                    logger.warning(f"Error in callback {callback.__class__.__name__}.on_build_end: {e}")
+                    # Log full stack trace at debug level
+                    import traceback
+                    logger.debug(f"Error in callback {callback.__class__.__name__}.on_build_end: {e}\n{traceback.format_exc()}")
+                    
+                    # Log a shorter message at warning level
+                    logger.warning(f"Error in callback {callback.__class__.__name__}.on_build_end: {str(e)[:50]}")
 
             # Step 4: update model state and attributes
             self.trainer_source = generated.training_source_code
@@ -339,11 +349,21 @@ class Model:
                         )
                     )
                 except Exception as e:
-                    logger.warning(f"Error in callback {callback.__class__.__name__}.on_build_end: {e}")
+                    # Log full stack trace at debug level
+                    import traceback
+                    logger.debug(f"Error in callback {callback.__class__.__name__}.on_build_end: {e}\n{traceback.format_exc()}")
+                    
+                    # Log a shorter message at warning level
+                    logger.warning(f"Error in callback {callback.__class__.__name__}.on_build_end: {str(e)[:50]}")
 
         except Exception as e:
             self.state = ModelState.ERROR
-            logger.error(f"Error during model building: {str(e)}")
+            # Log full stack trace at debug level
+            import traceback
+            logger.debug(f"Error during model building: {str(e)}\n{traceback.format_exc()}")
+            
+            # Log a shorter message at error level
+            logger.error(f"Error during model building: {str(e)[:50]}")
             raise e
 
     def predict(self, x: Dict[str, Any], validate_input: bool = False, validate_output: bool = False) -> Dict[str, Any]:
