@@ -51,7 +51,7 @@ def split_datasets(
     validation_dataset_names = []
     test_dataset_names = []
 
-    logger.info("🔪 Splitting datasets into train, validation, and test sets")
+    logger.debug("🔪 Splitting datasets into train, validation, and test sets")
     for name in datasets:
         dataset = object_registry.get(TabularConvertible, name)
         train_ds, val_ds, test_ds = dataset.split(train_ratio=train_ratio, val_ratio=val_ratio, test_ratio=test_ratio)
@@ -70,7 +70,7 @@ def split_datasets(
         validation_dataset_names.append(val_name)
         test_dataset_names.append(test_name)
 
-        logger.info(
+        logger.debug(
             f"✅ Split dataset {name} into train/validation/test with sizes "
             f"{len(train_ds)}/{len(val_ds)}/{len(test_ds)}"
         )
@@ -116,7 +116,7 @@ def create_input_sample(train_dataset_names: List[str], input_schema_fields: Lis
 
         # Register the input sample in the registry for validation tool to use
         object_registry.register(pd.DataFrame, "predictor_input_sample", input_sample_df)
-        logger.info(f"✅ Registered input sample with {len(input_sample_df)} rows for inference validation")
+        logger.debug(f"✅ Registered input sample with {len(input_sample_df)} rows for inference validation")
         return True
 
     except Exception as e:
