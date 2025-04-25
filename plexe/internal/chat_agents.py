@@ -145,3 +145,15 @@ class ChatPlexeAgent:
             max_steps=30,
             prompt_templates=p_templates,
         )
+        
+    def __call__(self, message: str) -> str:
+        """
+        Process a user message and return the agent's response.
+        
+        Args:
+            message: The user message
+            
+        Returns:
+            The agent's response
+        """
+        return self.agent(message)
