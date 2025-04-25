@@ -56,6 +56,7 @@ model.build(
     run_timeout=180,
     verbose=False,
     callbacks=[mlflow_callback],
+    chain_of_thought=True,  # Enable chain of thought output
 )
 
 # Step 3: Save the model
