@@ -231,9 +231,6 @@ class PlexeUI:
 
         # Get response from agent
         try:
-            # Clear CoT logs for this new conversation turn
-            self.emitter.clear()
-
             # Process the message with the agent to get the result
             step_result = self.agent.run(message)
 
