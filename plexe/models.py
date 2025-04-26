@@ -11,6 +11,7 @@ Key Features:
 - Constraints: Rules that must hold true for input/output pairs.
 - Mutable State: Tracks the model's lifecycle, training metrics, and metadata.
 - Build Process: Integrates solution generation with callbacks.
+- Chain of Thought: Captures the reasoning steps of the model building process.
 
 Example:
 >>>    model = Model(
@@ -23,7 +24,12 @@ Example:
 >>>        })
 >>>    )
 >>>
->>>    model.build(datasets=[pd.read_csv("houses.csv")], provider="openai:gpt-4o-mini", max_iterations=10)
+>>>    model.build(
+>>>        datasets=[pd.read_csv("houses.csv")], 
+>>>        provider="openai:gpt-4o-mini", 
+>>>        max_iterations=10,
+>>>        chain_of_thought=True  # Enable chain of thought logging
+>>>    )
 >>>
 >>>    prediction = model.predict({"bedrooms": 3, "bathrooms": 2, "square_footage": 1500.0})
 >>>    print(prediction)
@@ -42,7 +48,8 @@ from pydantic import BaseModel
 from plexe.config import prompt_templates
 from plexe.constraints import Constraint
 from plexe.datasets import DatasetGenerator
-from plexe.callbacks import Callback, BuildStateInfo
+from plexe.callbacks import Callback, BuildStateInfo, ChainOfThoughtModelCallback
+from plexe.internal.common.utils.chain_of_thought.emitters import ConsoleEmitter
 from plexe.internal.agents import PlexeAgent
 from plexe.internal.common.datasets.interface import Dataset, TabularConvertible
 from plexe.internal.common.datasets.adapter import DatasetAdapter
@@ -62,7 +69,6 @@ from plexe.internal.models.entities.description import (
 from plexe.internal.models.entities.metric import Metric
 from plexe.internal.models.interfaces.predictor import Predictor
 from plexe.internal.schemas.resolver import SchemaResolver
-
 
 logger = logging.getLogger(__name__)
 
@@ -149,6 +155,7 @@ class Model:
         run_timeout: int = 1800,
         callbacks: List[Callback] = None,
         verbose: bool = False,
+        chain_of_thought: bool = True,
     ) -> None:
         """
         Build the model using the provided dataset and optional data generation configuration.
@@ -161,12 +168,26 @@ class Model:
         :param run_timeout: maximum time in seconds for each individual model training run
         :param callbacks: list of callbacks to notify during the model building process
         :param verbose: whether to display detailed agent logs during model building (default: False)
+        :param chain_of_thought: whether to display chain of thought output (default: True)
         :return:
         """
         # Ensure the object registry is cleared before building
         self.object_registry.clear()
+
+        # Initialize callbacks list if not provided
+        callbacks = callbacks or []
+
+        # Add chain of thought callback if requested
+        cot_callable = None
+        if chain_of_thought:
+            cot_model_callback = ChainOfThoughtModelCallback(emitter=ConsoleEmitter())
+            callbacks.append(cot_model_callback)
+
+            # Get the underlying callback for use with agents
+            cot_callable = cot_model_callback.get_chain_of_thought_callable()
+
         # Register all callbacks in the object registry
-        self.object_registry.register_multiple(Callback, {f"{i}": c for i, c in enumerate(callbacks or [])})
+        self.object_registry.register_multiple(Callback, {f"{i}": c for i, c in enumerate(callbacks)})
 
         # Ensure timeout, max_iterations, and run_timeout make sense
         if timeout is None and max_iterations is None:
@@ -224,7 +245,15 @@ class Model:
                         )
                     )
                 except Exception as e:
-                    logger.warning(f"Error in callback {callback.__class__.__name__}.on_build_start: {e}")
+                    # Log full stack trace at debug level
+                    import traceback
+
+                    logger.debug(
+                        f"Error in callback {callback.__class__.__name__}.on_build_start: {e}\n{traceback.format_exc()}"
+                    )
+
+                    # Log a shorter message at warning level
+                    logger.warning(f"Error in callback {callback.__class__.__name__}.on_build_start: {str(e)[:50]}")
 
             # Step 3: generate model
             # Start the model generation run
@@ -243,6 +272,7 @@ class Model:
                 ml_ops_engineer_model_id=provider_config.ops_provider,
                 verbose=verbose,
                 max_steps=30,
+                chain_of_thought_callable=cot_callable,
             )
             generated = agent.run(
                 agent_prompt,
@@ -278,7 +308,15 @@ class Model:
                         )
                     )
                 except Exception as e:
-                    logger.warning(f"Error in callback {callback.__class__.__name__}.on_build_end: {e}")
+                    # Log full stack trace at debug level
+                    import traceback
+
+                    logger.debug(
+                        f"Error in callback {callback.__class__.__name__}.on_build_end: {e}\n{traceback.format_exc()}"
+                    )
+
+                    # Log a shorter message at warning level
+                    logger.warning(f"Error in callback {callback.__class__.__name__}.on_build_end: {str(e)[:50]}")
 
             # Step 4: update model state and attributes
             self.trainer_source = generated.training_source_code
@@ -312,11 +350,25 @@ class Model:
                         )
                     )
                 except Exception as e:
-                    logger.warning(f"Error in callback {callback.__class__.__name__}.on_build_end: {e}")
+                    # Log full stack trace at debug level
+                    import traceback
+
+                    logger.debug(
+                        f"Error in callback {callback.__class__.__name__}.on_build_end: {e}\n{traceback.format_exc()}"
+                    )
+
+                    # Log a shorter message at warning level
+                    logger.warning(f"Error in callback {callback.__class__.__name__}.on_build_end: {str(e)[:50]}")
 
         except Exception as e:
             self.state = ModelState.ERROR
-            logger.error(f"Error during model building: {str(e)}")
+            # Log full stack trace at debug level
+            import traceback
+
+            logger.debug(f"Error during model building: {str(e)}\n{traceback.format_exc()}")
+
+            # Log a shorter message at error level
+            logger.error(f"Error during model building: {str(e)[:50]}")
             raise e
 
     def predict(self, x: Dict[str, Any], validate_input: bool = False, validate_output: bool = False) -> Dict[str, Any]:

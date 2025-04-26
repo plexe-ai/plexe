@@ -215,7 +215,7 @@ def load_model(path: str | Path) -> Model:
 
             model.artifacts = artifact_handles
 
-            logger.info(f"Model successfully loaded from {path}")
+            logger.debug(f"Model successfully loaded from {path}")
             return model
 
     except Exception as e:

@@ -13,8 +13,7 @@ Build machine learning models using natural language.
 [Quickstart](#1-quickstart) |
 [Features](#2-features) |
 [Installation](#3-installation) |
-[Documentation](#4-documentation) |
-[Benchmarks](#5-benchmarks)
+[Documentation](#4-documentation)
 
 <br>
 
@@ -34,17 +33,9 @@ and the AI-powered system builds a fully functional model through an automated a
 pip install plexe
 ```
 
-### Two Ways to Use plexe
+### Using plexe
 
-#### A. Interactive Chat Interface
-Launch the interactive chat interface to build models through conversational AI:
-
-```bash
-# Start the chat interface
-plexe
-```
-
-This opens a Gradio UI where you can describe your model, upload datasets, and get explanations throughout the process.
+You can use plexe as a Python library to build and train machine learning models:
 
 #### B. Library API
 
@@ -179,30 +170,15 @@ See [LiteLLM providers](https://docs.litellm.ai/docs/providers) for environment 
 ## 4. Documentation
 For full documentation, visit [docs.plexe.ai](https://docs.plexe.ai).
 
-## 5. Benchmarks
-Evaluated on 20 OpenML benchmarks and 12 Kaggle competitions, showing higher performance in 12/20 datasets. Full results at [plexe-ai/plexe-results](https://github.com/plexe-ai/plexe-results).
 
-## 6. Docker Deployment
-Deploy as a platform with API and web UI:
 
-```bash
-git clone https://github.com/plexe-ai/plexe.git
-cd plexe/docker
-cp .env.example .env  # Add your API key
-docker-compose up -d
-```
-
-Access at:
-- API: http://localhost:8000
-- Web UI: http://localhost:8501
-
-## 7. Contributing
+## 5. Contributing
 See [CONTRIBUTING.md](CONTRIBUTING.md) for guidelines. Join our [Discord](https://discord.gg/SefZDepGMv) to connect with the team.
 
-## 8. License
+## 6. License
 [Apache-2.0 License](LICENSE)
 
-## 9. Product Roadmap
+## 7. Product Roadmap
 
 - [X] Fine-tuning and transfer learning for small pre-trained models
 - [X] Use Pydantic for schemas and split data generation into a separate module
@@ -210,4 +186,3 @@ See [CONTRIBUTING.md](CONTRIBUTING.md) for guidelines. Join our [Discord](https:
 - [X] Lightweight installation option without heavy deep learning dependencies
 - [X] Distributed training with Ray on AWS
 - [ ] Support for non-tabular data types in model generation
-- [ ] File upload to docker containers

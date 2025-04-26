@@ -77,6 +77,7 @@ class _Config:
         # Deep learning packages that are optional
         _deep_learning_packages: List[str] = field(
             default_factory=lambda: [
+                "tensorflow-cpu",
                 "torch",
                 "transformers",
                 "tokenizers",
@@ -128,12 +129,6 @@ class _Config:
             """Return the combined list of allowed packages and standard library modules for agent execution."""
             # Start with allowed packages
             imports = self.allowed_packages.copy()
-
-            # Add additional ML packages that might not be in allowed_packages
-            additional_ml_packages = ["lightgbm", "catboost", "tensorflow"]
-            for package in additional_ml_packages:
-                if package not in imports:
-                    imports.append(package)
 
             # Add standard library modules
             imports.extend(self._standard_lib_modules)
@@ -351,6 +346,12 @@ class _PromptTemplates:
             training_code=training_code,
             inference_code=inference_code,
         )
+
+    def cot_system(self) -> str:
+        return self._render("utils/system_prompt.jinja")
+
+    def cot_summarize(self, context: str) -> str:
+        return self._render("utils/cot_summarize.jinja", context=context)
 
     def agent_builder_prompt(
         self,

@@ -1,0 +1,25 @@
+Your task is to examine details about a reasoning step taken by an engineer and generate:
+1. A clear, professional title (3-8 words) that captures the essence of what happened
+2. A concise summary (exactly 1-3 sentences) that explains the step in technical terms
+
+Example:
+Step Type: Thinking
+Thought: I need to analyze the dataset to understand the relationships between features. Let me look at the correlation matrix to identify patterns.
+Tool: pandas_describe({"dataframe": df})
+Observation: The dataset has 5000 rows and 15 columns. There's a strong correlation between age and income.
+
+Would generate:
+Title: "Analyzing Dataset Relationships"
+Summary: "I analyzed the dataset's correlation matrix to identify feature relationships. I observed a strong correlation between age and income, which is relevant for further analysis."
+
+Context:
+{{ context }}
+
+Instructions:
+- Focus on capturing the main technical action/purpose of the step
+- In the summary, state both the thought/action and the result in precise, technical language
+- Title should be 3-8 words
+- Summary should be 1-3 sentences
+- Include specific technical details (e.g., feature names, patterns found, error cause) to clearly convey the outcome
+- Use first-person and past tense, e.g., "I analyzed..." or "I observed..."
+- Maintain a friendly but concise tone; you're technical and precise, but not overly formal

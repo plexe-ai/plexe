@@ -18,6 +18,7 @@ from datetime import datetime
 import pandas as pd
 
 import plexe
+from plexe.internal.common.provider import ProviderConfig
 
 # Step 1: Define the model using the Spaceship Titanic problem statement as the model description
 model = plexe.Model(
@@ -55,12 +56,20 @@ mlflow_callback = plexe.callbacks.MLFlowCallback(
 # NOTE: In order to run this example, you will need to download the dataset from Kaggle
 model.build(
     datasets=[pd.read_csv("examples/datasets/spaceship-titanic-train.csv")],
-    provider="anthropic/claude-3-7-sonnet-20250219",
+    provider=ProviderConfig(
+        default_provider="openai/gpt-4o",
+        orchestrator_provider="anthropic/claude-3-7-sonnet-20250219",
+        research_provider="openai/gpt-4o",
+        engineer_provider="anthropic/claude-3-7-sonnet-20250219",
+        ops_provider="anthropic/claude-3-7-sonnet-20250219",
+        tool_provider="openai/gpt-4o",
+    ),
     max_iterations=4,
     timeout=300,  # 5 minute timeout
     run_timeout=150,
-    verbose=True,
+    verbose=False,
     callbacks=[mlflow_callback],
+    chain_of_thought=True,
 )
 
 # Step 3: Save the model

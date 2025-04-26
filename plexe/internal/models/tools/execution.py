@@ -92,7 +92,15 @@ def get_executor_tool() -> Callable:
                         )
                     )
                 except Exception as e:
-                    logger.warning(f"Error in callback {callback.__class__.__name__}.on_iteration_end: {e}")
+                    # Log full stack trace at debug level
+                    import traceback
+
+                    logger.debug(
+                        f"Error in callback {callback.__class__.__name__}.on_iteration_end: {e}\n{traceback.format_exc()}"
+                    )
+
+                    # Log a shorter message at warning level
+                    logger.warning(f"Error in callback {callback.__class__.__name__}.on_iteration_end: {str(e)[:50]}")
 
             # Import here to avoid circular imports
             from plexe.config import config
@@ -101,7 +109,7 @@ def get_executor_tool() -> Callable:
             executor_class = _get_executor_class()
 
             # Create an instance of the executor
-            logger.info(f"Creating {executor_class.__name__} for execution ID: {execution_id}")
+            logger.debug(f"Creating {executor_class.__name__} for execution ID: {execution_id}")
             executor = executor_class(
                 execution_id=execution_id,
                 code=code,
@@ -166,7 +174,15 @@ def get_executor_tool() -> Callable:
                         )
                     )
                 except Exception as e:
-                    logger.warning(f"Error in callback {callback.__class__.__name__}.on_iteration_end: {e}")
+                    # Log full stack trace at debug level
+                    import traceback
+
+                    logger.debug(
+                        f"Error in callback {callback.__class__.__name__}.on_iteration_end: {e}\n{traceback.format_exc()}"
+                    )
+
+                    # Log a shorter message at warning level
+                    logger.warning(f"Error in callback {callback.__class__.__name__}.on_iteration_end: {str(e)[:50]}")
 
             # Check if the execution failed in any way
             if node.exception is not None:
@@ -205,7 +221,11 @@ def get_executor_tool() -> Callable:
                 "training_code_id": execution_id,
             }
         except Exception as e:
-            logger.error(f"Error executing training code: {str(e)}")
+            # Log full stack trace at debug level
+            import traceback
+
+            logger.debug(f"Error executing training code: {str(e)}\n{traceback.format_exc()}")
+
             return {
                 "success": False,
                 "performance": None,
