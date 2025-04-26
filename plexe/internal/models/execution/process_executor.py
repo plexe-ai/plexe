@@ -112,14 +112,10 @@ class ProcessExecutor(Executor):
                         model_artifacts.append(str(file))
 
             if process.returncode != 0:
-                # Log detailed stderr at debug level
-                logger.debug(f"Process execution failed with return code {process.returncode}. Full stderr: {stderr}")
-                # Create a more concise error message
-                error_msg = "Process execution failed"
                 return ExecutionResult(
                     term_out=[stdout],
                     exec_time=exec_time,
-                    exception=RuntimeError(error_msg),
+                    exception=RuntimeError(stderr),
                     model_artifacts=model_artifacts,
                 )
 
@@ -133,13 +129,12 @@ class ProcessExecutor(Executor):
 
         except subprocess.TimeoutExpired:
             process.kill()
-            error_msg = f"Execution exceeded {self.timeout}s timeout - individual run timeout limit reached"
-            # Log more details at debug level
-            logger.debug(f"Process execution timeout: {error_msg}")
             return ExecutionResult(
                 term_out=[],
                 exec_time=self.timeout,
-                exception=TimeoutError(error_msg),
+                exception=TimeoutError(
+                    f"Execution exceeded {self.timeout}s timeout - individual run timeout limit reached"
+                ),
             )
 
     def cleanup(self):
