@@ -28,19 +28,58 @@ from plexe.config import config
 logger = logging.getLogger(__name__)
 
 
-@ray.remote
+@ray.remote(num_gpus=1)  # Request 1 GPU for this task
 def _run_code(code: str, working_dir: str, dataset_files: List[str], timeout: int) -> dict:
-    """Ray remote function that executes the code."""
+    """Ray remote function that executes the code with GPU support if available."""
     import subprocess
     import sys
     from pathlib import Path
 
     working_dir = Path(working_dir)
     code_file = working_dir / "run.py"
+    
+    # Check for GPU availability
+    gpu_available = False
+    gpu_info = {}
+    
+    try:
+        import torch
+        if torch.cuda.is_available():
+            gpu_available = True
+            gpu_info = {
+                "device": torch.cuda.get_device_name(0),
+                "memory_start": torch.cuda.memory_allocated() / (1024**2)
+            }
+            print(f"[RayExecutor] GPU available: {gpu_info['device']}")
+    except ImportError:
+        print("[RayExecutor] PyTorch not available, cannot detect GPU")
+    
+    # Enhance code with GPU detection
+    gpu_detection_code = ""
+    if gpu_available:
+        gpu_detection_code = """
+# GPU detection for ML frameworks
+import torch
+if torch.cuda.is_available():
+    print(f"GPU available for training: {torch.cuda.get_device_name(0)}")
+    device = "cuda"
+    # Try to enable GPU for common ML frameworks
+    try:
+        import os
+        # XGBoost
+        os.environ["CUDA_VISIBLE_DEVICES"] = "0"
+        # TensorFlow
+        os.environ["TF_FORCE_GPU_ALLOW_GROWTH"] = "true"
+    except Exception as e:
+        print(f"Error setting up GPU environment: {e}")
+else:
+    print("No GPU available for training")
+    device = "cpu"
+"""
 
-    # Write code to file
+    # Write code to file with GPU detection if available
     with open(code_file, "w", encoding="utf-8") as f:
-        f.write("import os\nimport sys\nfrom pathlib import Path\n\n" + code)
+        f.write("import os\nimport sys\nfrom pathlib import Path\n\n" + gpu_detection_code + code)
 
     start_time = time.time()
     process = subprocess.Popen(
@@ -54,6 +93,17 @@ def _run_code(code: str, working_dir: str, dataset_files: List[str], timeout: in
     try:
         stdout, stderr = process.communicate(timeout=timeout)
         exec_time = time.time() - start_time
+
+        # Get final GPU stats if available
+        if gpu_available:
+            try:
+                import torch
+                if torch.cuda.is_available():
+                    gpu_info["memory_end"] = torch.cuda.memory_allocated() / (1024**2)
+                    gpu_info["memory_max"] = torch.cuda.max_memory_allocated() / (1024**2)
+                    print(f"[RayExecutor] GPU memory usage: {gpu_info['memory_end']:.2f} MB, max: {gpu_info['memory_max']:.2f} MB")
+            except Exception as e:
+                print(f"[RayExecutor] Error getting GPU stats: {e}")
 
         # Collect model artifacts
         model_artifacts = []
@@ -71,6 +121,7 @@ def _run_code(code: str, working_dir: str, dataset_files: List[str], timeout: in
             "returncode": process.returncode,
             "exec_time": exec_time,
             "model_artifacts": model_artifacts,
+            "gpu_info": gpu_info if gpu_available else {"available": False}
         }
     except subprocess.TimeoutExpired:
         process.kill()
@@ -80,6 +131,7 @@ def _run_code(code: str, working_dir: str, dataset_files: List[str], timeout: in
             "returncode": -1,
             "exec_time": timeout,
             "model_artifacts": [],
+            "gpu_info": gpu_info if gpu_available else {"available": False}
         }
 
 
