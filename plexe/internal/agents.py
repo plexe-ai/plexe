@@ -5,38 +5,37 @@ This implementation can be used both programmatically through the library interf
 and interactively through a Gradio UI.
 """
 
-import types
 import logging
-from typing import List, Dict, Optional, Any
+import types
 from dataclasses import dataclass, field
+from typing import List, Dict, Optional, Callable
 
 from smolagents import CodeAgent, LiteLLMModel, ToolCallingAgent
 
 from plexe.config import config
+from plexe.internal.common.registries.objects import ObjectRegistry
+from plexe.internal.common.utils.agents import get_prompt_templates
 from plexe.internal.models.entities.artifact import Artifact
 from plexe.internal.models.entities.code import Code
-from plexe.internal.models.tools.evaluation import review_finalised_model
-from plexe.internal.models.tools.execution import get_executor_tool
+from plexe.internal.models.entities.metric import Metric
+from plexe.internal.models.entities.metric import MetricComparator, ComparisonMethod
+from plexe.internal.models.interfaces.predictor import Predictor
 from plexe.internal.models.tools.code_generation import (
     generate_inference_code,
     fix_inference_code,
     generate_training_code,
     fix_training_code,
 )
-from plexe.internal.models.tools.metrics import select_target_metric
-from plexe.internal.models.tools.validation import validate_inference_code, validate_training_code
 from plexe.internal.models.tools.datasets import split_datasets, create_input_sample
+from plexe.internal.models.tools.evaluation import review_finalised_model
+from plexe.internal.models.tools.execution import get_executor_tool
+from plexe.internal.models.tools.metrics import select_target_metric
 from plexe.internal.models.tools.response_formatting import (
     format_final_orchestrator_agent_response,
     format_final_mle_agent_response,
     format_final_mlops_agent_response,
 )
-from plexe.internal.models.interfaces.predictor import Predictor
-from plexe.internal.models.entities.metric import Metric
-from plexe.internal.common.registries.objects import ObjectRegistry
-from plexe.internal.models.entities.metric import MetricComparator, ComparisonMethod
-from plexe.internal.common.utils.agents import get_prompt_templates
-
+from plexe.internal.models.tools.validation import validate_inference_code, validate_training_code
 
 logger = logging.getLogger(__name__)
 
@@ -61,15 +60,15 @@ class PlexeAgent:
     """
 
     def __init__(
-        self,
-        orchestrator_model_id: str = "anthropic/claude-3-7-sonnet-20250219",
-        ml_researcher_model_id: str = "openai/gpt-4o",
-        ml_engineer_model_id: str = "anthropic/claude-3-7-sonnet-20250219",
-        ml_ops_engineer_model_id: str = "anthropic/claude-3-7-sonnet-20250219",
-        verbose: bool = False,
-        max_steps: int = 30,
-        distributed: bool = False,
-        chain_of_thought_callback: Optional[Any] = None,
+            self,
+            orchestrator_model_id: str = "anthropic/claude-3-7-sonnet-20250219",
+            ml_researcher_model_id: str = "openai/gpt-4o",
+            ml_engineer_model_id: str = "anthropic/claude-3-7-sonnet-20250219",
+            ml_ops_engineer_model_id: str = "anthropic/claude-3-7-sonnet-20250219",
+            verbose: bool = False,
+            max_steps: int = 30,
+            distributed: bool = False,
+            chain_of_thought_callable: Optional[Callable] = None,
     ):
         """
         Initialize the multi-agent ML engineering system.
@@ -82,7 +81,7 @@ class PlexeAgent:
             verbose: Whether to display detailed agent logs
             max_steps: Maximum number of steps for the orchestrator agent
             distributed: Whether to run the agents in a distributed environment
-            chain_of_thought_callback: Optional callback for chain of thought logging
+            chain_of_thought_callable: Optional callable for chain of thought logging
         """
         self.orchestrator_model_id = orchestrator_model_id
         self.ml_researcher_model_id = ml_researcher_model_id
@@ -91,7 +90,7 @@ class PlexeAgent:
         self.verbose = verbose
         self.max_steps = max_steps
         self.distributed = distributed
-        self.chain_of_thought_callback = chain_of_thought_callback
+        self.chain_of_thought_callable = chain_of_thought_callable
 
         # Set verbosity levels
         self.orchestrator_verbosity = 2 if verbose else 0
@@ -114,7 +113,7 @@ class PlexeAgent:
             add_base_tools=False,
             verbosity_level=self.specialist_verbosity,
             prompt_templates=get_prompt_templates("toolcalling_agent.yaml", "mls_prompt_templates.yaml"),
-            step_callbacks=[self.chain_of_thought_callback]
+            step_callbacks=[self.chain_of_thought_callable]
         )
 
         # Create model trainer agent - implements training code
@@ -143,7 +142,7 @@ class PlexeAgent:
             add_base_tools=False,
             verbosity_level=self.specialist_verbosity,
             prompt_templates=get_prompt_templates("toolcalling_agent.yaml", "mle_prompt_templates.yaml"),
-            step_callbacks=[self.chain_of_thought_callback],
+            step_callbacks=[self.chain_of_thought_callable],
         )
 
         # Create predictor builder agent - creates inference code
@@ -169,7 +168,7 @@ class PlexeAgent:
             verbosity_level=self.specialist_verbosity,
             prompt_templates=get_prompt_templates("toolcalling_agent.yaml", "mlops_prompt_templates.yaml"),
             planning_interval=8,
-            step_callbacks=[self.chain_of_thought_callback],
+            step_callbacks=[self.chain_of_thought_callable],
         )
 
         # Create orchestrator agent - coordinates the workflow
@@ -190,7 +189,7 @@ class PlexeAgent:
             max_steps=self.max_steps,
             prompt_templates=get_prompt_templates("code_agent.yaml", "manager_prompt_templates.yaml"),
             planning_interval=7,
-            step_callbacks=[self.chain_of_thought_callback],
+            step_callbacks=[self.chain_of_thought_callable],
         )
 
     def run(self, task, additional_args: dict) -> ModelGenerationResult:

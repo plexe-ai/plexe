@@ -1491,13 +1491,13 @@ urllib3 = ["packaging", "urllib3"]
 
 [[package]]
 name = "gradio"
-version = "5.26.0"
+version = "5.27.0"
 description = "Python library for easily interacting with trained machine learning models"
 optional = false
 python-versions = ">=3.10"
 files = [
-    {file = "gradio-5.26.0-py3-none-any.whl", hash = "sha256:d0960eb551e0da528f8cf4caae0e742c8175deb72f58600d42f8beec866e9294"},
-    {file = "gradio-5.26.0.tar.gz", hash = "sha256:9d03ca96576b91a7ead40e99676f184ff6ad513b35b91539268b74449fa09979"},
+    {file = "gradio-5.27.0-py3-none-any.whl", hash = "sha256:68e5873204168c1e0025e1c6dda0adfc7546b2d906a79ad8becfd9864f719cca"},
+    {file = "gradio-5.27.0.tar.gz", hash = "sha256:577ee37a94d7d1de8a76c52b1386654d4f9a20694ed9a3ad8238ef90bf5da6e9"},
 ]
 
 [package.dependencies]
@@ -7032,8 +7032,9 @@ type = ["pytest-mypy"]
 all = ["accelerate", "safetensors", "tokenizers", "torch", "transformers"]
 deep-learning = ["accelerate", "safetensors", "tokenizers", "torch", "transformers"]
 lightweight = []
+torch = ["torch"]
 
 [metadata]
 lock-version = "2.0"
 python-versions = ">=3.11,<3.13"
-content-hash = "6f5c761868a3a12a5c78142065ab2848caf20e6f8a209a7fdbd26abaeeca6f1a"
+content-hash = "56625113ca73e2b57992432d9772bf0da592bc15e5285183b160b0a58ad55cb9"

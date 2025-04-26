@@ -23,12 +23,18 @@ UI_THEME = gr.themes.Soft(
 class GradioEmitter(ChainOfThoughtEmitter):
     """Emitter that captures chain of thought for display in the Gradio UI."""
 
+    # Global instance that can be accessed from other modules
+    _instance = None
+
     def __init__(self):
         """Initialize the Gradio emitter."""
         self.logs = []
         self.lock = Lock()
         self.subscribers = []
         self.emitters = []  # Additional emitters to forward thoughts to
+        
+        # Store the instance in the class variable for global access
+        GradioEmitter._instance = self
 
     def emit_thought(self, agent_name: str, message: str) -> None:
         """
@@ -82,6 +88,16 @@ class GradioEmitter(ChainOfThoughtEmitter):
             # Notify subscribers of empty logs
             for callback in self.subscribers:
                 callback("")
+                
+    @classmethod
+    def get_instance(cls) -> 'GradioEmitter':
+        """
+        Get the global instance of the GradioEmitter.
+        
+        Returns:
+            The global GradioEmitter instance
+        """
+        return cls._instance
 
 
 class PlexeUI:

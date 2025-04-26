@@ -49,6 +49,7 @@ from plexe.config import prompt_templates
 from plexe.constraints import Constraint
 from plexe.datasets import DatasetGenerator
 from plexe.callbacks import Callback, BuildStateInfo, ChainOfThoughtModelCallback
+from plexe.internal.common.utils.chain_of_thought import MultiEmitter
 from plexe.internal.common.utils.chain_of_thought.emitters import ConsoleEmitter
 from plexe.internal.agents import PlexeAgent
 from plexe.internal.common.datasets.interface import Dataset, TabularConvertible
@@ -69,7 +70,7 @@ from plexe.internal.models.entities.description import (
 from plexe.internal.models.entities.metric import Metric
 from plexe.internal.models.interfaces.predictor import Predictor
 from plexe.internal.schemas.resolver import SchemaResolver
-
+from plexe.internal.ui.gradio_ui import GradioEmitter
 
 logger = logging.getLogger(__name__)
 
@@ -182,13 +183,13 @@ class Model:
         callbacks = callbacks or []
         
         # Add chain of thought callback if requested
-        cot_callback = None
+        cot_callable = None
         if chain_of_thought:
             cot_model_callback = ChainOfThoughtModelCallback(emitter=ConsoleEmitter())
             callbacks.append(cot_model_callback)
             
             # Get the underlying callback for use with agents
-            cot_callback = cot_model_callback.get_chain_of_thought_callback()
+            cot_callable = cot_model_callback.get_chain_of_thought_callable()
             
         # Register all callbacks in the object registry
         self.object_registry.register_multiple(Callback, {f"{i}": c for i, c in enumerate(callbacks)})
@@ -274,7 +275,7 @@ class Model:
                 verbose=verbose,
                 max_steps=30,
                 distributed=self.distributed,
-                chain_of_thought_callback=cot_callback,
+                chain_of_thought_callable=cot_callable,
             )
             generated = agent.run(
                 agent_prompt,

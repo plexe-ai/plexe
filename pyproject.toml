@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "plexe"
-version = "0.17.0"
+version = "0.18.0"
 description = "An agentic framework for building ML models from natural language"
 authors = [
     "marcellodebernardi <marcello.debernardi@outlook.com>",
@@ -63,6 +63,7 @@ gradio = "^5.26.0"
 [tool.poetry.extras]
 all = ["torch", "transformers", "tokenizers", "accelerate", "safetensors"]
 deep-learning = ["torch", "transformers", "tokenizers", "accelerate", "safetensors"]
+torch = ["torch"]
 lightweight = []
 
 [tool.poetry.group.dev.dependencies]

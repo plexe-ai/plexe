@@ -22,14 +22,6 @@ relative to the current directory: {{ training_data_files }}
 relative to the current directory: {{ validation_data_files }}
 {% endif %}
 
-- An mlflow server is available. The script must enable mlflow autologging by including the following snippet:
-```python
-import mlflow
-mlflow.set_tracking_uri("https://127.0.0.1:8080")
-mlflow.autolog()
-```
-An mlflow run is already active, so the script must NOT start a new one. The snippet above has everything required for mlflow.
-
 - The script must train the model, compute and print the final evaluation metric to standard output,
 and **save all model files directly in the CURRENT directory** with descriptive names.
 Do not create any subdirectories. Do not print ANY other text to standard output than the metric. Print the

@@ -114,14 +114,14 @@ class ChainOfThoughtModelCallback(Callback):
             emitter: The emitter to use for chain of thought output
         """
         
-        self.cot_callback = ChainOfThoughtCallable(emitter=emitter or ConsoleEmitter())
+        self.cot_callable = ChainOfThoughtCallable(emitter=emitter or ConsoleEmitter())
         
     def on_build_start(self, info: BuildStateInfo) -> None:
         """
         Reset the chain of thought at the beginning of the build process.
         """
-        self.cot_callback.clear()
-        self.cot_callback.emitter.emit_thought(
+        self.cot_callable.clear()
+        self.cot_callable.emitter.emit_thought(
             "System",
             f"🚀 Starting model build for intent: {info.intent[:40]}..."
         )
@@ -130,7 +130,7 @@ class ChainOfThoughtModelCallback(Callback):
         """
         Emit completion message at the end of the build process.
         """
-        self.cot_callback.emitter.emit_thought(
+        self.cot_callable.emitter.emit_thought(
             "System",
             "✅ Model build completed"
         )
@@ -139,7 +139,7 @@ class ChainOfThoughtModelCallback(Callback):
         """
         Emit iteration start message.
         """
-        self.cot_callback.emitter.emit_thought(
+        self.cot_callable.emitter.emit_thought(
             "System",
             f"📊 Starting iteration {info.iteration + 1}"
         )
@@ -149,24 +149,24 @@ class ChainOfThoughtModelCallback(Callback):
         Emit iteration end message with performance metrics.
         """
         if info.node and info.node.performance:
-            self.cot_callback.emitter.emit_thought(
+            self.cot_callable.emitter.emit_thought(
                 "System",
                 f"📋 Iteration {info.iteration + 1} completed: {info.node.performance.name}={info.node.performance.value}"
             )
         else:
-            self.cot_callback.emitter.emit_thought(
+            self.cot_callable.emitter.emit_thought(
                 "System",
                 f"📋 Iteration {info.iteration + 1} failed: No performance metrics available"
             )
     
-    def get_chain_of_thought_callback(self):
+    def get_chain_of_thought_callable(self):
         """
-        Get the underlying chain of thought callback.
+        Get the underlying chain of thought callable.
         
         Returns:
-            The chain of thought callback used by this model callback
+            The chain of thought callable used by this model callback
         """
-        return self.cot_callback
+        return self.cot_callable
     
     def get_full_chain_of_thought(self) -> List:
         """
@@ -175,7 +175,7 @@ class ChainOfThoughtModelCallback(Callback):
         Returns:
             The list of steps in the chain of thought
         """
-        return self.cot_callback.get_full_chain_of_thought()
+        return self.cot_callable.get_full_chain_of_thought()
 
 
 # Import at the end to avoid circular dependencies

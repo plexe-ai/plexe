@@ -5,29 +5,29 @@ It defines a chat agent that collects information from users and delegates to th
 for the actual model building process.
 """
 
-import yaml
 import importlib
 import logging
-from typing import Dict, Any, List, Optional
+from typing import Dict, Any, List
 
-from smolagents import LiteLLMModel, tool, ToolCallingAgent
 import pandas as pd
+import yaml
 from pydantic import create_model
+from smolagents import LiteLLMModel, tool, ToolCallingAgent
 
-from plexe.models import Model
 from plexe.internal.common.provider import ProviderConfig
+from plexe.models import Model
 
 logger = logging.getLogger(__name__)
 
 
 @tool
 def build_model(
-    intent: str,
-    dataset_paths: List[str],
-    input_schema: Dict[str, str] = None,
-    output_schema: Dict[str, str] = None,
-    provider: str = "openai/gpt-4o",
-    max_iterations: int = 10,
+        intent: str,
+        dataset_paths: List[str],
+        input_schema: Dict[str, str] = None,
+        output_schema: Dict[str, str] = None,
+        provider: str = "openai/gpt-4o",
+        max_iterations: int = 10,
 ) -> Dict[str, Any]:
     """
     Build a machine learning model based on the provided information.
@@ -85,8 +85,8 @@ def build_model(
 
         # Create and build the model with sensible defaults for additional parameters
         model = Model(
-            intent=intent, 
-            input_schema=input_model, 
+            intent=intent,
+            input_schema=input_model,
             output_schema=output_model,
             distributed=False  # Sensible default, no need to expose to chat
         )
@@ -95,10 +95,10 @@ def build_model(
             datasets=datasets,
             provider=provider_config,
             max_iterations=max_iterations,
-            timeout=1800,  # 30 minutes default timeout
-            run_timeout=600,  # 10 minutes per run
-            verbose=False,  # No developer-facing logging in chat UI
-            chain_of_thought=True,  # Always enable chain of thought
+            timeout=3600,
+            run_timeout=1200,
+            verbose=False,
+            chain_of_thought=True,
         )
 
         # Return enhanced success information
@@ -152,7 +152,7 @@ class ChatPlexeAgent:
             max_steps=30,
             prompt_templates=p_templates,
         )
-        
+
     def __call__(self, message: str) -> str:
         """
         Process a user message and return the agent's response.
