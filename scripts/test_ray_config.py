@@ -31,7 +31,17 @@ original_ray_config = config_module.config.ray
 # Create a new test config
 test_ray_config = TestRayConfig()
 test_ray_config.num_cpus = 2
-test_ray_config.num_gpus = 0  # Explicitly set to 0 for testing
+
+# Try to detect GPU availability
+try:
+    import torch
+    gpu_available = torch.cuda.is_available()
+except ImportError:
+    gpu_available = False
+
+# Set GPU count based on availability
+test_ray_config.num_gpus = 1 if gpu_available else 0
+print(f"Using num_gpus={test_ray_config.num_gpus} (GPU available: {gpu_available})")
 
 # Patch the config
 config_module.config.ray = test_ray_config
@@ -54,8 +64,8 @@ try:
     import ray
 
     if not ray.is_initialized():
-        logger.info("Initializing Ray")
-        ray.init(num_cpus=2)
+        logger.info("Initializing Ray with GPU support if available")
+        ray.init(num_cpus=2, num_gpus=1 if gpu_available else 0)
 
     # Test Ray info
     logger.info("\nRay Cluster Information:")
