@@ -496,13 +496,13 @@ files = [
 
 [[package]]
 name = "certifi"
-version = "2025.1.31"
+version = "2025.4.26"
 description = "Python package for providing Mozilla's CA Bundle."
 optional = false
 python-versions = ">=3.6"
 files = [
-    {file = "certifi-2025.1.31-py3-none-any.whl", hash = "sha256:ca78db4565a652026a4db2bcdf68f2fb589ea80d0be70e03929ed730746b84fe"},
-    {file = "certifi-2025.1.31.tar.gz", hash = "sha256:3d5da6925056f6f18f119200434a4780a94263f10d1c21d032a6f6b2baa20651"},
+    {file = "certifi-2025.4.26-py3-none-any.whl", hash = "sha256:30350364dfe371162649852c63336a15c70c6510c2ad5015b21c2345311805f3"},
+    {file = "certifi-2025.4.26.tar.gz", hash = "sha256:0a816057ea3cdefcef70270d2c515e4506bbc954f417fa5ade2021213bb8f0c6"},
 ]
 
 [[package]]
@@ -5686,7 +5686,6 @@ files = [
 
 [package.dependencies]
 duckduckgo-search = ">=6.3.7"
-gradio = {version = ">=5.13.2", optional = true, markers = "extra == \"gradio\""}
 huggingface-hub = ">=0.28.0"
 jinja2 = ">=3.1.4"
 markdownify = ">=0.14.1"
@@ -7037,4 +7036,4 @@ torch = ["torch"]
 [metadata]
 lock-version = "2.0"
 python-versions = ">=3.11,<3.13"
-content-hash = "56625113ca73e2b57992432d9772bf0da592bc15e5285183b160b0a58ad55cb9"
+content-hash = "e14b1d4ce0b41b169255b84634266d5734ce08f093a297f8f4767065a77914c6"
