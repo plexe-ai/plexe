@@ -28,7 +28,7 @@ from plexe.config import config
 logger = logging.getLogger(__name__)
 
 
-@ray.remote(num_gpus=1)  # Request 1 GPU for this task
+@ray.remote(num_cpus=1)
 def _run_code(code: str, working_dir: str, dataset_files: List[str], timeout: int) -> dict:
     """Ray remote function that executes the code with GPU support if available."""
     import subprocess
@@ -202,7 +202,7 @@ class RayExecutor(Executor):
             if not ready_refs:
                 ray.cancel(result_ref, force=True)
                 return ExecutionResult(
-                    term_out=[],
+                    term_out=["Execution timed out"],
                     exec_time=self.timeout,
                     exception=TimeoutError(f"Execution exceeded {self.timeout}s timeout - Ray timeout reached"),
                 )
@@ -228,7 +228,7 @@ class RayExecutor(Executor):
         except ray.exceptions.GetTimeoutError:
             ray.cancel(result_ref, force=True)
             return ExecutionResult(
-                term_out=[],
+                term_out=["Execution timed out due to GetTimeoutError"],
                 exec_time=self.timeout,
                 exception=TimeoutError(f"Execution exceeded {self.timeout}s timeout - Ray timeout reached"),
             )
