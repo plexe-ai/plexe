@@ -78,13 +78,14 @@ graph TD
 
 ### Manager Agent (Orchestrator)
 
-**Class**: `PlexeAgent.manager_agent`  
+**Class**: `PlexeAgent` attribute `manager_agent`  
 **Type**: `CodeAgent`
 
 The Manager Agent serves as the central coordinator for the entire ML development process:
 
 ```python
 self.manager_agent = CodeAgent(
+    name="Orchestrator",
     model=LiteLLMModel(model_id=self.orchestrator_model_id),
     tools=[select_target_metric, review_finalised_model, split_datasets, 
            create_input_sample, format_final_orchestrator_agent_response],
@@ -95,6 +96,7 @@ self.manager_agent = CodeAgent(
     max_steps=self.max_steps,
     prompt_templates=get_prompt_templates("code_agent.yaml", "manager_prompt_templates.yaml"),
     planning_interval=7,
+    step_callbacks=[self.chain_of_thought_callable],
 )
 ```
 
@@ -129,6 +131,7 @@ self.ml_research_agent = ToolCallingAgent(
     add_base_tools=False,
     verbosity_level=self.specialist_verbosity,
     prompt_templates=get_prompt_templates("toolcalling_agent.yaml", "mls_prompt_templates.yaml"),
+    step_callbacks=[self.chain_of_thought_callable]
 )
 ```
 
@@ -171,6 +174,7 @@ self.mle_agent = ToolCallingAgent(
     add_base_tools=False,
     verbosity_level=self.specialist_verbosity,
     prompt_templates=get_prompt_templates("toolcalling_agent.yaml", "mle_prompt_templates.yaml"),
+    step_callbacks=[self.chain_of_thought_callable],
 )
 ```
 
@@ -211,6 +215,7 @@ self.mlops_engineer = ToolCallingAgent(
     verbosity_level=self.specialist_verbosity,
     prompt_templates=get_prompt_templates("toolcalling_agent.yaml", "mlops_prompt_templates.yaml"),
     planning_interval=8,
+    step_callbacks=[self.chain_of_thought_callable],
 )
 ```
 
@@ -467,7 +472,7 @@ class CustomModelValidator(Validator):
 
 ## References
 
-- [PlexeAgent Class Definition](plexe/internal/agents.py)
-- [Model Class Definition](plexe/models.py)
-- [Tool Definitions](plexe/internal/models/tools/)
-- [Executor Implementation](plexe/internal/models/execution/)
+- [PlexeAgent Class Definition](/plexe/internal/agents.py)
+- [Model Class Definition](/plexe/models.py)
+- [Tool Definitions](/plexe/internal/models/tools/)
+- [Executor Implementation](/plexe/internal/models/execution/)
