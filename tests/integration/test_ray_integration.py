@@ -39,18 +39,14 @@ def test_model_with_ray(sample_dataset):
 
     # Initialize with specific resources - use GPU if available
     from plexe.internal.common.utils.model_utils import is_gpu_available
-    
+
     # Check if GPU is available
     gpu_available = is_gpu_available()
     print(f"GPU available for testing: {gpu_available}")
-    
+
     # Initialize Ray with GPU if available
-    ray.init(
-        num_cpus=2, 
-        num_gpus=1 if gpu_available else 0, 
-        ignore_reinit_error=True
-    )
-    
+    ray.init(num_cpus=2, num_gpus=1 if gpu_available else 0, ignore_reinit_error=True)
+
     # Log Ray resources
     resources = ray.cluster_resources()
     print(f"Ray resources: {resources}")

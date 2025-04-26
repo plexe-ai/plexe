@@ -55,80 +55,72 @@ def is_package_available(package_name: str) -> bool:
 def is_gpu_available() -> bool:
     """
     Check if a GPU is available for training.
-    
+
     :return: True if a GPU is available, False otherwise
     """
     # Check for PyTorch GPU
     if is_package_available("torch"):
         import torch
+
         if torch.cuda.is_available():
             return True
-    
+
     # Check for TensorFlow GPU
     if is_package_available("tensorflow"):
         import tensorflow as tf
-        gpus = tf.config.list_physical_devices('GPU')
+
+        gpus = tf.config.list_physical_devices("GPU")
         if gpus:
             return True
-    
+
     return False
 
 
 def get_device() -> str:
     """
     Get the device to use for PyTorch ('cuda' or 'cpu').
-    
+
     :return: 'cuda' if a GPU is available, 'cpu' otherwise
     """
     if is_package_available("torch") and is_gpu_available():
         import torch
-        return 'cuda' if torch.cuda.is_available() else 'cpu'
-    return 'cpu'
+
+        return "cuda" if torch.cuda.is_available() else "cpu"
+    return "cpu"
 
 
 def get_gpu_params(framework: str) -> Dict:
     """
     Get GPU-related parameters for different ML frameworks.
-    
+
     :param framework: Name of the ML framework ('xgboost', 'lightgbm', 'catboost', 'pytorch', 'tensorflow')
     :return: Dictionary with appropriate GPU parameters for the specified framework
     """
     if not is_gpu_available():
         return {}
-    
+
     framework = framework.lower()
-    
+
     # XGBoost GPU parameters
-    if framework == 'xgboost':
-        return {
-            "tree_method": "gpu_hist", 
-            "gpu_id": 0,
-            "predictor": "gpu_predictor"
-        }
+    if framework == "xgboost":
+        return {"tree_method": "gpu_hist", "gpu_id": 0, "predictor": "gpu_predictor"}
     # LightGBM GPU parameters
-    elif framework == 'lightgbm':
-        return {
-            "device": "gpu",
-            "gpu_platform_id": 0,
-            "gpu_device_id": 0
-        }
+    elif framework == "lightgbm":
+        return {"device": "gpu", "gpu_platform_id": 0, "gpu_device_id": 0}
     # CatBoost GPU parameters
-    elif framework == 'catboost':
-        return {
-            "task_type": "GPU",
-            "devices": "0"
-        }
+    elif framework == "catboost":
+        return {"task_type": "GPU", "devices": "0"}
     # PyTorch device
-    elif framework == 'pytorch' or framework == 'torch':
+    elif framework == "pytorch" or framework == "torch":
         import torch
-        return {
-            "device": torch.device("cuda" if torch.cuda.is_available() else "cpu")
-        }
+
+        return {"device": torch.device("cuda" if torch.cuda.is_available() else "cpu")}
     # TensorFlow GPU config
-    elif framework == 'tensorflow' or framework == 'tf':
+    elif framework == "tensorflow" or framework == "tf":
         try:
             import tensorflow as tf
-            gpus = tf.config.list_physical_devices('GPU')
+
+            gpus = tf.config.list_physical_devices("GPU")
             if gpus:
                 # Only enable memory growth to avoid allocating all GPU memory
                 for gpu in gpus:
@@ -136,6 +128,6 @@ def get_gpu_params(framework: str) -> Dict:
                 return {"gpu_enabled": True, "gpu_count": len(gpus)}
         except Exception:
             pass
-    
+
     # Default empty dict for other frameworks
     return {}

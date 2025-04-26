@@ -37,23 +37,24 @@ def _run_code(code: str, working_dir: str, dataset_files: List[str], timeout: in
 
     working_dir = Path(working_dir)
     code_file = working_dir / "run.py"
-    
+
     # Check for GPU availability
     gpu_available = False
     gpu_info = {}
-    
+
     try:
         import torch
+
         if torch.cuda.is_available():
             gpu_available = True
             gpu_info = {
                 "device": torch.cuda.get_device_name(0),
-                "memory_start": torch.cuda.memory_allocated() / (1024**2)
+                "memory_start": torch.cuda.memory_allocated() / (1024**2),
             }
             print(f"[RayExecutor] GPU available: {gpu_info['device']}")
     except ImportError:
         print("[RayExecutor] PyTorch not available, cannot detect GPU")
-    
+
     # Enhance code with GPU detection
     gpu_detection_code = ""
     if gpu_available:
@@ -98,10 +99,13 @@ else:
         if gpu_available:
             try:
                 import torch
+
                 if torch.cuda.is_available():
                     gpu_info["memory_end"] = torch.cuda.memory_allocated() / (1024**2)
                     gpu_info["memory_max"] = torch.cuda.max_memory_allocated() / (1024**2)
-                    print(f"[RayExecutor] GPU memory usage: {gpu_info['memory_end']:.2f} MB, max: {gpu_info['memory_max']:.2f} MB")
+                    print(
+                        f"[RayExecutor] GPU memory usage: {gpu_info['memory_end']:.2f} MB, max: {gpu_info['memory_max']:.2f} MB"
+                    )
             except Exception as e:
                 print(f"[RayExecutor] Error getting GPU stats: {e}")
 
@@ -121,7 +125,7 @@ else:
             "returncode": process.returncode,
             "exec_time": exec_time,
             "model_artifacts": model_artifacts,
-            "gpu_info": gpu_info if gpu_available else {"available": False}
+            "gpu_info": gpu_info if gpu_available else {"available": False},
         }
     except subprocess.TimeoutExpired:
         process.kill()
@@ -131,7 +135,7 @@ else:
             "returncode": -1,
             "exec_time": timeout,
             "model_artifacts": [],
-            "gpu_info": gpu_info if gpu_available else {"available": False}
+            "gpu_info": gpu_info if gpu_available else {"available": False},
         }
 
 
