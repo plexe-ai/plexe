@@ -70,7 +70,6 @@ from plexe.internal.models.entities.description import (
 from plexe.internal.models.entities.metric import Metric
 from plexe.internal.models.interfaces.predictor import Predictor
 from plexe.internal.schemas.resolver import SchemaResolver
-from plexe.internal.ui.gradio_ui import GradioEmitter
 
 logger = logging.getLogger(__name__)
 

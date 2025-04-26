@@ -1,8 +1,5 @@
 """
 This module defines a multi-agent ML engineering system for building machine learning models.
-
-This implementation can be used both programmatically through the library interface
-and interactively through a Gradio UI.
 """
 
 import logging
