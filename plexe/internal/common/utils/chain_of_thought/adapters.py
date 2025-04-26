@@ -15,11 +15,11 @@ from .protocol import StepSummary, ToolCall
 def extract_step_summary_from_smolagents(step: Any, agent: Any) -> StepSummary:
     """
     Extract step summary from a SmoLAgents step object.
-    
+
     Args:
         step: A SmoLAgents step object
         agent: The agent that performed the step
-        
+
     Returns:
         A framework-agnostic StepSummary object
     """
@@ -39,10 +39,7 @@ def extract_step_summary_from_smolagents(step: Any, agent: Any) -> StepSummary:
     # Extract tool calls
     tool_calls = []
     if hasattr(step, "tool_calls") and step.tool_calls:
-        tool_calls = [
-            ToolCall(name=call.name, args=call.arguments)
-            for call in step.tool_calls
-        ]
+        tool_calls = [ToolCall(name=call.name, args=call.arguments) for call in step.tool_calls]
 
     # Extract observations and results based on step type
     observations = getattr(step, "observations", None)
@@ -65,5 +62,5 @@ def extract_step_summary_from_smolagents(step: Any, agent: Any) -> StepSummary:
         tool_calls=tool_calls,
         observations=observations,
         result=result,
-        error=error
+        error=error,
     )

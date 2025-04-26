@@ -349,7 +349,7 @@ class _PromptTemplates:
 
     def cot_system(self) -> str:
         return self._render("utils/system_prompt.jinja")
-        
+
     def cot_summarize(self, context: str) -> str:
         return self._render("utils/cot_summarize.jinja", context=context)
 

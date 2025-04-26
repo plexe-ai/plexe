@@ -57,15 +57,15 @@ class PlexeAgent:
     """
 
     def __init__(
-            self,
-            orchestrator_model_id: str = "anthropic/claude-3-7-sonnet-20250219",
-            ml_researcher_model_id: str = "openai/gpt-4o",
-            ml_engineer_model_id: str = "anthropic/claude-3-7-sonnet-20250219",
-            ml_ops_engineer_model_id: str = "anthropic/claude-3-7-sonnet-20250219",
-            verbose: bool = False,
-            max_steps: int = 30,
-            distributed: bool = False,
-            chain_of_thought_callable: Optional[Callable] = None,
+        self,
+        orchestrator_model_id: str = "anthropic/claude-3-7-sonnet-20250219",
+        ml_researcher_model_id: str = "openai/gpt-4o",
+        ml_engineer_model_id: str = "anthropic/claude-3-7-sonnet-20250219",
+        ml_ops_engineer_model_id: str = "anthropic/claude-3-7-sonnet-20250219",
+        verbose: bool = False,
+        max_steps: int = 30,
+        distributed: bool = False,
+        chain_of_thought_callable: Optional[Callable] = None,
     ):
         """
         Initialize the multi-agent ML engineering system.
@@ -110,7 +110,7 @@ class PlexeAgent:
             add_base_tools=False,
             verbosity_level=self.specialist_verbosity,
             prompt_templates=get_prompt_templates("toolcalling_agent.yaml", "mls_prompt_templates.yaml"),
-            step_callbacks=[self.chain_of_thought_callable]
+            step_callbacks=[self.chain_of_thought_callable],
         )
 
         # Create model trainer agent - implements training code

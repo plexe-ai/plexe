@@ -9,6 +9,7 @@ from typing import Any, Dict, List, Optional, Protocol
 @dataclass
 class ToolCall:
     """Information about a tool called by an agent."""
+
     name: str
     args: Dict[str, Any]
 
@@ -17,10 +18,11 @@ class ToolCall:
 class StepSummary:
     """
     Framework-agnostic representation of an agent's reasoning step.
-    
+
     This class represents a single step in an agent's chain of thought,
     regardless of the underlying agent framework used.
     """
+
     step_number: Optional[int] = None
     step_type: str = "Unknown"
     agent_name: str = "Agent"
@@ -41,11 +43,11 @@ class StepExtractor(Protocol):
     def __call__(self, step: Any, agent: Any) -> StepSummary:
         """
         Extract step summary from framework-specific step object.
-        
+
         Args:
             step: A step object from a specific agent framework
             agent: The agent that performed the step
-            
+
         Returns:
             A framework-agnostic StepSummary object
         """

@@ -95,8 +95,11 @@ def get_executor_tool(distributed: bool = False) -> Callable:
                 except Exception as e:
                     # Log full stack trace at debug level
                     import traceback
-                    logger.debug(f"Error in callback {callback.__class__.__name__}.on_iteration_end: {e}\n{traceback.format_exc()}")
-                    
+
+                    logger.debug(
+                        f"Error in callback {callback.__class__.__name__}.on_iteration_end: {e}\n{traceback.format_exc()}"
+                    )
+
                     # Log a shorter message at warning level
                     logger.warning(f"Error in callback {callback.__class__.__name__}.on_iteration_end: {str(e)[:50]}")
 
@@ -174,8 +177,11 @@ def get_executor_tool(distributed: bool = False) -> Callable:
                 except Exception as e:
                     # Log full stack trace at debug level
                     import traceback
-                    logger.debug(f"Error in callback {callback.__class__.__name__}.on_iteration_end: {e}\n{traceback.format_exc()}")
-                    
+
+                    logger.debug(
+                        f"Error in callback {callback.__class__.__name__}.on_iteration_end: {e}\n{traceback.format_exc()}"
+                    )
+
                     # Log a shorter message at warning level
                     logger.warning(f"Error in callback {callback.__class__.__name__}.on_iteration_end: {str(e)[:50]}")
 
@@ -218,8 +224,9 @@ def get_executor_tool(distributed: bool = False) -> Callable:
         except Exception as e:
             # Log full stack trace at debug level
             import traceback
+
             logger.debug(f"Error executing training code: {str(e)}\n{traceback.format_exc()}")
-            
+
             return {
                 "success": False,
                 "performance": None,

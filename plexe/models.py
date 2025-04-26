@@ -49,7 +49,6 @@ from plexe.config import prompt_templates
 from plexe.constraints import Constraint
 from plexe.datasets import DatasetGenerator
 from plexe.callbacks import Callback, BuildStateInfo, ChainOfThoughtModelCallback
-from plexe.internal.common.utils.chain_of_thought import MultiEmitter
 from plexe.internal.common.utils.chain_of_thought.emitters import ConsoleEmitter
 from plexe.internal.agents import PlexeAgent
 from plexe.internal.common.datasets.interface import Dataset, TabularConvertible
@@ -177,19 +176,19 @@ class Model:
         """
         # Ensure the object registry is cleared before building
         self.object_registry.clear()
-        
+
         # Initialize callbacks list if not provided
         callbacks = callbacks or []
-        
+
         # Add chain of thought callback if requested
         cot_callable = None
         if chain_of_thought:
             cot_model_callback = ChainOfThoughtModelCallback(emitter=ConsoleEmitter())
             callbacks.append(cot_model_callback)
-            
+
             # Get the underlying callback for use with agents
             cot_callable = cot_model_callback.get_chain_of_thought_callable()
-            
+
         # Register all callbacks in the object registry
         self.object_registry.register_multiple(Callback, {f"{i}": c for i, c in enumerate(callbacks)})
 
@@ -251,8 +250,11 @@ class Model:
                 except Exception as e:
                     # Log full stack trace at debug level
                     import traceback
-                    logger.debug(f"Error in callback {callback.__class__.__name__}.on_build_start: {e}\n{traceback.format_exc()}")
-                    
+
+                    logger.debug(
+                        f"Error in callback {callback.__class__.__name__}.on_build_start: {e}\n{traceback.format_exc()}"
+                    )
+
                     # Log a shorter message at warning level
                     logger.warning(f"Error in callback {callback.__class__.__name__}.on_build_start: {str(e)[:50]}")
 
@@ -312,8 +314,11 @@ class Model:
                 except Exception as e:
                     # Log full stack trace at debug level
                     import traceback
-                    logger.debug(f"Error in callback {callback.__class__.__name__}.on_build_end: {e}\n{traceback.format_exc()}")
-                    
+
+                    logger.debug(
+                        f"Error in callback {callback.__class__.__name__}.on_build_end: {e}\n{traceback.format_exc()}"
+                    )
+
                     # Log a shorter message at warning level
                     logger.warning(f"Error in callback {callback.__class__.__name__}.on_build_end: {str(e)[:50]}")
 
@@ -351,8 +356,11 @@ class Model:
                 except Exception as e:
                     # Log full stack trace at debug level
                     import traceback
-                    logger.debug(f"Error in callback {callback.__class__.__name__}.on_build_end: {e}\n{traceback.format_exc()}")
-                    
+
+                    logger.debug(
+                        f"Error in callback {callback.__class__.__name__}.on_build_end: {e}\n{traceback.format_exc()}"
+                    )
+
                     # Log a shorter message at warning level
                     logger.warning(f"Error in callback {callback.__class__.__name__}.on_build_end: {str(e)[:50]}")
 
@@ -360,8 +368,9 @@ class Model:
             self.state = ModelState.ERROR
             # Log full stack trace at debug level
             import traceback
+
             logger.debug(f"Error during model building: {str(e)}\n{traceback.format_exc()}")
-            
+
             # Log a shorter message at error level
             logger.error(f"Error during model building: {str(e)[:50]}")
             raise e

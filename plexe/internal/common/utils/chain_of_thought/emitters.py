@@ -18,7 +18,7 @@ logger = logging.getLogger(__name__)
 class ChainOfThoughtEmitter(ABC):
     """
     Abstract base class for chain of thought emitters.
-    
+
     Emitters are responsible for outputting chain of thought
     information in a user-friendly format.
     """
@@ -27,7 +27,7 @@ class ChainOfThoughtEmitter(ABC):
     def emit_thought(self, agent_name: str, message: str) -> None:
         """
         Emit a thought from an agent.
-        
+
         Args:
             agent_name: The name of the agent emitting the thought
             message: The thought message
@@ -43,7 +43,7 @@ class ConsoleEmitter(ChainOfThoughtEmitter):
     def __init__(self, output: TextIO = sys.stdout):
         """
         Initialize the console emitter with Rich support.
-        
+
         Args:
             output: The text IO to write to
         """
@@ -64,7 +64,7 @@ class ConsoleEmitter(ChainOfThoughtEmitter):
     def emit_thought(self, agent_name: str, message: str) -> None:
         """
         Emit a thought to the console using Rich tree visualization.
-        
+
         Args:
             agent_name: The name of the agent emitting the thought
             message: The thought message
@@ -77,9 +77,6 @@ class ConsoleEmitter(ChainOfThoughtEmitter):
 
         try:
             # Import Rich components for type annotations
-            from rich.text import Text
-            from rich.panel import Panel
-            from rich.tree import Tree
 
             # Track step count for timeline
             self.step_count += 1
@@ -92,13 +89,15 @@ class ConsoleEmitter(ChainOfThoughtEmitter):
             # Add agent and step information in a cleaner format
             # Use plain print with styling - make it more compact
             step_info = f"Step {self.step_count}"
-            
+
             # Add a blank line before new agent name for better readability
             # but only if this isn't the first step
             if self.step_count > 1:
                 self.console.print("")
-                
-            self.console.print(f"[bold {agent_color}]{agent_name}[/bold {agent_color}] · [dim]{step_info} · {timestamp}[/dim]")
+
+            self.console.print(
+                f"[bold {agent_color}]{agent_name}[/bold {agent_color}] · [dim]{step_info} · {timestamp}[/dim]"
+            )
 
             # Process the message based on format
             if message.startswith("💡"):
@@ -124,6 +123,7 @@ class ConsoleEmitter(ChainOfThoughtEmitter):
         except Exception as e:
             # Log the error at debug level
             import logging
+
             logger = logging.getLogger(__name__)
             logger.debug(f"Error in Rich formatting: {str(e)}")
 
@@ -141,7 +141,7 @@ class ConsoleEmitter(ChainOfThoughtEmitter):
             "ML Ops Engineer": "magenta",
             "Orchestrator": "cyan",
             # Default color
-            "default": "blue"
+            "default": "blue",
         }
 
         # Match partial agent names (e.g. "Engineer" should match "ML Engineer")
@@ -160,7 +160,7 @@ class LoggingEmitter(ChainOfThoughtEmitter):
     def __init__(self, level: int = logging.INFO):
         """
         Initialize the logging emitter.
-        
+
         Args:
             level: The logging level to use
         """
@@ -170,7 +170,7 @@ class LoggingEmitter(ChainOfThoughtEmitter):
     def emit_thought(self, agent_name: str, message: str) -> None:
         """
         Emit a thought to the logger.
-        
+
         Args:
             agent_name: The name of the agent emitting the thought
             message: The thought message
@@ -186,7 +186,7 @@ class MultiEmitter(ChainOfThoughtEmitter):
     def __init__(self, emitters: List[ChainOfThoughtEmitter]):
         """
         Initialize the multi emitter.
-        
+
         Args:
             emitters: The emitters to output to
         """
@@ -195,7 +195,7 @@ class MultiEmitter(ChainOfThoughtEmitter):
     def emit_thought(self, agent_name: str, message: str) -> None:
         """
         Emit a thought to all configured emitters.
-        
+
         Args:
             agent_name: The name of the agent emitting the thought
             message: The thought message
