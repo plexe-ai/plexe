@@ -69,7 +69,7 @@ model.build(
     run_timeout=150,
     verbose=False,
     callbacks=[mlflow_callback],
-    chain_of_thought=True
+    chain_of_thought=True,
 )
 
 # Step 3: Save the model
