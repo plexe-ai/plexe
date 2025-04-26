@@ -1,3 +1,0 @@
-"""
-UI components for plexe.
-"""
