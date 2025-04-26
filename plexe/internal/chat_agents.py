@@ -26,12 +26,7 @@ def build_model(
     dataset_paths: List[str],
     input_schema: Dict[str, str] = None,
     output_schema: Dict[str, str] = None,
-    provider: str = "openai/gpt-4o-mini",
-    orchestrator_provider: Optional[str] = None,
-    research_provider: Optional[str] = None,
-    engineer_provider: Optional[str] = None,
-    ops_provider: Optional[str] = None,
-    tool_provider: Optional[str] = None,
+    provider: str = "openai/gpt-4o",
     max_iterations: int = 10,
 ) -> Dict[str, Any]:
     """
@@ -43,11 +38,6 @@ def build_model(
         input_schema: Dictionary mapping field names to types (as strings)
         output_schema: Dictionary mapping field names to types (as strings)
         provider: Default LLM provider to use for model generation
-        orchestrator_provider: LLM provider specifically for the orchestrator agent
-        research_provider: LLM provider specifically for the ML Research Scientist agent
-        engineer_provider: LLM provider specifically for the ML Engineer agent
-        ops_provider: LLM provider specifically for the ML Ops Engineer agent
-        tool_provider: LLM provider specifically for tool operations
         max_iterations: Maximum number of iterations for model building
 
     Returns:
@@ -66,6 +56,12 @@ def build_model(
             "bool": bool,
         }
 
+        # Convert string provider to config if needed
+        if isinstance(provider, str):
+            provider_config = ProviderConfig(default_provider=provider)
+        else:
+            provider_config = provider
+
         # Convert schemas to proper types
         input_types = {k: type_map.get(v.lower(), str) for k, v in input_schema.items()}
         output_types = {k: type_map.get(v.lower(), str) for k, v in output_schema.items()}
@@ -79,31 +75,42 @@ def build_model(
 
         # Create provider configuration
         provider_config = ProviderConfig(
-            default_provider=provider,
-            orchestrator_provider=orchestrator_provider,
-            research_provider=research_provider,
-            engineer_provider=engineer_provider,
-            ops_provider=ops_provider,
-            tool_provider=tool_provider,
+            default_provider=provider_config.default_provider,
+            orchestrator_provider=provider_config.orchestrator_provider,
+            research_provider=provider_config.research_provider,
+            engineer_provider=provider_config.engineer_provider,
+            ops_provider=provider_config.ops_provider,
+            tool_provider=provider_config.tool_provider,
         )
 
-        # Create and build the model
-        model = Model(intent=intent, input_schema=input_model, output_schema=output_model)
+        # Create and build the model with sensible defaults for additional parameters
+        model = Model(
+            intent=intent, 
+            input_schema=input_model, 
+            output_schema=output_model,
+            distributed=False  # Sensible default, no need to expose to chat
+        )
 
         model.build(
             datasets=datasets,
             provider=provider_config,
             max_iterations=max_iterations,
             timeout=1800,  # 30 minutes default timeout
+            run_timeout=600,  # 10 minutes per run
+            verbose=False,  # No developer-facing logging in chat UI
+            chain_of_thought=True,  # Always enable chain of thought
         )
 
-        # Return success information
+        # Return enhanced success information
         return {
             "success": True,
             "model_type": model.metadata.get("model_type", "Unknown"),
             "framework": model.metadata.get("framework", "Unknown"),
             "metrics": model.get_metrics(),
             "description": model.describe().to_dict(),
+            "evaluation_metric": model.metadata.get("evaluation_metric", "Unknown"),
+            "strengths": model.metadata.get("strengths", "Unknown"),
+            "limitations": model.metadata.get("limitations", "Unknown"),
         }
 
     except Exception as e:
