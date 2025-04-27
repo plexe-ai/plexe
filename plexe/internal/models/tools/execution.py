@@ -120,6 +120,7 @@ def get_executor_tool(distributed: bool = False) -> Callable:
                 code_execution_file_name=config.execution.runfile_name,
             )
 
+            # Execute and collect results - ProcessExecutor.run() handles cleanup internally
             logger.debug(f"Executing node {node} using executor {executor}")
             result = executor.run()
             logger.debug(f"Execution result: {result}")
