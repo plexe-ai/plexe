@@ -54,7 +54,7 @@ class TestProcessExecutor:
     @patch("pyarrow.parquet.write_table")
     def test_run_successful_execution(self, mock_write_table):
         mock_process = MagicMock()
-        mock_process.communicate.return_value = ("Execution completed", "")
+        mock_process.communicate.return_value = ("Performance: 0.5", "")
         mock_process.returncode = 0
 
         with patch("subprocess.Popen", return_value=mock_process) as mock_popen:
@@ -72,8 +72,8 @@ class TestProcessExecutor:
             text=True,
         )
         assert isinstance(result, ExecutionResult)
-        assert "Execution completed" in result.term_out
         assert result.exception is None
+        assert "Performance: 0.5" in result.term_out
 
     @patch("subprocess.Popen")
     def test_run_timeout(self, mock_popen):
