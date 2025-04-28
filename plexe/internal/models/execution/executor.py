@@ -20,6 +20,14 @@ class ExecutionResult:
     exception: Exception = field(default=None)
     performance: Optional[float] = field(default=None)
 
+    def is_valid_performance(self) -> bool:
+        """Validate if performance metric is usable."""
+        return (
+            self.performance is not None
+            and isinstance(self.performance, (int, float))
+            and self.performance not in [float("inf"), float("-inf")]
+        )
+
 
 class Executor(ABC):
     """

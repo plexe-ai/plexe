@@ -100,8 +100,7 @@ def extract_performance(output: str) -> float | None:
 
         # Looking for format "MetricName: value"
         if ":" not in last_line:
-            logger.warning("No colon found in last line")
-            return None
+            raise RuntimeError("No colon found in last line")
 
         value_str = last_line.split(":")[-1].strip()
 
@@ -110,9 +109,7 @@ def extract_performance(output: str) -> float | None:
             logger.debug(f"Successfully parsed value: {value}")
             return value
         except ValueError as e:
-            logger.warning(f"Could not convert '{value_str}' to float: {e}")
-            return None
+            raise RuntimeError(f"Could not convert '{value_str}' to float: {e}") from e
 
     except Exception as e:
-        logger.warning(f"Error extracting performance: {e}")
-        return None
+        raise RuntimeError(f"Error extracting run performance: {e}") from e

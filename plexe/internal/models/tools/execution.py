@@ -78,30 +78,19 @@ def get_executor_tool(distributed: bool = False) -> Callable:
 
             # Get callbacks from the registry and notify them
             node.training_code = code
-            # Notification for iteration end with all required fields
-            for callback in object_registry.get_all(Callback).values():
-                try:
-                    callback.on_iteration_start(
-                        BuildStateInfo(
-                            intent="goobers",  # Will be filled by agent context
-                            provider="openai/gpt-4o",  # Will be filled by agent context
-                            input_schema=None,  # Will be filled by agent context
-                            output_schema=None,  # Will be filled by agent context
-                            datasets=datasets,
-                            iteration=0,  # Default value, no longer used for MLFlow run naming
-                            node=node,
-                        )
-                    )
-                except Exception as e:
-                    # Log full stack trace at debug level
-                    import traceback
+            # Create state info once for all callbacks
+            state_info = BuildStateInfo(
+                intent="Unknown",  # Will be filled by agent context
+                provider="Unknown",  # Will be filled by agent context
+                input_schema=None,  # Will be filled by agent context
+                output_schema=None,  # Will be filled by agent context
+                datasets=datasets,
+                iteration=0,  # Default value, no longer used for MLFlow run naming
+                node=node,
+            )
 
-                    logger.debug(
-                        f"Error in callback {callback.__class__.__name__}.on_iteration_end: {e}\n{traceback.format_exc()}"
-                    )
-
-                    # Log a shorter message at warning level
-                    logger.warning(f"Error in callback {callback.__class__.__name__}.on_iteration_end: {str(e)[:50]}")
+            # Notify all callbacks about execution start
+            _notify_callbacks(object_registry.get_all(Callback), "start", state_info)
 
             # Import here to avoid circular imports
             from plexe.config import config
@@ -130,22 +119,13 @@ def get_executor_tool(distributed: bool = False) -> Callable:
             node.exception = result.exception or None
             node.model_artifacts = result.model_artifacts
 
-            # Handle the performance metric properly
+            # Handle the performance metric properly using the consolidated validation logic
             performance_value = None
             is_worst = True
 
-            if result.performance is not None and isinstance(result.performance, (int, float)):
+            if result.is_valid_performance():
                 performance_value = result.performance
                 is_worst = False
-
-                if (
-                    result.performance
-                    in [float("inf"), float("-inf")]
-                    # or result.performance < 1e-7
-                    # or result.performance > 1 - 1e-7
-                ):
-                    performance_value = None
-                    is_worst = True
 
             # Create a metric object with proper handling of None or invalid values
             node.performance = Metric(
@@ -157,45 +137,14 @@ def get_executor_tool(distributed: bool = False) -> Callable:
 
             node.training_code = code
 
-            # Notify callbacks about the execution end
-            # Notification for iteration end with all required fields
-            for callback in object_registry.get_all(Callback).values():
-                try:
-                    # Create build state info with required fields
-                    # Some fields like intent, input_schema, etc. will be empty here
-                    # but will be filled in by the model builder agent context
-                    callback.on_iteration_end(
-                        BuildStateInfo(
-                            intent="goobers",  # Will be filled by agent context
-                            provider="openai/gpt-4o",  # Will be filled by agent context
-                            input_schema=None,  # Will be filled by agent context
-                            output_schema=None,  # Will be filled by agent context
-                            datasets=datasets,
-                            iteration=0,  # Default value, no longer used for MLFlow run naming
-                            node=node,
-                        )
-                    )
-                except Exception as e:
-                    # Log full stack trace at debug level
-                    import traceback
-
-                    logger.debug(
-                        f"Error in callback {callback.__class__.__name__}.on_iteration_end: {e}\n{traceback.format_exc()}"
-                    )
-
-                    # Log a shorter message at warning level
-                    logger.warning(f"Error in callback {callback.__class__.__name__}.on_iteration_end: {str(e)[:50]}")
+            # Notify callbacks about the execution end with the same state_info
+            # The node reference in state_info automatically reflects the updates to node
+            _notify_callbacks(object_registry.get_all(Callback), "end", state_info)
 
             # Check if the execution failed in any way
             if node.exception is not None:
                 raise RuntimeError(f"Execution failed with exception: {node.exception}")
-            if (
-                result.performance is None
-                or not isinstance(result.performance, (int, float))
-                or result.performance in [float("inf"), float("-inf")]
-                # or result.performance < 1e-7
-                # or result.performance > 1 - 1e-7
-            ):
+            if not result.is_valid_performance():
                 raise RuntimeError(f"Execution failed due to not producing a valid performance: {result.performance}")
 
             # Register code and artifacts
@@ -264,3 +213,27 @@ def _get_executor_class(distributed: bool = False) -> Type:
     # Default to ProcessExecutor for non-distributed execution
     logger.debug("Using ProcessExecutor (non-distributed)")
     return ProcessExecutor
+
+
+def _notify_callbacks(callbacks: Dict, event_type: str, build_state_info) -> None:
+    """Helper function to notify callbacks with consistent error handling.
+
+    Args:
+        callbacks: Dictionary of callbacks from the registry
+        event_type: The event type - either "start" or "end"
+        build_state_info: The state info to pass to callbacks
+    """
+    method_name = f"on_iteration_{event_type}"
+
+    for callback in callbacks.values():
+        try:
+            getattr(callback, method_name)(build_state_info)
+        except Exception as e:
+            # Log full stack trace at debug level
+            import traceback
+
+            logger.debug(
+                f"Error in callback {callback.__class__.__name__}.{method_name}: {e}\n{traceback.format_exc()}"
+            )
+            # Log a shorter message at warning level
+            logger.warning(f"Error in callback {callback.__class__.__name__}.{method_name}: {str(e)[:50]}")

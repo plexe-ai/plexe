@@ -121,11 +121,11 @@ class ProcessExecutor(Executor):
                 return ExecutionResult(
                     term_out=[stdout],
                     exec_time=exec_time,
-                    exception=RuntimeError(stderr),
+                    exception=RuntimeError(f"Process exited with code {self.process.returncode}: {stderr}"),
                     model_artifacts=model_artifacts,
                 )
 
-            # Parse performance from last line of stdout
+            # Extract performance and create result
             return ExecutionResult(
                 term_out=[stdout],
                 exec_time=exec_time,
@@ -145,11 +145,20 @@ class ProcessExecutor(Executor):
                 ),
             )
         except Exception as e:
+            stdout, stderr = "", ""
+
             if self.process:
+                # Try to collect any output that was produced before the exception
+                try:
+                    if hasattr(self.process, "stdout") and self.process.stdout:
+                        stdout = self.process.stdout.read() or ""
+                except Exception:
+                    pass  # Best effort to get output
+
                 self.process.kill()
 
             return ExecutionResult(
-                term_out=[],
+                term_out=[stdout or f"Process failed with exception: {str(e)}"],
                 exec_time=time.time() - start_time,
                 exception=e,
             )
