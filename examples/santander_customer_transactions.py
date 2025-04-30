@@ -26,7 +26,9 @@ from plexe.internal.common.provider import ProviderConfig
 model = plexe.Model(
     intent=(
         "Identify which customers will make a specific transaction in the future, irrespective of the amount "
-        "of money transacted. For each Id, make a binary prediction of the 'target' variable."
+        "of money transacted. For each Id, make a binary prediction of the 'target' variable. Use only linear "
+        "regression and decision tree models, no ensembling. The models must be extremely simple and quickly "
+        "trainable on extremely constrained hardware."
     ),
     output_schema={
         "target": int,
@@ -51,7 +53,7 @@ model.build(
         ops_provider="anthropic/claude-3-7-sonnet-20250219",
         tool_provider="openai/gpt-4o",
     ),
-    max_iterations=8,
+    max_iterations=5,
     timeout=1800,  # 30 minute timeout
     run_timeout=180,
     verbose=False,
