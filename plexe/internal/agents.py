@@ -18,15 +18,15 @@ from plexe.internal.models.entities.metric import Metric
 from plexe.internal.models.entities.metric import MetricComparator, ComparisonMethod
 from plexe.internal.models.interfaces.predictor import Predictor
 from plexe.internal.models.tools.code_generation import (
-    generate_inference_code,
-    fix_inference_code,
-    generate_training_code,
-    fix_training_code,
+    get_generate_training_code,
+    get_fix_training_code,
+    get_generate_inference_code,
+    get_fix_inference_code,
 )
+from plexe.internal.models.tools.evaluation import get_review_finalised_model
+from plexe.internal.models.tools.metrics import get_select_target_metric
 from plexe.internal.models.tools.datasets import split_datasets, create_input_sample
-from plexe.internal.models.tools.evaluation import review_finalised_model
 from plexe.internal.models.tools.execution import get_executor_tool
-from plexe.internal.models.tools.metrics import select_target_metric
 from plexe.internal.models.tools.response_formatting import (
     format_final_orchestrator_agent_response,
     format_final_mle_agent_response,
@@ -62,6 +62,7 @@ class PlexeAgent:
         ml_researcher_model_id: str = "openai/gpt-4o",
         ml_engineer_model_id: str = "anthropic/claude-3-7-sonnet-20250219",
         ml_ops_engineer_model_id: str = "anthropic/claude-3-7-sonnet-20250219",
+        tool_model_id: str = "openai/gpt-4o",
         verbose: bool = False,
         max_steps: int = 30,
         distributed: bool = False,
@@ -75,6 +76,7 @@ class PlexeAgent:
             ml_researcher_model_id: Model ID for the ML researcher agent
             ml_engineer_model_id: Model ID for the ML engineer agent
             ml_ops_engineer_model_id: Model ID for the ML ops engineer agent
+            tool_model_id: Model ID for the model used inside tool calls
             verbose: Whether to display detailed agent logs
             max_steps: Maximum number of steps for the orchestrator agent
             distributed: Whether to run the agents in a distributed environment
@@ -84,6 +86,7 @@ class PlexeAgent:
         self.ml_researcher_model_id = ml_researcher_model_id
         self.ml_engineer_model_id = ml_engineer_model_id
         self.ml_ops_engineer_model_id = ml_ops_engineer_model_id
+        self.tool_model_id = tool_model_id
         self.verbose = verbose
         self.max_steps = max_steps
         self.distributed = distributed
@@ -130,9 +133,9 @@ class PlexeAgent:
             ),
             model=LiteLLMModel(model_id=self.ml_engineer_model_id),
             tools=[
-                generate_training_code,
+                get_generate_training_code(self.tool_model_id),
                 validate_training_code,
-                fix_training_code,
+                get_fix_training_code(self.tool_model_id),
                 get_executor_tool(distributed),
                 format_final_mle_agent_response,
             ],
@@ -156,9 +159,9 @@ class PlexeAgent:
             model=LiteLLMModel(model_id=self.ml_ops_engineer_model_id),
             tools=[
                 split_datasets,
-                generate_inference_code,
+                get_generate_inference_code(self.tool_model_id),
                 validate_inference_code,
-                fix_inference_code,
+                get_fix_inference_code(self.tool_model_id),
                 format_final_mlops_agent_response,
             ],
             add_base_tools=False,
@@ -173,8 +176,8 @@ class PlexeAgent:
             name="Orchestrator",
             model=LiteLLMModel(model_id=self.orchestrator_model_id),
             tools=[
-                select_target_metric,
-                review_finalised_model,
+                get_select_target_metric(self.tool_model_id),
+                get_review_finalised_model(self.tool_model_id),
                 split_datasets,
                 create_input_sample,
                 format_final_orchestrator_agent_response,

@@ -273,6 +273,7 @@ class Model:
                 ml_researcher_model_id=provider_config.research_provider,
                 ml_engineer_model_id=provider_config.engineer_provider,
                 ml_ops_engineer_model_id=provider_config.ops_provider,
+                tool_model_id=provider_config.tool_provider,
                 verbose=verbose,
                 max_steps=30,
                 distributed=self.distributed,
@@ -285,7 +286,6 @@ class Model:
                     "working_dir": self.working_dir,
                     "input_schema": format_schema(self.input_schema),
                     "output_schema": format_schema(self.output_schema),
-                    "provider": provider_config.tool_provider,  # Use tool_provider for tool operations
                     "max_iterations": max_iterations,
                     "timeout": timeout,
                     "run_timeout": run_timeout,
