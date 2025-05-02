@@ -20,9 +20,8 @@ from plexe.internal.models.interfaces.predictor import Predictor
 from plexe.internal.models.tools.code_generation import (
     get_generate_training_code,
     get_fix_training_code,
-    get_generate_inference_code,
-    get_fix_inference_code,
 )
+from plexe.internal.models.tools.code_analysis import read_training_code
 from plexe.internal.models.tools.evaluation import get_review_finalised_model
 from plexe.internal.models.tools.metrics import get_select_target_metric
 from plexe.internal.models.tools.datasets import split_datasets, create_input_sample
@@ -32,7 +31,8 @@ from plexe.internal.models.tools.response_formatting import (
     format_final_mle_agent_response,
     format_final_mlops_agent_response,
 )
-from plexe.internal.models.tools.validation import validate_inference_code, validate_training_code
+from plexe.internal.models.tools.unified_inference import get_generate_and_validate_inference_code
+from plexe.internal.models.tools.validation import validate_training_code
 
 logger = logging.getLogger(__name__)
 
@@ -149,8 +149,8 @@ class PlexeAgent:
         self.mlops_engineer = ToolCallingAgent(
             name="MLOperationsEngineer",
             description=(
-                "Expert ML operations engineer that writes inference code for ML models to be used in production. "
-                "To work effectively, as part of the 'task' prompt the agent STRICTLY requires:"
+                "Expert ML operations engineer that analyzes training code and creates high-quality production-ready "
+                "inference code for ML models. To work effectively, as part of the 'task' prompt the agent STRICTLY requires:"
                 "- input schema for the model"
                 "- output schema for the model"
                 "- the 'training code id' of the training code produced by the MLEngineer agent"
@@ -158,10 +158,8 @@ class PlexeAgent:
             ),
             model=LiteLLMModel(model_id=self.ml_ops_engineer_model_id),
             tools=[
-                split_datasets,
-                get_generate_inference_code(self.tool_model_id),
-                validate_inference_code,
-                get_fix_inference_code(self.tool_model_id),
+                read_training_code,
+                get_generate_and_validate_inference_code(self.tool_model_id),
                 format_final_mlops_agent_response,
             ],
             add_base_tools=False,

@@ -8,31 +8,47 @@ managed_agent:
     {{task}}
     ---
     
-    ## Instructions for You
-    Generate Python machine learning inference code for the provided ML model using the relevant tool. Validate 
-    the code using the relevant tools. If the validation fails, attempt to debug/fix the code using the relevant tools, 
-    then re-validate. Attempt fixing the code AT MOST 10 times, and if it still fails, return the error message.
+    ## Your Goal
+    Create high-quality, production-ready inference code for a machine learning model that follows best practices and 
+    passes validation. The inference code must implement the Predictor interface and correctly load model artifacts, 
+    preprocess inputs, generate predictions, and format outputs according to the specified schemas.
+    
+    ## Approach
+    1. First, analyze the training code to understand:
+       - What ML framework was used (sklearn, pytorch, tensorflow, etc.)
+       - How model artifacts were saved
+       - What preprocessing steps were applied to the data
+       - What the model architecture is
+       - What the prediction logic should be
+    
+    2. Based on your analysis, create detailed instructions for code generation
+    
+    3. Generate and validate the inference code, providing specific instructions on:
+       - How to properly load model artifacts
+       - How to implement preprocessing steps
+       - How to make predictions
+       - How to format output
+    
+    4. If validation fails, analyze the error message, refine your instructions, and try again
+       with more specific guidance to address the issues
     
     ## Information You Need from Manager
     In order for you to start work, your manager needs to provide:
     - A 'training code id' which identifies the training code produced by the ML engineer
     - The input schema the model predictor must have
     - The output schema the model predictor must have
-    - The identifier of the LLM to use for code generation.
-    If this information is not provided, don't try to build a model. Instead, respond to your manager explaining 
-    you need this information to do your work correctly.
+    - The identifier of the LLM to use for code generation
+    
+    If this information is not provided, respond to your manager explaining what you need to do your work correctly.
+    
+    ## Available Tools
+    - read_training_code: Use this to retrieve and analyze the training code
+    - generate_and_validate_inference_code: Use this to generate inference code with your instructions and validate it
+    - format_final_mlops_agent_response: Use this to format your final response
     
     ## Final Answer
-    ### If You Tried Generating the Inference Code
-    Your final_answer MUST include the following elements:
-    - The 'inference code id' for the inference code, which is an id returned by the code validation tool after completing
+    When you have successfully generated and validated inference code, submit your final answer using:
+    1. First, use the 'format_final_mlops_agent_response' tool with the inference_code_id
+    2. Then, put this dictionary in the 'final_answer' tool
     
-    To submit your final answer, you MUST do the following:
-    - First, use the 'format_final_mlops_agent_response' tool to get a dictionary containing the fields that need 
-    to be in your final answer.
-    - Then, put this dictionary in the 'final_answer' tool. Everything that you do not pass as an argument to final_answer will be lost, so make sure to include everything.
-    
-    ### If You Could Not Attempt the Task
-    If you could not attempt the task, for example due to lack of information, you must return a response to your
-    manager explaining why you could not attempt the task. Put this response in the 'final_answer' tool.  
-    Everything that you do not pass as an argument to final_answer will be lost, so make sure to include everything.
+    If you could not complete the task, explain why in your final_answer.

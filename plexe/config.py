@@ -325,6 +325,25 @@ class _PromptTemplates:
             problems=problems,
         )
 
+    def inference_unified_generate(
+        self,
+        predictor_interface_source,
+        predictor_template,
+        training_code,
+        input_schema,
+        output_schema,
+        instructions="",
+    ) -> str:
+        return self._render(
+            "inference/unified_generate.jinja",
+            predictor_interface_source=predictor_interface_source,
+            predictor_template=predictor_template,
+            training_code=training_code,
+            input_schema=input_schema,
+            output_schema=output_schema,
+            instructions=instructions,
+        )
+
     def review_system(self) -> str:
         return self._render("review/system_prompt.jinja")
 
