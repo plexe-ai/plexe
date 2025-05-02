@@ -105,7 +105,6 @@ class Model:
         input_schema: Type[BaseModel] | Dict[str, type] = None,
         output_schema: Type[BaseModel] | Dict[str, type] = None,
         constraints: List[Constraint] = None,
-        distributed: bool = False,
     ):
         """
         Initialise a model with a natural language description of its intent, as well as
@@ -116,7 +115,6 @@ class Model:
         :param output_schema: a pydantic model or dictionary defining the output schema
         :param constraints: A list of Constraint objects that represent rules which must be
             satisfied by every input/output pair for the model.
-        :param distributed: Whether to use distributed training with Ray if available.
         """
         # todo: analyse natural language inputs and raise errors where applicable
 
@@ -126,7 +124,6 @@ class Model:
         self.output_schema: Type[BaseModel] = map_to_basemodel("out", output_schema) if output_schema else None
         self.constraints: List[Constraint] = constraints or []
         self.training_data: Dict[str, Dataset] = dict()
-        self.distributed: bool = distributed
 
         # The model's mutable state is defined by these fields
         self.state: ModelState = ModelState.DRAFT
@@ -275,7 +272,6 @@ class Model:
                 ml_ops_engineer_model_id=provider_config.ops_provider,
                 verbose=verbose,
                 max_steps=30,
-                distributed=self.distributed,
                 chain_of_thought_callable=cot_callable,
             )
             generated = agent.run(

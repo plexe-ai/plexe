@@ -24,8 +24,8 @@ from typing import Type
 logger = logging.getLogger(__name__)
 
 
-def get_executor_tool(distributed: bool = False) -> Callable:
-    """Get the appropriate executor tool based on the distributed flag."""
+def get_executor_tool() -> Callable:
+    """Get the executor tool for training code execution."""
 
     @tool
     def execute_training_code(
@@ -51,8 +51,7 @@ def get_executor_tool(distributed: bool = False) -> Callable:
         Returns:
             A dictionary containing execution results with model artifacts and their registry names
         """
-        # Log the distributed flag
-        logger.debug(f"execute_training_code called with distributed={distributed}")
+        logger.info(f"execute_training_code for node_id={node_id}")
 
         from plexe.callbacks import BuildStateInfo
 
@@ -96,7 +95,7 @@ def get_executor_tool(distributed: bool = False) -> Callable:
             from plexe.config import config
 
             # Get the appropriate executor class via the factory
-            executor_class = _get_executor_class(distributed=distributed)
+            executor_class = _get_executor_class()
 
             # Create an instance of the executor
             logger.debug(f"Creating {executor_class.__name__} for execution ID: {execution_id}")
@@ -187,31 +186,56 @@ def get_executor_tool(distributed: bool = False) -> Callable:
     return execute_training_code
 
 
-def _get_executor_class(distributed: bool = False) -> Type:
-    """Get the appropriate executor class based on the distributed flag.
-
-    Args:
-        distributed: Whether to use distributed execution if available
+def _get_executor_class() -> Type:
+    """Get the appropriate executor class based on Ray availability.
 
     Returns:
         Executor class (not instance) appropriate for the environment
     """
-    # Log the distributed flag
-    logger.debug(f"get_executor_class using distributed={distributed}")
-    if distributed:
+    # Check if Ray is available
+    try:
+        import ray
+    except ImportError:
+        logger.warning("Ray not available, using ProcessExecutor")
+        return ProcessExecutor
+
+    # Check if Ray is initialized
+    if ray.is_initialized():
         try:
             # Try to import Ray executor
             from plexe.internal.models.execution.ray_executor import RayExecutor
 
-            logger.debug("Using Ray for distributed execution")
+            logger.info("Using Ray for execution (Ray is initialized)")
             return RayExecutor
         except ImportError:
-            # Fall back to process executor if Ray is not available
-            logger.warning("Ray not available, falling back to ProcessExecutor")
+            # Fall back to process executor if Ray executor is not available
+            logger.warning("Ray initialized but RayExecutor not found, falling back to ProcessExecutor")
             return ProcessExecutor
 
-    # Default to ProcessExecutor for non-distributed execution
-    logger.debug("Using ProcessExecutor (non-distributed)")
+    # Fall back to configuration-based decision if Ray is not initialized
+    # This maintains backward compatibility
+    from plexe.config import config
+
+    ray_configured = hasattr(config, "ray") and (
+        getattr(config.ray, "address", None) is not None
+        or getattr(config.ray, "num_gpus", None) is not None
+        or getattr(config.ray, "num_cpus", None) is not None
+    )
+
+    if ray_configured:
+        try:
+            # Try to import Ray executor
+            from plexe.internal.models.execution.ray_executor import RayExecutor
+
+            logger.info("Using Ray for execution based on configuration")
+            return RayExecutor
+        except ImportError:
+            # Fall back to process executor if Ray executor is not available
+            logger.warning("Ray configured but RayExecutor not available, falling back to ProcessExecutor")
+            return ProcessExecutor
+
+    # Default to ProcessExecutor when Ray is not available
+    logger.info("Using ProcessExecutor (Ray not initialized or configured)")
     return ProcessExecutor
 
 
