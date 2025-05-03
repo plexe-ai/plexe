@@ -160,7 +160,7 @@ class PlexeAgent:
             ],
             add_base_tools=False,
             verbosity_level=self.specialist_verbosity,
-            additional_authorized_imports=config.code_generation.authorized_agent_imports,
+            additional_authorized_imports=config.code_generation.authorized_agent_imports + ["typing", "uuid", "plexe"],
             prompt_templates=get_prompt_templates("code_agent.yaml", "mlops_prompt_templates.yaml"),
             planning_interval=8,
             step_callbacks=[self.chain_of_thought_callable],
