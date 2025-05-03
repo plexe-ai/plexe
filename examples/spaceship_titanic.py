@@ -77,11 +77,11 @@ model.build(
 plexe.save_model(model, "spaceship_titanic_model.tar.gz")
 
 # Step 4: Run a prediction on the built model
-test_df = pd.read_csv("examples/datasets/spaceship-titanic-test.csv")
+test_df = pd.read_csv("examples/datasets/spaceship-titanic-test.csv").sample(10)
 predictions = pd.DataFrame.from_records([model.predict(x) for x in test_df.to_dict(orient="records")])
 
 # Step 5: print a sample of predictions
-print(predictions.sample(10))
+print(predictions)
 
 # Step 6: Print model description
 description = model.describe()
