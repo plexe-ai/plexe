@@ -96,7 +96,7 @@ def _extract_artifacts(llm_to_use: str, code: str) -> List[str]:
                 ArtifactResponse,
             )
         )["artifact_names"]
-        return result.artifact_names
+        return result
     except Exception as e:
         logger.warning(f"Artifact extraction failed: {e}")
         return []
