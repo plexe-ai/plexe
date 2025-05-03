@@ -31,7 +31,7 @@ model = plexe.Model(
         "The models must be extremely simple and quickly trainable on extremely constrained hardware."
     ),
     output_schema={
-        "SalePrice ": float,
+        "SalePrice": float,
     },
 )
 
