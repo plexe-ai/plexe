@@ -22,12 +22,18 @@ class ValidationResult:
         passed (bool): Whether the validation passed or not.
         message (str, optional): A message providing details about the validation result.
         exception (Exception, optional): An exception that was raised during validation, if any.
+        error_stage (str, optional): The stage at which validation failed (e.g., "syntax", "loading", "prediction").
+        error_type (str, optional): The type of error that occurred (e.g., "SyntaxError", "TypeError").
+        error_details (str, optional): Detailed information about the error.
     """
 
     name: str
     passed: bool
     message: str = None
     exception: Exception | None = None
+    error_stage: str = None
+    error_type: str = None
+    error_details: str = None
 
 
 class Validator(abc.ABC):

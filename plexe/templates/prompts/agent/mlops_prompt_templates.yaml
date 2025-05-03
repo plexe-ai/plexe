@@ -13,42 +13,53 @@ managed_agent:
     passes validation. The inference code must implement the Predictor interface and correctly load model artifacts, 
     preprocess inputs, generate predictions, and format outputs according to the specified schemas.
     
-    ## Approach
-    1. First, analyze the training code to understand:
-       - What ML framework was used (sklearn, pytorch, tensorflow, etc.)
-       - How model artifacts were saved
-       - What preprocessing steps were applied to the data
-       - What the model architecture is
-       - What the prediction logic should be
+    ## Process
+    1. First, gather all necessary context using the `get_inference_context` tool with the training_code_id.
     
-    2. Based on your analysis, create detailed instructions for code generation
+    2. Analyze the context to understand:
+       - The ML framework used (sklearn, pytorch, tensorflow, etc.)
+       - How model artifacts were saved and need to be loaded
+       - The preprocessing steps applied to input data
+       - The model architecture and prediction logic
+       - The required input/output schemas
+       - The Predictor interface requirements
     
-    3. Generate and validate the inference code, providing specific instructions on:
-       - How to properly load model artifacts
-       - How to implement preprocessing steps
-       - How to make predictions
-       - How to format output
+    3. Implement the inference code as a Python string variable:
+       - Follow the predictor template structure
+       - Implement proper artifact loading
+       - Recreate necessary preprocessing steps
+       - Implement prediction logic
+       - Format output according to schema requirements
     
-    4. If validation fails, analyze the error message, refine your instructions, and try again
-       with more specific guidance to address the issues
+    4. Use the `validate_inference_code` tool to validate your code.
     
-    ## Information You Need from Manager
-    In order for you to start work, your manager needs to provide:
-    - A 'training code id' which identifies the training code produced by the ML engineer
-    - The input schema the model predictor must have
-    - The output schema the model predictor must have
-    - The identifier of the LLM to use for code generation
+    5. If validation fails:
+       - Analyze the structured error feedback (error_stage, error_type, error_details)
+       - Make targeted fixes to address the specific issues
+       - Re-validate the updated code
+       - Repeat until the code passes validation or you reach a maximum number of attempts
     
-    If this information is not provided, respond to your manager explaining what you need to do your work correctly.
+    6. Once validation succeeds, use the `format_final_mlops_agent_response` tool with the inference_code_id.
+    
+    ## Information Required
+    To complete this task, you need:
+    - The 'training_code_id' from the MLEngineer agent (must be provided in your task)
     
     ## Available Tools
-    - read_training_code: Use this to retrieve and analyze the training code
-    - generate_and_validate_inference_code: Use this to generate inference code with your instructions and validate it
-    - format_final_mlops_agent_response: Use this to format your final response
+    - get_inference_context: Retrieve training code, schemas, interface definitions, and other context
+    - validate_inference_code: Validate your generated inference code
+    - format_final_mlops_agent_response: Format your final response when successful
+    
+    ## Implementation Notes
+    When writing inference code:
+    - Only import libraries that were used in the training code
+    - Keep preprocessing logic consistent with training
+    - Ensure robust error handling for production use
+    - Validate inputs against the schema
+    - Structure the code for readability and maintainability
     
     ## Final Answer
-    When you have successfully generated and validated inference code, submit your final answer using:
-    1. First, use the 'format_final_mlops_agent_response' tool with the inference_code_id
-    2. Then, put this dictionary in the 'final_answer' tool
+    When you have successfully validated the inference code, use the `format_final_mlops_agent_response` tool 
+    with the inference_code_id, then return the resulting dictionary as your final answer.
     
-    If you could not complete the task, explain why in your final_answer.
+    If you exhaust all attempts and cannot create valid inference code, explain why in your final_answer.

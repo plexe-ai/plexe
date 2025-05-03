@@ -45,22 +45,46 @@ class PredictorValidator(Validator):
         :param model_artifacts: model artifacts to be used for validation
         :return: True if valid, False otherwise
         """
-        try:
-            predictor_module: types.ModuleType = self._load_module(code)
-            predictor_class = getattr(predictor_module, "PredictorImplementation")
-            predictor = predictor_class(model_artifacts)
-            self._is_subclass(predictor_class)
-            self._returns_output_when_called(predictor)
 
-            return ValidationResult(self.name, True, "Prediction code is valid.")
-
-        except Exception as e:
+        def validation_error(stage, e):
+            """Helper to create validation error results"""
             return ValidationResult(
                 self.name,
                 False,
-                message=f"Prediction code is not valid: {str(e)}.",
+                message=f"Failed at {stage} stage: {str(e)}",
                 exception=e,
+                error_stage=stage,
+                error_type=type(e).__name__,
+                error_details=str(e),
             )
+
+        # Stage 1: Load module
+        try:
+            predictor_module = self._load_module(code)
+        except Exception as e:
+            return validation_error("loading", e)
+
+        # Stage 2: Check class definition
+        try:
+            predictor_class = getattr(predictor_module, "PredictorImplementation")
+            self._is_subclass(predictor_class)
+        except Exception as e:
+            return validation_error("class_definition", e)
+
+        # Stage 3: Initialize predictor
+        try:
+            predictor = predictor_class(model_artifacts)
+        except Exception as e:
+            return validation_error("initialization", e)
+
+        # Stage 4: Test prediction
+        try:
+            self._returns_output_when_called(predictor)
+        except Exception as e:
+            return validation_error("prediction", e)
+
+        # All validation steps passed
+        return ValidationResult(self.name, True, "Prediction code is valid.")
 
     @staticmethod
     def _load_module(code: str) -> types.ModuleType:

@@ -50,66 +50,77 @@ def validate_inference_code(
 
     Args:
         inference_code: The inference code to validate
-        model_artifact_names: The names of model artifacts to use from the registry
-        input_schema: The input schema for the model, for example {"feat_1": "int", "feat_2": "str"}
-        output_schema: The output schema for the model, for example {"output": "float"}
+        model_artifact_names: Names of model artifacts to use from registry
+        input_schema: Input schema for the model (e.g., {"feat_1": "int"})
+        output_schema: Output schema for the model (e.g., {"output": "float"})
 
     Returns:
-        A dictionary containing validation results
+        Dict with validation results and error details if validation fails
     """
     from plexe.internal.common.utils.pydantic_utils import map_to_basemodel
     from plexe.internal.common.registries.objects import ObjectRegistry
 
-    # Debug logging
-    logger.debug(f"Input schema type: {type(input_schema)}, value: {input_schema}")
-    logger.debug(f"Output schema type: {type(output_schema)}, value: {output_schema}")
+    object_registry = ObjectRegistry()
 
-    # Convert dict schemas back to Type[BaseModel] as this is what the validator expects
+    # Convert schemas to pydantic models
     try:
         input_model = map_to_basemodel("InputSchema", input_schema)
         output_model = map_to_basemodel("OutputSchema", output_schema)
     except Exception as e:
-        raise ValueError(f"❌ Given schema is not convertible to pydantic BaseModel: {str(e)}") from e
+        return _error_response("schema_preparation", type(e).__name__, str(e))
 
-    # Initialise registries which are used to pass datasets and artifacts between agents and tools
-    object_registry = ObjectRegistry()
-
-    # Retrieve input sample from registry
+    # Get input samples
     try:
         input_samples = object_registry.get(list, "predictor_input_sample")
+        if not input_samples:
+            return _error_response("input_sample", "MissingData", "Input sample list is empty")
     except Exception as e:
-        raise ValueError(f"❌ Failed to get input sample from registry: {str(e)}") from e
+        return _error_response("input_sample", type(e).__name__, str(e))
 
-    # Retrieve model artifacts from registry
+    # Get artifacts
     artifact_objects = []
-    if model_artifact_names:
+    try:
         for name in model_artifact_names:
             try:
-                artifact = object_registry.get(Artifact, name)
-                artifact_objects.append(artifact)
-                logger.debug(f"Retrieved artifact '{name}' from registry")
-            except KeyError as e:
-                raise ValueError(f"❌ Artifact '{name}' not found in registry") from e
+                artifact_objects.append(object_registry.get(Artifact, name))
+            except KeyError:
+                return _error_response("artifacts", "MissingArtifact", f"Artifact '{name}' not found")
 
-    if not artifact_objects:
-        raise ValueError("❌ No artifacts found or created. Validation will fail.")
+        if not artifact_objects:
+            return _error_response("artifacts", "NoArtifacts", "No artifacts available for model loading")
+    except Exception as e:
+        return _error_response("artifacts", type(e).__name__, str(e))
 
-    # Validate the inference code
-    validation = InferenceCodeValidator(
-        input_schema=input_model,
-        output_schema=output_model,
-        input_sample=input_samples,
-    ).validate(inference_code, model_artifacts=artifact_objects)
+    # Validate the code
+    validator = InferenceCodeValidator(input_schema=input_model, output_schema=output_model, input_sample=input_samples)
+    validation = validator.validate(inference_code, model_artifacts=artifact_objects)
 
-    result = {
-        "passed": validation.passed,
-        "message": validation.message,
-        "exception": str(validation.exception) if validation.exception else None,
-    }
-
+    # Return appropriate result
     if validation.passed:
         inference_code_id = uuid.uuid4().hex
         object_registry.register(Code, inference_code_id, Code(inference_code))
-        result["inference_code_id"] = inference_code_id
+        return _success_response(validation.message, inference_code_id)
 
-    return result
+    # Extract error details from validation result
+    error_type = validation.error_type or (
+        type(validation.exception).__name__ if validation.exception else "UnknownError"
+    )
+    error_details = validation.error_details or (str(validation.exception) if validation.exception else "Unknown error")
+
+    return _error_response(validation.error_stage or "unknown", error_type, error_details, validation.message)
+
+
+def _error_response(stage, exc_type, details, message=None):
+    """Helper to create error response dictionaries"""
+    return {
+        "passed": False,
+        "error_stage": stage,
+        "error_type": exc_type,
+        "error_details": details,
+        "message": message or details,
+    }
+
+
+def _success_response(message, inference_code_id):
+    """Helper to create success response dictionaries"""
+    return {"passed": True, "message": message, "inference_code_id": inference_code_id}

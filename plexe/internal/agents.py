@@ -21,7 +21,6 @@ from plexe.internal.models.tools.training import (
     get_generate_training_code,
     get_fix_training_code,
 )
-from plexe.internal.models.tools.code_analysis import read_training_code
 from plexe.internal.models.tools.evaluation import get_review_finalised_model
 from plexe.internal.models.tools.metrics import get_select_target_metric
 from plexe.internal.models.tools.datasets import split_datasets, create_input_sample
@@ -31,8 +30,8 @@ from plexe.internal.models.tools.response_formatting import (
     format_final_mle_agent_response,
     format_final_mlops_agent_response,
 )
-from plexe.internal.models.tools.inference import get_generate_and_validate_inference_code
-from plexe.internal.models.tools.validation import validate_training_code
+from plexe.internal.models.tools.context import get_inference_context
+from plexe.internal.models.tools.validation import validate_training_code, validate_inference_code
 
 logger = logging.getLogger(__name__)
 
@@ -144,7 +143,7 @@ class PlexeAgent:
         )
 
         # Create predictor builder agent - creates inference code
-        self.mlops_engineer = ToolCallingAgent(
+        self.mlops_engineer = CodeAgent(
             name="MLOperationsEngineer",
             description=(
                 "Expert ML operations engineer that analyzes training code and creates high-quality production-ready "
@@ -155,13 +154,14 @@ class PlexeAgent:
             ),
             model=LiteLLMModel(model_id=self.ml_ops_engineer_model_id),
             tools=[
-                read_training_code,
-                get_generate_and_validate_inference_code(self.tool_model_id),
+                get_inference_context,
+                validate_inference_code,
                 format_final_mlops_agent_response,
             ],
             add_base_tools=False,
             verbosity_level=self.specialist_verbosity,
-            prompt_templates=get_prompt_templates("toolcalling_agent.yaml", "mlops_prompt_templates.yaml"),
+            additional_authorized_imports=config.code_generation.authorized_agent_imports,
+            prompt_templates=get_prompt_templates("code_agent.yaml", "mlops_prompt_templates.yaml"),
             planning_interval=8,
             step_callbacks=[self.chain_of_thought_callable],
         )

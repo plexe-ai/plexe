@@ -40,4 +40,7 @@ class SyntaxValidator(Validator):
                 False,
                 message=f"Syntax is not valid: {e.msg} at line {e.lineno}, column {e.offset}.",
                 exception=e,
+                error_stage="syntax",
+                error_type="SyntaxError",
+                error_details=f"{e.msg} at line {e.lineno}, column {e.offset}",
             )
