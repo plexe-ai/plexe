@@ -18,8 +18,6 @@ from plexe.internal.models.entities.artifact import Artifact
 from plexe.internal.models.entities.code import Code
 from plexe.internal.models.validation.composites import InferenceCodeValidator
 
-import pandas as pd
-
 logger = logging.getLogger(__name__)
 
 
@@ -31,12 +29,14 @@ def get_generate_and_validate_inference_code(llm_to_use: str) -> Callable:
         input_schema: Dict[str, str], output_schema: Dict[str, str], training_code_id: str, instructions: str = ""
     ) -> Dict[str, Any]:
         """
-        Generates and validates inference code in a single operation.
+        Generates inference code based on the training code. The schemas must be provided as a flat dictionary
+        mapping field names to strings representing their types (e.g., "int", "str"). Returns a response indicating
+        whether the generated code passed validation.
 
         Args:
             input_schema: The input schema for the model, for example {"feat_1": "int", "feat_2": "str"}
             output_schema: The output schema for the model, for example {"output": "float"}
-            training_code_id: The identifier for the training code used to train the model
+            training_code_id: The identifier for the training code that was used to train the model
             instructions: Optional instructions from the agent to guide code generation
 
         Returns:
@@ -50,7 +50,7 @@ def get_generate_and_validate_inference_code(llm_to_use: str) -> Callable:
         except Exception as e:
             return {
                 "passed": False,
-                "message": f"Training code with ID {training_code_id} not found",
+                "message": f"Training code with ID {training_code_id} not found, are you sure it exists?",
                 "exception": str(e),
                 "code": None,
             }
@@ -62,7 +62,7 @@ def get_generate_and_validate_inference_code(llm_to_use: str) -> Callable:
         except Exception as e:
             return {
                 "passed": False,
-                "message": "Failed to convert schemas to pydantic models",
+                "message": "Failed to convert schemas to pydantic models, are you sure you provided correct schemas?",
                 "exception": str(e),
                 "code": None,
             }
@@ -88,12 +88,12 @@ def get_generate_and_validate_inference_code(llm_to_use: str) -> Callable:
 
         # Retrieve input sample from registry for validation
         try:
-            input_df = ObjectRegistry().get(pd.DataFrame, "predictor_input_sample")
-            logger.debug(f"Retrieved input sample for validation with {len(input_df)} rows")
+            input_samples = ObjectRegistry().get(list, "predictor_input_sample")
+            logger.debug(f"Retrieved input sample for validation with {len(input_samples)} dictionaries")
         except Exception as e:
             return {
                 "passed": False,
-                "message": "Failed to retrieve input sample for validation",
+                "message": "Failed to retrieve input sample for validation, was the input sample created?",
                 "exception": str(e),
                 "code": inference_code,
             }
@@ -114,7 +114,7 @@ def get_generate_and_validate_inference_code(llm_to_use: str) -> Callable:
         validator = InferenceCodeValidator(
             input_schema=input_model,
             output_schema=output_model,
-            input_sample=input_df,
+            input_sample=input_samples,
         )
 
         validation = validator.validate(inference_code, model_artifacts=artifact_objects)

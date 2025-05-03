@@ -6,7 +6,6 @@ import logging
 import uuid
 from typing import Dict, List
 
-import pandas as pd
 from smolagents import tool
 
 from plexe.internal.models.entities.artifact import Artifact
@@ -75,9 +74,9 @@ def validate_inference_code(
     # Initialise registries which are used to pass datasets and artifacts between agents and tools
     object_registry = ObjectRegistry()
 
-    # Retrieve input sample from registry and convert it to a DataFrame
+    # Retrieve input sample from registry
     try:
-        input_df = object_registry.get(pd.DataFrame, "predictor_input_sample")
+        input_samples = object_registry.get(list, "predictor_input_sample")
     except Exception as e:
         raise ValueError(f"❌ Failed to get input sample from registry: {str(e)}") from e
 
@@ -99,7 +98,7 @@ def validate_inference_code(
     validation = InferenceCodeValidator(
         input_schema=input_model,
         output_schema=output_model,
-        input_sample=input_df,
+        input_sample=input_samples,
     ).validate(inference_code, model_artifacts=artifact_objects)
 
     result = {

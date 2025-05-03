@@ -111,12 +111,13 @@ def create_input_sample(train_dataset_names: List[str], input_schema_fields: Lis
         # Combine datasets and filter for input schema columns
         combined_df = pd.concat(input_sample_dfs, axis=0).reset_index(drop=True)
 
-        # Keep only columns that match the input schema
-        input_sample_df = combined_df[input_schema_fields].head(5)
+        # Keep only columns that match the input schema and convert to list of dicts
+        input_sample_df = combined_df[input_schema_fields].head(min(100, len(combined_df)))
+        input_sample_dicts = input_sample_df.to_dict(orient="records")
 
         # Register the input sample in the registry for validation tool to use
-        object_registry.register(pd.DataFrame, "predictor_input_sample", input_sample_df)
-        logger.debug(f"✅ Registered input sample with {len(input_sample_df)} rows for inference validation")
+        object_registry.register(list, "predictor_input_sample", input_sample_dicts)
+        logger.debug(f"✅ Registered input sample with {len(input_sample_dicts)} dictionaries for inference validation")
         return True
 
     except Exception as e:

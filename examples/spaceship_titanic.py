@@ -24,7 +24,8 @@ from plexe.internal.common.provider import ProviderConfig
 model = plexe.Model(
     intent=(
         "From features describing a Spaceship Titanic passenger's information, determine whether they were "
-        "transported or not."
+        "transported or not. Use only linear regression and decision tree models, no ensembling. The models "
+        "must be extremely simple and quickly trainable on extremely constrained hardware."
     ),
     input_schema={
         "PassengerId": str,
@@ -64,7 +65,7 @@ model.build(
         ops_provider="anthropic/claude-3-7-sonnet-20250219",
         tool_provider="openai/gpt-4o",
     ),
-    max_iterations=4,
+    max_iterations=1,
     timeout=300,  # 5 minute timeout
     run_timeout=150,
     verbose=False,

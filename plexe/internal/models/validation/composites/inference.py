@@ -5,8 +5,7 @@ Classes:
     - InferenceCodeValidator: A validator class that validates the correctness of prediction code.
 """
 
-import pandas as pd
-from typing import Type
+from typing import Type, List, Dict, Any
 
 from pydantic import BaseModel
 
@@ -24,10 +23,15 @@ class InferenceCodeValidator(CompositeValidator):
         self,
         input_schema: Type[BaseModel],
         output_schema: Type[BaseModel],
-        input_sample: pd.DataFrame,
+        input_sample: List[Dict[str, Any]],
     ):
         """
-        Initialize the PredictionValidator with the name 'prediction'.
+        Initialize the InferenceCodeValidator with the name 'prediction'.
+
+        Args:
+            input_schema: The input schema for the model
+            output_schema: The output schema for the model
+            input_sample: List of sample input dictionaries to test the predictor
         """
         super().__init__(
             "prediction",

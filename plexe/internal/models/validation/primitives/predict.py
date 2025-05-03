@@ -7,8 +7,7 @@ Classes:
 
 import types
 import warnings
-from typing import Type
-import pandas as pd
+from typing import Type, List, Dict, Any
 
 from pydantic import BaseModel
 
@@ -25,19 +24,19 @@ class PredictorValidator(Validator):
         self,
         input_schema: Type[BaseModel],
         output_schema: Type[BaseModel],
-        sample: pd.DataFrame,
+        sample: List[Dict[str, Any]],
     ) -> None:
         """
         Initialize the PredictorValidator with the name 'predictor'.
 
         :param input_schema: The input schema of the predictor.
         :param output_schema: The output schema of the predictor.
-        :param sample: The sample input data to test the predictor.
+        :param sample: List of sample input dictionaries to test the predictor.
         """
         super().__init__("predictor")
         self.input_schema: Type[BaseModel] = input_schema
         self.output_schema: Type[BaseModel] = output_schema
-        self.input_sample: pd.DataFrame = sample
+        self.input_sample: List[Dict[str, Any]] = sample
 
     def validate(self, code: str, model_artifacts=None) -> ValidationResult:
         """
@@ -89,11 +88,11 @@ class PredictorValidator(Validator):
         total_tests = len(self.input_sample)
         issues = []
 
-        for i, sample in self.input_sample.iterrows():
+        for i, sample in enumerate(self.input_sample):
             try:
                 with warnings.catch_warnings():
                     warnings.simplefilter("ignore")
-                    predictor.predict(sample.to_dict())
+                    predictor.predict(sample)
             except Exception as e:
                 issues.append({"error": str(e), "sample": sample, "index": i})
 
