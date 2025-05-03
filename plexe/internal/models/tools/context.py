@@ -82,7 +82,7 @@ def _extract_artifacts(llm_to_use: str, code: str) -> List[str]:
     try:
         provider = Provider(llm_to_use)
 
-        result = json.loads(
+        names = json.loads(
             provider.query(
                 "You are a code analysis assistant.",
                 (
@@ -96,7 +96,6 @@ def _extract_artifacts(llm_to_use: str, code: str) -> List[str]:
                 ArtifactResponse,
             )
         )["artifact_names"]
-        return result
+        return names
     except Exception as e:
-        logger.warning(f"Artifact extraction failed: {e}")
-        return []
+        raise RuntimeError(f"Artifact extraction failed: {e}") from e
