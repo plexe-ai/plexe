@@ -186,3 +186,15 @@ See [CONTRIBUTING.md](CONTRIBUTING.md) for guidelines. Join our [Discord](https:
 - [X] Lightweight installation option without heavy deep learning dependencies
 - [X] Distributed training with Ray on AWS
 - [ ] Support for non-tabular data types in model generation
+
+## 8. Citation
+If you use Plexe in your research, please cite it as follows:
+
+```bibtex
+@software{plexe2025,
+  author = {De Bernardi, Marcello AND Dubey, Vaibhav},
+  title = {Plexe: Build machine learning models using natural language.},
+  year = {2025},
+  publisher = {GitHub},
+  howpublished = {\url{https://github.com/plexe-ai/plexe}},
+}
