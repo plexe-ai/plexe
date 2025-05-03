@@ -17,7 +17,7 @@ from plexe.internal.models.entities.code import Code
 from plexe.internal.models.entities.metric import Metric
 from plexe.internal.models.entities.metric import MetricComparator, ComparisonMethod
 from plexe.internal.models.interfaces.predictor import Predictor
-from plexe.internal.models.tools.code_generation import (
+from plexe.internal.models.tools.training import (
     get_generate_training_code,
     get_fix_training_code,
 )
@@ -31,7 +31,7 @@ from plexe.internal.models.tools.response_formatting import (
     format_final_mle_agent_response,
     format_final_mlops_agent_response,
 )
-from plexe.internal.models.tools.unified_inference import get_generate_and_validate_inference_code
+from plexe.internal.models.tools.inference import get_generate_and_validate_inference_code
 from plexe.internal.models.tools.validation import validate_training_code
 
 logger = logging.getLogger(__name__)
