@@ -20,7 +20,8 @@ managed_agent:
     - The identifier of the LLM to use for code generation.
     
     If the information above was not provided, you should reject the task and request your manager to provide the
-    required information.
+    required information. You can also use the 'get_dataset_preview' tool to get a better understanding of the data
+    in case it helps.
     
     ## Instructions for You
     If you have the required information: generate Python machine learning training code to train a model that solves 
