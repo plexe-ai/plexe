@@ -30,7 +30,7 @@ from plexe.internal.models.tools.response_formatting import (
     format_final_mle_agent_response,
     format_final_mlops_agent_response,
 )
-from plexe.internal.models.tools.context import get_inference_context
+from plexe.internal.models.tools.context import get_inference_context_tool
 from plexe.internal.models.tools.validation import validate_training_code, validate_inference_code
 
 logger = logging.getLogger(__name__)
@@ -154,13 +154,13 @@ class PlexeAgent:
             ),
             model=LiteLLMModel(model_id=self.ml_ops_engineer_model_id),
             tools=[
-                get_inference_context,
+                get_inference_context_tool(self.tool_model_id),
                 validate_inference_code,
                 format_final_mlops_agent_response,
             ],
             add_base_tools=False,
             verbosity_level=self.specialist_verbosity,
-            additional_authorized_imports=config.code_generation.authorized_agent_imports + ["typing", "uuid", "plexe"],
+            additional_authorized_imports=config.code_generation.authorized_agent_imports,
             prompt_templates=get_prompt_templates("code_agent.yaml", "mlops_prompt_templates.yaml"),
             planning_interval=8,
             step_callbacks=[self.chain_of_thought_callable],

@@ -26,15 +26,17 @@ def validate_training_code(training_code: str) -> Dict:
         training_code: The training code to validate
 
     Returns:
-        A dictionary containing validation results, in form
+        A dictionary containing validation results
     """
     validator = TrainingCodeValidator()
     validation = validator.validate(training_code)
-    return {
-        "passed": validation.passed,
-        "message": validation.message,
-        "exception": str(validation.exception) if validation.exception else None,
-    }
+
+    if validation.passed:
+        return _success_response(validation.message)
+    else:
+        error_type = type(validation.exception).__name__ if validation.exception else "UnknownError"
+        error_details = str(validation.exception) if validation.exception else "Unknown error"
+        return _error_response("validation", error_type, error_details, validation.message)
 
 
 @tool
@@ -121,6 +123,10 @@ def _error_response(stage, exc_type, details, message=None):
     }
 
 
-def _success_response(message, inference_code_id):
+def _success_response(message, inference_code_id=None):
     """Helper to create success response dictionaries"""
-    return {"passed": True, "message": message, "inference_code_id": inference_code_id}
+    response = {"passed": True, "message": message}
+    # Only include inference_code_id for inference code validation
+    if inference_code_id is not None:
+        response["inference_code_id"] = inference_code_id
+    return response

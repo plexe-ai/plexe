@@ -107,7 +107,7 @@ class PredictorValidator(Validator):
 
     def _returns_output_when_called(self, predictor) -> None:
         """
-        Tests the `predict` function by calling it with sample inputs.
+        Tests the `predict` function by calling it with sample inputs and validates outputs.
         """
         total_tests = len(self.input_sample)
         issues = []
@@ -116,9 +116,27 @@ class PredictorValidator(Validator):
             try:
                 with warnings.catch_warnings():
                     warnings.simplefilter("ignore")
-                    predictor.predict(sample)
+                    # Test prediction execution
+                    output = predictor.predict(sample)
+
+                    # Validate output against schema
+                    try:
+                        self.output_schema.model_validate(output)
+                    except Exception as schema_err:
+                        # Include truncated sample and output for context
+                        truncated_output = str(output)[:100] + "..." if len(str(output)) > 100 else output
+                        issues.append(
+                            {
+                                "error": f"Output schema validation error: {str(schema_err)}",
+                                "output": truncated_output,
+                                "index": i,
+                            }
+                        )
             except Exception as e:
-                issues.append({"error": str(e), "sample": sample, "index": i})
+                # Include truncated sample for context
+                sample_str = str(sample)
+                truncated_sample = sample_str[:100] + "..." if len(sample_str) > 100 else sample_str
+                issues.append({"error": str(e), "sample": truncated_sample, "index": i})
 
         if len(issues) > 0:
             raise RuntimeError(f"{len(issues)}/{total_tests} calls to 'predict' failed. Issues: {issues}")
