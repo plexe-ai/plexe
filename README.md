@@ -37,8 +37,6 @@ pip install plexe
 
 You can use plexe as a Python library to build and train machine learning models:
 
-#### B. Library API
-
 ```python
 import plexe
 
@@ -106,9 +104,9 @@ Plexe supports distributed model training and evaluation with Ray for faster par
 
 ```python
 from plexe import Model
-from plexe.config import config
 
 # Optional: Configure Ray cluster address if using remote Ray
+# from plexe import config
 # config.ray.address = "ray://10.1.2.3:10001"
 
 model = Model(
@@ -140,13 +138,18 @@ model.build(provider="openai/gpt-4o-mini")  # Schema inferred automatically
 ```
 
 ### 2.6. 🌐 Multi-Provider Support
-Use your preferred LLM provider:
+Use your preferred LLM provider, for example:
 ```python
-model.build(provider="openai/gpt-4o-mini")    # OpenAI
-model.build(provider="anthropic/claude-3-opus")  # Anthropic
-model.build(provider="google/gemini-1.5-pro")    # Google
+model.build(provider="openai/gpt-4o-mini")          # OpenAI
+model.build(provider="anthropic/claude-3-opus")     # Anthropic
+model.build(provider="ollama/llama2")               # Ollama
+model.build(provider="huggingface/meta-llama/...")  # Hugging Face    
 ```
-See [LiteLLM providers](https://docs.litellm.ai/docs/providers) for available providers.
+See [LiteLLM providers](https://docs.litellm.ai/docs/providers) for instructions and available providers.
+
+> [!NOTE]
+> Plexe *should* work with most LiteLLM providers, but we actively test only with `openai/*` and `anthropic/*`
+> models. If you encounter issues with other providers, please let us know.
 
 
 ## 3. Installation
@@ -169,8 +172,6 @@ See [LiteLLM providers](https://docs.litellm.ai/docs/providers) for environment 
 
 ## 4. Documentation
 For full documentation, visit [docs.plexe.ai](https://docs.plexe.ai).
-
-
 
 ## 5. Contributing
 See [CONTRIBUTING.md](CONTRIBUTING.md) for guidelines. Join our [Discord](https://discord.gg/SefZDepGMv) to connect with the team.
