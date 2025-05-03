@@ -23,7 +23,7 @@ from plexe.internal.models.tools.training import (
 )
 from plexe.internal.models.tools.evaluation import get_review_finalised_model
 from plexe.internal.models.tools.metrics import get_select_target_metric
-from plexe.internal.models.tools.datasets import split_datasets, create_input_sample
+from plexe.internal.models.tools.datasets import split_datasets, create_input_sample, get_dataset_preview
 from plexe.internal.models.tools.execution import get_executor_tool
 from plexe.internal.models.tools.response_formatting import (
     format_final_orchestrator_agent_response,
@@ -107,7 +107,7 @@ class PlexeAgent:
                 "- the name and comparison method of the metric to optimise"
             ),
             model=LiteLLMModel(model_id=self.ml_researcher_model_id),
-            tools=[],
+            tools=[get_dataset_preview],
             add_base_tools=False,
             verbosity_level=self.specialist_verbosity,
             prompt_templates=get_prompt_templates("toolcalling_agent.yaml", "mls_prompt_templates.yaml"),
@@ -134,6 +134,7 @@ class PlexeAgent:
                 validate_training_code,
                 get_fix_training_code(self.tool_model_id),
                 get_executor_tool(distributed),
+                get_dataset_preview,
                 format_final_mle_agent_response,
             ],
             add_base_tools=False,
@@ -175,6 +176,7 @@ class PlexeAgent:
                 get_review_finalised_model(self.tool_model_id),
                 split_datasets,
                 create_input_sample,
+                get_dataset_preview,
                 format_final_orchestrator_agent_response,
             ],
             managed_agents=[self.ml_research_agent, self.mle_agent, self.mlops_engineer],
