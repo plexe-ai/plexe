@@ -228,6 +228,9 @@ class Model:
             elif self.input_schema is None:
                 self.input_schema, _ = self.schema_resolver.resolve(self.training_data)
 
+            self.object_registry.register(dict, "input_schema", format_schema(self.input_schema))
+            self.object_registry.register(dict, "output_schema", format_schema(self.output_schema))
+
             # Run callbacks for build start
             for callback in self.object_registry.get_all(Callback).values():
                 try:
