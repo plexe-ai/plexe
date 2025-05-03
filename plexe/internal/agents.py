@@ -106,7 +106,6 @@ class PlexeAgent:
                 "- input schema for the model"
                 "- output schema for the model"
                 "- the name and comparison method of the metric to optimise"
-                "- the identifier of the LLM that should be used for plan generation"
             ),
             model=LiteLLMModel(model_id=self.ml_researcher_model_id),
             tools=[],
@@ -129,7 +128,6 @@ class PlexeAgent:
                 "- the full solution plan that outlines how to solve this problem"
                 "- the split train/validation dataset names"
                 "- the working directory to use for model execution"
-                "- the identifier of the LLM that should be used for code generation"
             ),
             model=LiteLLMModel(model_id=self.ml_engineer_model_id),
             tools=[
@@ -154,7 +152,6 @@ class PlexeAgent:
                 "- input schema for the model"
                 "- output schema for the model"
                 "- the 'training code id' of the training code produced by the MLEngineer agent"
-                "- the identifier of the LLM that should be used for code generation"
             ),
             model=LiteLLMModel(model_id=self.ml_ops_engineer_model_id),
             tools=[
