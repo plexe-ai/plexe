@@ -43,18 +43,13 @@ def validate_training_code(training_code: str) -> Dict:
 def validate_inference_code(
     inference_code: str,
     model_artifact_names: List[str],
-    input_schema: Dict[str, str],
-    output_schema: Dict[str, str],
 ) -> Dict:
     """
-    Validates inference code for syntax, security, and correctness. The schemas must be provided as a flat dictionary
-    mapping field names to strings representing their types (e.g., "int", "str").
+    Validates inference code for syntax, security, and correctness.
 
     Args:
         inference_code: The inference code to validate
         model_artifact_names: Names of model artifacts to use from registry
-        input_schema: Input schema for the model (e.g., {"feat_1": "int"})
-        output_schema: Output schema for the model (e.g., {"output": "float"})
 
     Returns:
         Dict with validation results and error details if validation fails
@@ -63,6 +58,13 @@ def validate_inference_code(
     from plexe.internal.common.registries.objects import ObjectRegistry
 
     object_registry = ObjectRegistry()
+
+    # Get schemas from registry
+    try:
+        input_schema = object_registry.get(dict, "input_schema")
+        output_schema = object_registry.get(dict, "output_schema")
+    except Exception as e:
+        return _error_response("schema_preparation", type(e).__name__, str(e))
 
     # Convert schemas to pydantic models
     try:
