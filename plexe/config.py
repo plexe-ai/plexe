@@ -93,6 +93,7 @@ class _Config:
                 "typing",
                 "dataclasses",
                 "json",
+                "io",
                 "time",
                 "datetime",
                 "os",
@@ -109,6 +110,7 @@ class _Config:
                 "logging",
                 "importlib",
                 "types",
+                "plexe",
             ]
         )
 
