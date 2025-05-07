@@ -23,7 +23,7 @@ and the AI-powered system builds a fully functional model through an automated a
 </div>
 
 
-[![Building an ML model with Plexe](resources/demo-thumbnail.png)](https://www.youtube.com/watch?v=bUwCSglhcXY)
+[![Building an ML model with Plexe](https://img.youtube.com/vi/bUwCSglhcXY/0.jpg)](https://www.youtube.com/watch?v=bUwCSglhcXY)
 
 ## 1. Quickstart
 
