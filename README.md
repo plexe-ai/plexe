@@ -23,7 +23,9 @@ and the AI-powered system builds a fully functional model through an automated a
 </div>
 
 
+<div align="center">
 <iframe width="560" height="315" src="https://www.youtube.com/embed/bUwCSglhcXY?si=0aJmElb0ZqUUTvPR" title="YouTube video player" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" referrerpolicy="strict-origin-when-cross-origin" allowfullscreen></iframe>
+</div>
 
 ## 1. Quickstart
 
