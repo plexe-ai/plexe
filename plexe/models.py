@@ -214,31 +214,30 @@ class Model:
             }
             self.object_registry.register_multiple(TabularConvertible, self.training_data)
 
-            # Step 2: define model schemas using the SchemaResolverAgent
-            # Create and run the schema resolver agent
-            schema_resolver_agent = SchemaResolverAgent(
-                model_id=provider_config.tool_provider,
-                verbose=verbose,
-                chain_of_thought_callable=cot_callable,
-            )
-            schema_result = schema_resolver_agent.run(
-                intent=self.intent,
-                dataset_names=list(self.training_data.keys()),
-                user_input_schema=format_schema(self.input_schema) if self.input_schema else None,
-                user_output_schema=format_schema(self.output_schema) if self.output_schema else None,
-            )
+            # Step 2: define model schemas using the SchemaResolverAgent (only if schemas are not provided)
+            if self.input_schema is None or self.output_schema is None:
+                # Create and run the schema resolver agent
+                schema_resolver_agent = SchemaResolverAgent(
+                    model_id=provider_config.tool_provider,
+                    verbose=verbose,
+                    chain_of_thought_callable=cot_callable,
+                )
+                schema_result = schema_resolver_agent.run(
+                    intent=self.intent,
+                    dataset_names=list(self.training_data.keys()),
+                    user_input_schema=format_schema(self.input_schema) if self.input_schema else None,
+                    user_output_schema=format_schema(self.output_schema) if self.output_schema else None,
+                )
 
-            # Convert the returned schemas to Pydantic models and update
-            self.input_schema = map_to_basemodel("InputSchema", schema_result["input_schema"])
-            self.output_schema = map_to_basemodel("OutputSchema", schema_result["output_schema"])
+                # Convert the returned schemas to Pydantic models and update
+                if self.input_schema is None:
+                    self.input_schema = map_to_basemodel("InputSchema", schema_result["input_schema"])
+                if self.output_schema is None:
+                    self.output_schema = map_to_basemodel("OutputSchema", schema_result["output_schema"])
 
             # Register the final schemas in the object registry
             self.object_registry.register(dict, "input_schema", format_schema(self.input_schema))
             self.object_registry.register(dict, "output_schema", format_schema(self.output_schema))
-
-            # Also register the schema reasoning if available
-            if "reasoning" in schema_result:
-                self.object_registry.register(str, "schema_reasoning", schema_result["reasoning"])
 
             # Run callbacks for build start
             for callback in self.object_registry.get_all(Callback).values():
@@ -273,7 +272,7 @@ class Model:
             # Step 3: generate model
             # Start the model generation run
             # Get schema reasoning if available
-            schema_reasoning = self.object_registry.get(str, "schema_reasoning")
+            schema_reasoning = self.object_registry.get(str, "schema_reasoning", None)
 
             agent_prompt = prompt_templates.agent_builder_prompt(
                 intent=self.intent,

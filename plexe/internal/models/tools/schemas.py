@@ -5,6 +5,7 @@ Tools for schema inference, definition, and validation.
 import json
 import logging
 from typing import Dict, List, Any
+from pydantic import BaseModel
 
 import pandas as pd
 from smolagents import tool
@@ -15,6 +16,11 @@ from plexe.internal.common.provider import Provider
 from plexe.internal.common.registries.objects import ObjectRegistry
 
 logger = logging.getLogger(__name__)
+
+
+class SchemaResponse(BaseModel):
+    input_schema: Dict[str, str]
+    output_schema: Dict[str, str]
 
 
 @tool
@@ -151,7 +157,6 @@ def get_model_schema_resolver(llm_to_use: str):
             Return a JSON object with these properties:
             - input_schema: finalized input schema (dictionary mapping field names to types)  
             - output_schema: finalized output schema (dictionary mapping field names to types)
-            - reasoning: explanation of schema validation decisions
             """
 
             # Use schema prompt templates if available
@@ -166,7 +171,11 @@ def get_model_schema_resolver(llm_to_use: str):
                 )
 
         # Query the LLM
-        response_text = provider.query(prompt)
+        response_text = provider.query(
+            system_message="You are an expert data scientist who understands how to derive business value from data.",
+            user_message=prompt,
+            response_format=SchemaResponse,
+        )
 
         try:
             # Parse the JSON response

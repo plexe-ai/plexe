@@ -59,7 +59,7 @@ class SchemaResolverAgent:
             tools=[get_dataset_preview, get_raw_dataset_schema, get_model_schema_resolver(model_id)],
             add_base_tools=False,
             verbosity_level=self.verbosity,
-            step_callbacks=chain_of_thought_callable,
+            step_callbacks=[chain_of_thought_callable],
         )
 
     def run(
@@ -115,7 +115,7 @@ class SchemaResolverAgent:
         # (this is done by the define_model_schemas tool)
         input_schema = object_registry.get(dict, "input_schema")
         output_schema = object_registry.get(dict, "output_schema")
-        schema_reasoning = object_registry.get(str, "schema_reasoning", default="No reasoning provided")
+        schema_reasoning = object_registry.get(str, "schema_reasoning")
 
         # Return the schema information
         return {"input_schema": input_schema, "output_schema": output_schema, "reasoning": schema_reasoning}
