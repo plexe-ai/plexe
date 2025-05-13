@@ -10,7 +10,6 @@ import logging
 from typing import Dict, List, Any
 
 import numpy as np
-import pandas as pd
 from smolagents import tool
 
 from plexe.internal.common.datasets.interface import TabularConvertible
@@ -85,13 +84,14 @@ def split_datasets(
 
 
 @tool
-def create_input_sample(train_dataset_names: List[str], input_schema_fields: List[str]) -> bool:
+def create_input_sample(input_schema: Dict[str, str], n_samples: int = 5) -> bool:
     """
-    Create and register a sample input dataset for inference code validation.
+    Create and register a synthetic sample input dataset that matches the model's input schema.
+    This sample is used for validating inference code.
 
     Args:
-        train_dataset_names: List of training dataset names to extract samples from
-        input_schema_fields: List of field names from the input schema
+        input_schema: Dictionary mapping field names to their types
+        n_samples: Number of samples to generate (default: 5)
 
     Returns:
         True if sample was successfully created and registered, False otherwise
@@ -99,27 +99,33 @@ def create_input_sample(train_dataset_names: List[str], input_schema_fields: Lis
     object_registry = ObjectRegistry()
 
     try:
-        # Concatenate all train datasets and extract relevant columns for the input schema
-        input_sample_dfs = []
-        for dataset_name in train_dataset_names:
-            dataset = object_registry.get(TabularConvertible, dataset_name)
-            df = dataset.to_pandas().head(max(5, 5 // len(train_dataset_names)))
-            input_sample_dfs.append(df)
+        # Create synthetic sample data that matches the schema
+        input_sample_dicts = []
 
-        if not input_sample_dfs:
-            logger.warning("⚠️ No datasets available to create input sample for validation")
-            return False
+        # Generate synthetic examples
+        for i in range(n_samples):
+            sample = {}
+            for field_name, field_type in input_schema.items():
+                # Generate appropriate sample values based on type
+                if field_type == "int":
+                    sample[field_name] = i * 10
+                elif field_type == "float":
+                    sample[field_name] = i * 10.5
+                elif field_type == "bool":
+                    sample[field_name] = i % 2 == 0
+                elif field_type == "str":
+                    sample[field_name] = f"sample_{field_name}_{i}"
+                else:
+                    sample[field_name] = None
+            input_sample_dicts.append(sample)
 
-        # Combine datasets and filter for input schema columns
-        combined_df = pd.concat(input_sample_dfs, axis=0).reset_index(drop=True)
-
-        # Keep only columns that match the input schema and convert to list of dicts
-        input_sample_df = combined_df[input_schema_fields].head(min(100, len(combined_df)))
-        input_sample_dicts = input_sample_df.to_dict(orient="records")
+        # TODO: we should use an LLM call to generate sensible values; then validate using pydantic
 
         # Register the input sample in the registry for validation tool to use
         object_registry.register(list, "predictor_input_sample", input_sample_dicts)
-        logger.debug(f"✅ Registered input sample with {len(input_sample_dicts)} dictionaries for inference validation")
+        logger.debug(
+            f"✅ Registered synthetic input sample with {len(input_sample_dicts)} examples for inference validation"
+        )
         return True
 
     except Exception as e:

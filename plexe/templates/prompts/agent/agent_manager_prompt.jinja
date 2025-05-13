@@ -19,6 +19,11 @@ for the team if absolutely necessary.
 ### 1.3. Output Schema (Expected Output Schema for the Model)
 {{output_schema}}
 
+{% if schema_reasoning is defined and schema_reasoning %}
+### 1.4. Schema Design Reasoning
+This explains why the input and output schemas were designed this way, and any transformations that may be needed:
+{{schema_reasoning}}
+{% endif %}
 
 ## 2. Available Datasets
 The following datasets are available for development of the model. You must always refer to the datasets by these

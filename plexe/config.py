@@ -212,6 +212,41 @@ class _PromptTemplates:
             "schemas/generate_from_intent.jinja", intent=intent, input_schema=input_schema, output_schema=output_schema
         )
 
+    def schema_resolve(self, intent, datasets, has_input_schema=False, has_output_schema=False) -> str:
+        return self._render(
+            "schemas/resolve.jinja",
+            intent=intent,
+            datasets=datasets,
+            has_input_schema=has_input_schema,
+            has_output_schema=has_output_schema,
+        )
+
+    def schema_validate(
+        self, intent, datasets, input_schema, output_schema, has_input_schema, has_output_schema
+    ) -> str:
+        return self._render(
+            "schemas/validate.jinja",
+            intent=intent,
+            datasets=datasets,
+            input_schema=input_schema,
+            output_schema=output_schema,
+            has_input_schema=has_input_schema,
+            has_output_schema=has_output_schema,
+        )
+
+    def schema_resolver_prompt(
+        self, intent, datasets, input_schema=None, output_schema=None, has_input_schema=False, has_output_schema=False
+    ) -> str:
+        return self._render(
+            "agent/schema_resolver_prompt.jinja",
+            intent=intent,
+            datasets=datasets,
+            input_schema=input_schema,
+            output_schema=output_schema,
+            has_input_schema=has_input_schema,
+            has_output_schema=has_output_schema,
+        )
+
     def training_system(self) -> str:
         return self._render("training/system_prompt.jinja")
 
@@ -290,6 +325,7 @@ class _PromptTemplates:
         datasets: List[str],
         working_dir: str,
         max_iterations: int = None,
+        schema_reasoning: str = None,
     ) -> str:
         return self._render(
             "agent/agent_manager_prompt.jinja",
@@ -299,6 +335,7 @@ class _PromptTemplates:
             datasets=datasets,
             working_dir=working_dir,
             max_iterations=max_iterations,
+            schema_reasoning=schema_reasoning,
         )
 
 

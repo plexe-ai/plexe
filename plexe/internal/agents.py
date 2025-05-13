@@ -24,6 +24,7 @@ from plexe.internal.models.tools.training import (
 from plexe.internal.models.tools.evaluation import get_review_finalised_model
 from plexe.internal.models.tools.metrics import get_select_target_metric
 from plexe.internal.models.tools.datasets import split_datasets, create_input_sample, get_dataset_preview
+from plexe.internal.models.tools.schemas import get_raw_dataset_schema
 from plexe.internal.models.tools.execution import get_executor_tool
 from plexe.internal.models.tools.response_formatting import (
     format_final_orchestrator_agent_response,
@@ -177,6 +178,7 @@ class PlexeAgent:
                 split_datasets,
                 create_input_sample,
                 get_dataset_preview,
+                get_raw_dataset_schema,
                 format_final_orchestrator_agent_response,
             ],
             managed_agents=[self.ml_research_agent, self.mle_agent, self.mlops_engineer],
