@@ -21,7 +21,7 @@ Build machine learning models using natural language.
 and the AI-powered system builds a fully functional model through an automated agentic approach. Also available as a 
 [managed cloud service](https://plexe.ai).
 
-[![Building an ML model with Plexe](https://img.youtube.com/vi/bUwCSglhcXY/0.jpg)](https://www.youtube.com/watch?v=bUwCSglhcXY)
+[![Building an ML model with Plexe](resources/demo-thumbnail.png)](https://www.youtube.com/watch?v=bUwCSglhcXY)
 </div>
 
 ## 1. Quickstart
