@@ -194,4 +194,8 @@ plexe-full-codebase.txt
 examples/datasets/
 examples/datasets/*
 
+# Experiments
+experiments/
+notebooks/
+
 **/.claude/settings.local.json
