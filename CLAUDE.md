@@ -1,39 +1,37 @@
 # CLAUDE.md: Plexe Coding Reference
 
-## Project Structure
-- `plexe/`: Main package directory
-- `plexe/models.py`: Implemented the top-level `Model` class
-- `plexe/fileio.py`: Saving and loading models
-- `plexe/config.py`: Configuration for model building, including LLM prompts
-- `plexe/internal/common/`: Package containing common utilities and functions
-- `plexe/internal/models/`: Package containing model building and training logic
-- `plexe/internal/datasets`: Package containing synthetic data generation logic
-- `plexe/internal/schemas/`: Package containing schema validation and inference logic
-- `plexe/internal/models/generators.py`: Main implementation of the model building and training logic
+## Project Overview
+Plexe is a framework for building ML models using natural language. It employs a multi-agent architecture where 
+specialized AI agents collaborate to analyze requirements, generate solutions, and build functional ML models.
+
+The core architecture is as follows: agents go in `plexe/agents/*`, tools in `plexe/tools/*`, prompt templates in
+`plexe/templates/prompts/*`, and the main model code in `plexe/models.py`. This structure must be followed.
+
+## Key Components
+- `plexe/models.py`: Core `Model` class with build/predict functionality
+- `plexe/agents/schema_resolver.py`: Agent inferring input/output schemas
+- `plexe/internal/agents.py`: Multi-agent system implementation (`PlexeAgent` class)
+- `plexe/internal/models/tools/`: Tools for code generation, execution, validation
+- `plexe/config.py`: Configuration management and prompt templates
+- `plexe/internal/common/registries/objects.py`: Shared object registry for agents
+- `plexe/datasets.py`: Dataset handling and synthetic data generation
+- `docs/architecture/multi-agent-system.md`: Architectural documentation
+- `plexe/templates/prompts/`: Prompt templates for agents and LLM calls
 
 ## Build/Run Commands
 - Install deps: `poetry install`
 - Format code: `poetry run black .`
 - Lint code: `poetry run ruff check . --fix`
-- Run all tests: `poetry run pytest tests/`
-- Run single test: `poetry run pytest tests/path/to/test_file.py::test_function_name`
-- Run unit tests: `poetry run pytest tests/unit/`
-- Run integration tests: `poetry run pytest tests/integration/`
+- Run tests: `poetry run pytest tests/`
 - Run with coverage: `poetry run pytest --cov=plexe tests/`
 
 ## Code Style
-- **Paradigm**: object-oriented structure, functional implementations where appropriate
-- **Functions**: 50 lines max (not including docstrings)
+- **Functions**: Max 50 lines (excluding docstrings)
 - **Formatting**: Black with 120 char line length
 - **Linting**: Ruff with E203/E501/E402 ignored
-- **Typing**: Use type hints and Pydantic models
-- **Naming**: snake_case (functions/vars), CamelCase (classes)
-- **Imports**: Group stdlib, third-party, then local imports; NO IMPORTS INSIDE FUNCTIONS, always import at the top of the file
-- **__init__.py**: No code in __init__.py files except in plexe/__init__.py for convenience
-- **Docstrings**: Required for public modules/classes/functions; Sphinx style without type hints
+- **Typing**: Type hints and Pydantic models required
+- **Imports**: ALWAYS at top level in order: stdlib, third-party, local; NEVER inside functions
+- **__init__.py**: No implementation code except in `plexe/__init__.py`
+- **Docstrings**: Required for public APIs; Sphinx style
 - **Testing**: Write pytest tests for all new functionality
-
-## Commit Messages
-- Format: `<type>: <subject>`
-- Types: feat, fix, docs, style, refactor, test, chore
-- Example: `feat: add support for deepseek`
+- **Elegance**: Write the simplest solution possible; avoid over-engineering; prefer deleting code over adding code
