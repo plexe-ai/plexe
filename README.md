@@ -20,11 +20,12 @@ Build machine learning models using natural language.
 **plexe** lets you create machine learning models by describing them in plain language. Simply explain what you want, 
 and the AI-powered system builds a fully functional model through an automated agentic approach. Also available as a 
 [managed cloud service](https://plexe.ai).
+
+<br>
+
+Watch the demo on YouTube:
+[![Building an ML model with Plexe](resources/demo-thumbnail.png)](https://www.youtube.com/watch?v=bUwCSglhcXY)
 </div>
-
-
-[![Demo](resources/demo-thumbnail.png)](https://github.com/user-attachments/assets/05ac238b-464c-457c-a63a-819bfe9a4fed)
-
 
 ## 1. Quickstart
 
