@@ -40,21 +40,37 @@ def register_final_model_schemas(
     """
     object_registry = ObjectRegistry()
 
+    # Validate schemas by attempting to convert them to Pydantic models
     try:
-        # Validate schemas by attempting to convert them to Pydantic models
         map_to_basemodel("InputSchema", input_schema)
         map_to_basemodel("OutputSchema", output_schema)
-
-        # Register the validated schemas
-        object_registry.register(dict, "input_schema", input_schema)
-        object_registry.register(dict, "output_schema", output_schema)
-        object_registry.register(str, "schema_reasoning", reasoning)
-
-        return {"status": "success", "message": "Schemas validated and registered successfully"}
     except Exception as e:
         error_msg = f"Schema validation or registration failed: {str(e)}"
         logger.error(error_msg)
         raise ValueError(error_msg) from e
+
+    # Register input schema if possible
+    try:
+        object_registry.register(dict, "input_schema", input_schema)
+    except ValueError as e:
+        if "already registered" not in str(e):
+            raise e
+
+    # Register output schema if possible
+    try:
+        object_registry.register(dict, "output_schema", output_schema)
+    except ValueError as e:
+        if "already registered" not in str(e):
+            raise e
+
+    # Register reasoning if possible
+    try:
+        object_registry.register(str, "schema_reasoning", reasoning)
+    except ValueError as e:
+        if "already registered" not in str(e):
+            raise e
+
+    return {"status": "success", "message": "Schemas validated and registered successfully"}
 
 
 @tool
