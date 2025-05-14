@@ -143,8 +143,15 @@ class MLFlowCallback(Callback):
                 with open(code_path, "w") as f:
                     f.write(info.node.training_code)
                 mlflow.log_artifact(str(code_path))
+                # Clean up the temporary file after logging
+                code_path.unlink(missing_ok=True)
             except Exception as e:
                 logger.warning(f"Could not log trainer source: {e}")
+                # Attempt to clean up the file even if logging failed
+                try:
+                    Path("trainer_source.py").unlink(missing_ok=True)
+                except Exception:
+                    pass
 
         # Log node performance if available
         if info.node.performance:
