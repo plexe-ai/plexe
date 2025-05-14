@@ -38,6 +38,8 @@ class TabularDataset(Dataset, TabularConvertible):
         test_ratio: float = 0.15,
         stratify_column: Optional[str] = None,
         random_state: Optional[int] = None,
+        is_time_series: bool = False,
+        time_index_column: Optional[str] = None,
     ) -> Tuple["TabularDataset", "TabularDataset", "TabularDataset"]:
         """
         Split dataset into train, validation and test sets.
@@ -45,15 +47,48 @@ class TabularDataset(Dataset, TabularConvertible):
         :param train_ratio: Proportion of data to use for training
         :param val_ratio: Proportion of data to use for validation
         :param test_ratio: Proportion of data to use for testing
-        :param stratify_column: Column to use for stratified splitting
-        :param random_state: Random seed for reproducibility
+        :param stratify_column: Column to use for stratified splitting (not used for time series)
+        :param random_state: Random seed for reproducibility (not used for time series)
+        :param is_time_series: Whether the data is chronological time series data
+        :param time_index_column: Column name that represents the time index, required if is_time_series=True
         :returns: A tuple of (train_dataset, val_dataset, test_dataset)
-        :raises ValueError: If ratios don't sum to approximately 1.0
+        :raises ValueError: If ratios don't sum to approximately 1.0 or if time_index_column is missing for time series
         """
-        from sklearn.model_selection import train_test_split
-
         if abs(train_ratio + val_ratio + test_ratio - 1.0) > 1e-10:
             raise ValueError("Split ratios must sum to 1.0")
+
+        # Handle time series data
+        if is_time_series:
+            if not time_index_column:
+                raise ValueError("time_index_column must be provided when is_time_series=True")
+
+            if time_index_column not in self._data.columns:
+                raise ValueError(f"time_index_column '{time_index_column}' not found in dataset columns")
+
+            # Sort by time index
+            sorted_data = self._data.sort_values(by=time_index_column).reset_index(drop=True)
+
+            # Calculate split indices
+            n_samples = len(sorted_data)
+            train_end = int(n_samples * train_ratio)
+            val_end = train_end + int(n_samples * val_ratio)
+
+            # Split the data sequentially
+            train_data = sorted_data.iloc[:train_end]
+            val_data = sorted_data.iloc[train_end:val_end]
+            test_data = sorted_data.iloc[val_end:]
+
+            # Handle edge cases for empty splits
+            empty_df = pd.DataFrame(columns=self._data.columns)
+            if val_ratio < 1e-10:
+                val_data = empty_df
+            if test_ratio < 1e-10:
+                test_data = empty_df
+
+            return TabularDataset(train_data), TabularDataset(val_data), TabularDataset(test_data)
+
+        # Regular random splitting for non-time series data
+        from sklearn.model_selection import train_test_split
 
         # Handle all-data-to-train edge case
         if val_ratio < 1e-10 and test_ratio < 1e-10:
@@ -101,7 +136,7 @@ class TabularDataset(Dataset, TabularConvertible):
             stratify=temp_data[stratify_column] if stratify_column else None,
             random_state=random_state,
         )
-        return (TabularDataset(train_data), TabularDataset(val_data), TabularDataset(test_data))
+        return TabularDataset(train_data), TabularDataset(val_data), TabularDataset(test_data)
 
     def sample(
         self, n: int = None, frac: float = None, replace: bool = False, random_state: int = None

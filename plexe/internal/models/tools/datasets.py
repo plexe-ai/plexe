@@ -24,6 +24,8 @@ def split_datasets(
     train_ratio: float = 0.9,
     val_ratio: float = 0.1,
     test_ratio: float = 0.0,
+    is_time_series: bool = False,
+    time_index_column: str = None,
 ) -> Dict[str, List[str]]:
     """
     Split datasets into train, validation, and test sets and register the new split datasets with
@@ -35,6 +37,8 @@ def split_datasets(
         train_ratio: Ratio of data to use for training (default: 0.9)
         val_ratio: Ratio of data to use for validation (default: 0.1)
         test_ratio: Ratio of data to use for testing (default: 0.0)
+        is_time_series: Whether the data is chronological time series data (default: False)
+        time_index_column: Column name that represents the time index, required if is_time_series=True
 
     Returns:
         Dictionary containing lists of registered dataset names:
@@ -55,7 +59,13 @@ def split_datasets(
     logger.debug("🔪 Splitting datasets into train, validation, and test sets")
     for name in datasets:
         dataset = object_registry.get(TabularConvertible, name)
-        train_ds, val_ds, test_ds = dataset.split(train_ratio=train_ratio, val_ratio=val_ratio, test_ratio=test_ratio)
+        train_ds, val_ds, test_ds = dataset.split(
+            train_ratio=train_ratio,
+            val_ratio=val_ratio,
+            test_ratio=test_ratio,
+            is_time_series=is_time_series,
+            time_index_column=time_index_column,
+        )
 
         # Register split datasets in the registry
         train_name = f"{name}_train"
