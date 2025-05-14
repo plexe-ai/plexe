@@ -22,13 +22,21 @@ def register_final_model_schemas(
     """
     Register agent-determined schemas in the ObjectRegistry with validation.
 
+    Validates schemas by attempting to convert them to Pydantic models
+    and registers them in the ObjectRegistry if valid. If validation fails,
+    raises an exception with details.
+
     Args:
         input_schema: Finalized input schema as field:type dictionary
         output_schema: Finalized output schema as field:type dictionary
         reasoning: Explanation of schema design decisions
 
     Returns:
-        Status message confirming registration or error details
+        Status message confirming registration
+
+    Raises:
+        ValueError: If schema validation fails
+        KeyError: If schema registration fails
     """
     object_registry = ObjectRegistry()
 
@@ -44,9 +52,9 @@ def register_final_model_schemas(
 
         return {"status": "success", "message": "Schemas validated and registered successfully"}
     except Exception as e:
-        error_msg = f"Schema validation failed: {str(e)}"
+        error_msg = f"Schema validation or registration failed: {str(e)}"
         logger.error(error_msg)
-        return {"status": "error", "message": error_msg}
+        raise ValueError(error_msg) from e
 
 
 @tool

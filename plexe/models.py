@@ -215,7 +215,10 @@ class Model:
             self.object_registry.register_multiple(TabularConvertible, self.training_data)
 
             # Step 2: define model schemas using the SchemaResolverAgent (only if schemas are not provided)
-            schema_result = {}
+            if self.input_schema is not None:
+                self.object_registry.register(dict, "input_schema", format_schema(self.input_schema))
+            if self.output_schema is not None:
+                self.object_registry.register(dict, "output_schema", format_schema(self.output_schema))
             if self.input_schema is None or self.output_schema is None:
                 # Create and run the schema resolver agent
                 schema_resolver_agent = SchemaResolverAgent(
@@ -235,12 +238,6 @@ class Model:
                     self.input_schema = map_to_basemodel("InputSchema", schema_result["input_schema"])
                 if self.output_schema is None:
                     self.output_schema = map_to_basemodel("OutputSchema", schema_result["output_schema"])
-
-            # Only register schemas if not already registered by the agent
-            already_registered = schema_result.get("already_registered", False)
-            if not already_registered:
-                self.object_registry.register(dict, "input_schema", format_schema(self.input_schema))
-                self.object_registry.register(dict, "output_schema", format_schema(self.output_schema))
 
             # Run callbacks for build start
             for callback in self.object_registry.get_all(Callback).values():
@@ -361,26 +358,6 @@ class Model:
             self.metadata["tool_provider"] = str(provider_config.tool_provider)
 
             self.state = ModelState.READY
-
-            # Run callbacks for 'on_build_end' event
-            for callback in self.object_registry.get_all(Callback).values():
-                try:
-                    callback.on_build_end(
-                        BuildStateInfo(
-                            intent=self.intent,
-                            provider=provider_config.tool_provider,  # Use tool_provider for callbacks
-                        )
-                    )
-                except Exception as e:
-                    # Log full stack trace at debug level
-                    import traceback
-
-                    logger.debug(
-                        f"Error in callback {callback.__class__.__name__}.on_build_end: {e}\n{traceback.format_exc()}"
-                    )
-
-                    # Log a shorter message at warning level
-                    logger.warning(f"Error in callback {callback.__class__.__name__}.on_build_end: {str(e)[:50]}")
 
         except Exception as e:
             self.state = ModelState.ERROR
