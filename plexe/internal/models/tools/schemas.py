@@ -10,6 +10,7 @@ from smolagents import tool
 
 from plexe.internal.common.datasets.interface import TabularConvertible
 from plexe.internal.common.registries.objects import ObjectRegistry
+from plexe.internal.common.utils.pydantic_utils import map_to_basemodel
 
 logger = logging.getLogger(__name__)
 
@@ -19,7 +20,7 @@ def register_final_model_schemas(
     input_schema: Dict[str, str], output_schema: Dict[str, str], reasoning: str
 ) -> Dict[str, str]:
     """
-    Register agent-determined schemas in the ObjectRegistry.
+    Register agent-determined schemas in the ObjectRegistry with validation.
 
     Args:
         input_schema: Finalized input schema as field:type dictionary
@@ -27,13 +28,25 @@ def register_final_model_schemas(
         reasoning: Explanation of schema design decisions
 
     Returns:
-        Status message confirming registration
+        Status message confirming registration or error details
     """
     object_registry = ObjectRegistry()
-    object_registry.register(dict, "input_schema", input_schema)
-    object_registry.register(dict, "output_schema", output_schema)
-    object_registry.register(str, "schema_reasoning", reasoning)
-    return {"status": "Schemas registered successfully"}
+
+    try:
+        # Validate schemas by attempting to convert them to Pydantic models
+        map_to_basemodel("InputSchema", input_schema)
+        map_to_basemodel("OutputSchema", output_schema)
+
+        # Register the validated schemas
+        object_registry.register(dict, "input_schema", input_schema)
+        object_registry.register(dict, "output_schema", output_schema)
+        object_registry.register(str, "schema_reasoning", reasoning)
+
+        return {"status": "success", "message": "Schemas validated and registered successfully"}
+    except Exception as e:
+        error_msg = f"Schema validation failed: {str(e)}"
+        logger.error(error_msg)
+        return {"status": "error", "message": error_msg}
 
 
 @tool

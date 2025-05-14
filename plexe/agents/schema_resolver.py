@@ -83,6 +83,7 @@ class SchemaResolverAgent:
             - input_schema: The finalized input schema
             - output_schema: The finalized output schema
             - reasoning: Explanation of schema design decisions
+            - already_registered: Flag indicating schemas are already in the registry
         """
         # Use the template system to create the prompt
         has_input_schema = user_input_schema is not None
@@ -108,14 +109,16 @@ class SchemaResolverAgent:
         # Run the agent to get schema resolution
         self.agent.run(task_description)
 
-        # The registry should already have the schemas registered by the tool
+        # Get the registered schemas from the registry
         object_registry = ObjectRegistry()
-
-        # Ensure the registry has the schema information registered
-        # (this is done by the define_model_schemas tool)
         input_schema = object_registry.get(dict, "input_schema")
         output_schema = object_registry.get(dict, "output_schema")
         schema_reasoning = object_registry.get(str, "schema_reasoning")
 
-        # Return the schema information
-        return {"input_schema": input_schema, "output_schema": output_schema, "reasoning": schema_reasoning}
+        # Return schemas and indicate they're already registered
+        return {
+            "input_schema": input_schema,
+            "output_schema": output_schema,
+            "reasoning": schema_reasoning,
+            "already_registered": True,
+        }

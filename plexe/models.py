@@ -215,6 +215,7 @@ class Model:
             self.object_registry.register_multiple(TabularConvertible, self.training_data)
 
             # Step 2: define model schemas using the SchemaResolverAgent (only if schemas are not provided)
+            schema_result = {}
             if self.input_schema is None or self.output_schema is None:
                 # Create and run the schema resolver agent
                 schema_resolver_agent = SchemaResolverAgent(
@@ -235,9 +236,11 @@ class Model:
                 if self.output_schema is None:
                     self.output_schema = map_to_basemodel("OutputSchema", schema_result["output_schema"])
 
-            # Register the final schemas in the object registry
-            self.object_registry.register(dict, "input_schema", format_schema(self.input_schema))
-            self.object_registry.register(dict, "output_schema", format_schema(self.output_schema))
+            # Only register schemas if not already registered by the agent
+            already_registered = schema_result.get("already_registered", False)
+            if not already_registered:
+                self.object_registry.register(dict, "input_schema", format_schema(self.input_schema))
+                self.object_registry.register(dict, "output_schema", format_schema(self.output_schema))
 
             # Run callbacks for build start
             for callback in self.object_registry.get_all(Callback).values():
@@ -272,7 +275,7 @@ class Model:
             # Step 3: generate model
             # Start the model generation run
             # Get schema reasoning if available
-            schema_reasoning = self.object_registry.get(str, "schema_reasoning", None)
+            schema_reasoning = self.object_registry.get(str, "schema_reasoning")
 
             agent_prompt = prompt_templates.agent_builder_prompt(
                 intent=self.intent,
