@@ -10,6 +10,7 @@
 - [Overview](#overview)
 - [Architecture Diagram](#architecture-diagram)
 - [Key Components](#key-components)
+  - [Schema Resolver Agent](#schema-resolver-agent)
   - [Manager Agent (Orchestrator)](#manager-agent-orchestrator)
   - [ML Research Scientist Agent](#ml-research-scientist-agent)
   - [ML Engineer Agent](#ml-engineer-agent)
@@ -38,6 +39,8 @@ graph TD
     User([User]) --> |"Intent & Datasets"| Model["Model Class"]
     
     subgraph "Multi-Agent System"
+        Model --> |"Schema Resolution"| SchemaResolver["Schema Resolver"]
+        SchemaResolver --> |"Schemas"| Orchestrator
         Model --> |build| Orchestrator["Manager Agent"]
         Orchestrator --> |"Plan Task"| MLS["ML Researcher"]
         Orchestrator --> |"Implement Task"| MLE["ML Engineer"]
@@ -52,6 +55,7 @@ graph TD
         Datasets[(Datasets)]
         Artifacts[(Model Artifacts)]
         Code[(Code Snippets)]
+        Schemas[(I/O Schemas)]
     end
     
     subgraph Tools["Tool System"]
@@ -68,6 +72,8 @@ graph TD
     MLS <--> Tools
     MLE <--> Tools
     MLOPS <--> Tools
+    SchemaResolver <--> Registry
+    SchemaResolver <--> Tools
     
     Orchestrator --> Result([Trained Model])
     Result --> Model
@@ -76,9 +82,30 @@ graph TD
 
 ## Key Components
 
+### Schema Resolver Agent
+
+**Class**: `SchemaResolverAgent`
+**Type**: `ToolCallingAgent`
+
+The Schema Resolver Agent infers input and output schemas from intent and dataset samples:
+
+```python
+schema_resolver = SchemaResolverAgent(
+    model_id=provider_config.tool_provider,
+    chain_of_thought_callable=cot_callable,
+    verbosity_level=1,
+)
+```
+
+**Responsibilities**:
+- Analyzing the problem description and sample data
+- Inferring appropriate input and output schemas
+- Registering schemas with the Object Registry
+- Providing automatic schema resolution when schemas aren't specified
+
 ### Manager Agent (Orchestrator)
 
-**Class**: `PlexeAgent` attribute `manager_agent`  
+**Class**: `PlexeAgent.manager_agent`  
 **Type**: `CodeAgent`
 
 The Manager Agent serves as the central coordinator for the entire ML development process:
@@ -87,8 +114,15 @@ The Manager Agent serves as the central coordinator for the entire ML developmen
 self.manager_agent = CodeAgent(
     name="Orchestrator",
     model=LiteLLMModel(model_id=self.orchestrator_model_id),
-    tools=[select_target_metric, review_finalised_model, split_datasets, 
-           create_input_sample, format_final_orchestrator_agent_response],
+    tools=[
+        get_select_target_metric(self.tool_model_id),
+        get_review_finalised_model(self.tool_model_id),
+        split_datasets,
+        create_input_sample,
+        get_dataset_preview,
+        get_raw_dataset_schema,
+        format_final_orchestrator_agent_response,
+    ],
     managed_agents=[self.ml_research_agent, self.mle_agent, self.mlops_engineer],
     add_base_tools=False,
     verbosity_level=self.orchestrator_verbosity,
@@ -124,14 +158,13 @@ self.ml_research_agent = ToolCallingAgent(
         "- input schema for the model"
         "- output schema for the model"
         "- the name and comparison method of the metric to optimise"
-        "- the identifier of the LLM that should be used for plan generation"
     ),
     model=LiteLLMModel(model_id=self.ml_researcher_model_id),
-    tools=[],
+    tools=[get_dataset_preview],
     add_base_tools=False,
     verbosity_level=self.specialist_verbosity,
     prompt_templates=get_prompt_templates("toolcalling_agent.yaml", "mls_prompt_templates.yaml"),
-    step_callbacks=[self.chain_of_thought_callable]
+    step_callbacks=[self.chain_of_thought_callable],
 )
 ```
 
@@ -161,14 +194,13 @@ self.mle_agent = ToolCallingAgent(
         "- the full solution plan that outlines how to solve this problem"
         "- the split train/validation dataset names"
         "- the working directory to use for model execution"
-        "- the identifier of the LLM that should be used for code generation"
     ),
     model=LiteLLMModel(model_id=self.ml_engineer_model_id),
     tools=[
-        generate_training_code,
+        get_generate_training_code(self.tool_model_id),
         validate_training_code,
-        fix_training_code,
-        get_executor_tool(distributed),
+        get_fix_training_code(self.tool_model_id),
+        get_executor_tool(self.distributed),
         format_final_mle_agent_response,
     ],
     add_base_tools=False,
@@ -188,12 +220,12 @@ self.mle_agent = ToolCallingAgent(
 ### ML Operations Engineer Agent
 
 **Class**: `PlexeAgent.mlops_engineer`  
-**Type**: `ToolCallingAgent`
+**Type**: `CodeAgent`
 
 This agent focuses on productionizing the model through inference code:
 
 ```python
-self.mlops_engineer = ToolCallingAgent(
+self.mlops_engineer = CodeAgent(
     name="MLOperationsEngineer",
     description=(
         "Expert ML operations engineer that writes inference code for ML models to be used in production. "
@@ -201,19 +233,17 @@ self.mlops_engineer = ToolCallingAgent(
         "- input schema for the model"
         "- output schema for the model"
         "- the 'training code id' of the training code produced by the MLEngineer agent"
-        "- the identifier of the LLM that should be used for code generation"
     ),
     model=LiteLLMModel(model_id=self.ml_ops_engineer_model_id),
     tools=[
-        split_datasets,
-        generate_inference_code,
+        get_generate_inference_code(self.tool_model_id),
         validate_inference_code,
-        fix_inference_code,
+        get_fix_inference_code(self.tool_model_id),
         format_final_mlops_agent_response,
     ],
     add_base_tools=False,
     verbosity_level=self.specialist_verbosity,
-    prompt_templates=get_prompt_templates("toolcalling_agent.yaml", "mlops_prompt_templates.yaml"),
+    prompt_templates=get_prompt_templates("code_agent.yaml", "mlops_prompt_templates.yaml"),
     planning_interval=8,
     step_callbacks=[self.chain_of_thought_callable],
 )
@@ -254,27 +284,32 @@ class ObjectRegistry:
 **Key Features**:
 - Type-safe storage and retrieval
 - Shared access across agents
-- Registration of multiple item types (datasets, artifacts, code)
+- Registration of multiple item types (datasets, artifacts, code, schemas)
+- Batch operations with register_multiple and get_multiple
 
 ### Tool System
 
-The system includes specialized tools that agents can use to perform specific tasks:
+The system includes specialized tools that agents can use to perform specific tasks, implemented using factory patterns:
 
 **Metric Selection Tool**:
 ```python
-@tool
-def select_target_metric(task: str, provider: str) -> Dict:
-    """Selects the appropriate target metric to optimise for the given task."""
+def get_select_target_metric(model_id: str) -> Callable:
+    """Factory function that returns a tool for selecting appropriate target metrics."""
+    @tool
+    def select_target_metric(task: str, provider: str) -> Dict:
+        """Selects the appropriate target metric to optimise for the given task."""
 ```
 
 **Code Generation Tools**:
 ```python
-@tool
-def generate_training_code(
-    task: str, solution_plan: str, train_datasets: List[str], 
-    validation_datasets: List[str], llm_to_use: str
-) -> str:
-    """Generates training code based on the solution plan."""
+def get_generate_training_code(model_id: str) -> Callable:
+    """Factory function that returns a tool for generating training code."""
+    @tool
+    def generate_training_code(
+        task: str, solution_plan: str, train_datasets: List[str], 
+        validation_datasets: List[str]
+    ) -> str:
+        """Generates training code based on the solution plan."""
 ```
 
 **Validation Tools**:
@@ -289,12 +324,11 @@ def validate_inference_code(
 
 **Execution Tools**:
 ```python
-@tool
-def execute_training_code(
-    node_id: str, code: str, working_dir: str, dataset_names: List[str],
-    timeout: int, metric_to_optimise_name: str, metric_to_optimise_comparison_method: str,
-) -> Dict:
-    """Executes training code in an isolated environment."""
+def get_executor_tool(distributed: bool) -> Callable:
+    """Factory function that returns the appropriate executor tool."""
+    if distributed:
+        return execute_training_code_distributed
+    return execute_training_code
 ```
 
 ## Workflow
@@ -305,24 +339,28 @@ The multi-agent workflow follows these key steps:
    - User creates a `Model` instance with intent and datasets
    - User calls `model.build()` to start the process
 
-2. **Orchestration**:
+2. **Schema Resolution**:
+   - If schemas aren't provided, SchemaResolverAgent infers them
+   - Schemas are registered in the Object Registry
+
+3. **Orchestration**:
    - Manager Agent selects metrics and splits datasets
    - Manager Agent initializes the solution planning phase
 
-3. **Solution Planning**:
+4. **Solution Planning**:
    - ML Research Scientist proposes solution approaches
    - Manager Agent evaluates and selects approaches
 
-4. **Model Implementation**:
+5. **Model Implementation**:
    - ML Engineer generates and executes training code
    - Model artifacts are registered in the Object Registry
    - Process may iterate through multiple approaches
 
-5. **Inference Code Generation**:
+6. **Inference Code Generation**:
    - ML Operations Engineer generates compatible inference code
    - Code is validated with sample inputs
 
-6. **Finalization**:
+7. **Finalization**:
    - Manager Agent reviews and finalizes the model
    - All artifacts and code are collected
    - Completed model is returned to the user
@@ -334,7 +372,7 @@ The multi-agent workflow follows these key steps:
 The system uses a hierarchical communication pattern:
 
 ```
-User → Model → Manager Agent → Specialist Agents → Manager Agent → Model → User
+User → Model → Schema Resolver → Manager Agent → Specialist Agents → Manager Agent → Model → User
 ```
 
 Each agent communicates through structured task descriptions and responses:
@@ -447,14 +485,17 @@ class CustomPlexeAgent(PlexeAgent):
 
 ### Implementing Custom Tools
 
-You can add new tools by using the `@tool` decorator:
+You can add new tools using the factory pattern with the `@tool` decorator:
 
 ```python
-@tool
-def custom_tool(param1: str, param2: int) -> Dict:
-    """Description of what this tool does."""
-    # Tool implementation
-    return {"result": "Output of the tool"}
+def get_custom_tool(model_id: str) -> Callable:
+    """Factory function that returns a custom tool."""
+    @tool
+    def custom_tool(param1: str, param2: int) -> Dict:
+        """Description of what this tool does."""
+        # Tool implementation
+        return {"result": "Output of the tool"}
+    return custom_tool
 ```
 
 ### Supporting New Model Types
@@ -474,5 +515,7 @@ class CustomModelValidator(Validator):
 
 - [PlexeAgent Class Definition](/plexe/internal/agents.py)
 - [Model Class Definition](/plexe/models.py)
+- [SchemaResolverAgent Definition](/plexe/agents/schema_resolver.py)
 - [Tool Definitions](/plexe/internal/models/tools/)
 - [Executor Implementation](/plexe/internal/models/execution/)
+- [Object Registry](/plexe/internal/common/registries/objects.py)
