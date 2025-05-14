@@ -8,14 +8,14 @@ Given this ML task: "{{intent}}"
 And these available datasets: {{datasets}}
 
 {% if has_input_schema and has_output_schema %}
-Validate both user-provided schemas against the dataset structure:
+Review both user-provided schemas against the dataset structure:
 Input schema: {{input_schema}}
 Output schema: {{output_schema}}
 {% elif has_input_schema %}
-Validate user's input schema and infer an appropriate output schema:
+Review the user's input schema and infer an appropriate output schema:
 Input schema: {{input_schema}}
 {% elif has_output_schema %}
-Validate user's output schema and infer an appropriate input schema:
+Review user's output schema and infer an appropriate input schema:
 Output schema: {{output_schema}}
 {% else %}
 Infer both input and output schemas based on the model intent and datasets.
@@ -39,4 +39,4 @@ Key requirements:
 When calling register_final_model_schemas, use this format:
 - input_schema: dictionary mapping field names to types
 - output_schema: dictionary mapping field names to types
-- reasoning: detailed explanation of your schema design decisions
+- reasoning: detailed explanation of your schema design decisions, or of the user-provided schemas
