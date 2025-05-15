@@ -51,6 +51,7 @@ from plexe.datasets import DatasetGenerator
 from plexe.callbacks import Callback, BuildStateInfo, ChainOfThoughtModelCallback
 from plexe.internal.common.utils.chain_of_thought.emitters import ConsoleEmitter
 from plexe.agents.schema_resolver import SchemaResolverAgent
+from plexe.agents.dataset_analyser import EdaAgent
 from plexe.internal.agents import PlexeAgent
 from plexe.internal.common.datasets.interface import Dataset, TabularConvertible
 from plexe.internal.common.datasets.adapter import DatasetAdapter
@@ -214,7 +215,24 @@ class Model:
             }
             self.object_registry.register_multiple(TabularConvertible, self.training_data)
 
-            # Step 2: define model schemas using the SchemaResolverAgent (only if schemas are not provided)
+            # Step 2: run the EDA agent to analyze datasets
+            eda_agent = EdaAgent(
+                model_id=provider_config.research_provider,
+                verbose=verbose,
+                chain_of_thought_callable=cot_callable,
+            )
+            eda_result = eda_agent.run(
+                intent=self.intent,
+                dataset_names=list(self.training_data.keys()),
+            )
+
+            # Store EDA results in metadata
+            if eda_result and "summary" in eda_result:
+                self.metadata["eda_insights"] = eda_result.get("summary", [])
+                self.metadata["eda_report_names"] = eda_result.get("eda_report_names", [])
+                logger.info(f"✅ EDA completed with {len(eda_result.get('eda_report_names', []))} reports")
+
+            # Step 3: define model schemas using the SchemaResolverAgent (only if schemas are not provided)
             if self.input_schema is not None:
                 self.object_registry.register(dict, "input_schema", format_schema(self.input_schema))
             if self.output_schema is not None:
@@ -269,10 +287,23 @@ class Model:
                     # Log a shorter message at warning level
                     logger.warning(f"Error in callback {callback.__class__.__name__}.on_build_start: {str(e)[:50]}")
 
-            # Step 3: generate model
+            # Step 4: generate model
             # Start the model generation run
             # Get schema reasoning if available
             schema_reasoning = self.object_registry.get(str, "schema_reasoning")
+
+            # Get EDA report names to provide context to the agents
+            eda_report_names = []
+            try:
+                # Look for EDA reports in the object registry
+                eda_report_names = [
+                    name.split("://")[1]
+                    for name in self.object_registry.list()
+                    if str(dict) in name and "eda_report_" in name
+                ]
+                logger.debug(f"Found EDA reports: {eda_report_names}")
+            except (IndexError, KeyError) as e:
+                logger.warning(f"Unable to extract EDA report names: {str(e)}")
 
             agent_prompt = prompt_templates.agent_builder_prompt(
                 intent=self.intent,
@@ -356,6 +387,17 @@ class Model:
             self.metadata["engineer_provider"] = str(provider_config.engineer_provider)
             self.metadata["ops_provider"] = str(provider_config.ops_provider)
             self.metadata["tool_provider"] = str(provider_config.tool_provider)
+
+            # Store EDA report references
+            if not self.metadata.get("eda_report_names"):
+                try:
+                    eda_report_refs = [
+                        name for name in self.object_registry.list() if str(dict) in name and "eda_report_" in name
+                    ]
+                    if eda_report_refs:
+                        self.metadata["eda_report_names"] = eda_report_refs
+                except Exception as e:
+                    logger.debug(f"Error retrieving EDA reports for metadata: {str(e)}")
 
             self.state = ModelState.READY
 

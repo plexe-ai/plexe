@@ -225,6 +225,13 @@ class _PromptTemplates:
             has_output_schema=has_output_schema,
         )
 
+    def eda_agent_prompt(self, intent, datasets) -> str:
+        return self._render(
+            "agent/agent_data_analyser_prompt.jinja",
+            intent=intent,
+            datasets=datasets,
+        )
+
     def training_system(self) -> str:
         return self._render("training/system_prompt.jinja")
 

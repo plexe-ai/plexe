@@ -3,10 +3,12 @@ Tools for dataset manipulation, splitting, and registration.
 
 These tools help with dataset operations within the model generation pipeline, including
 splitting datasets into training, validation, and test sets, registering datasets with
-the dataset registry, creating sample data for validation, and previewing dataset content.
+the dataset registry, creating sample data for validation, previewing dataset content,
+and registering exploratory data analysis (EDA) reports.
 """
 
 import logging
+from datetime import datetime
 from typing import Dict, List, Any
 
 import numpy as np
@@ -204,3 +206,56 @@ def get_dataset_preview(dataset_name: str) -> Dict[str, Any]:
             "error": f"Failed to generate preview for dataset '{dataset_name}': {str(e)}",
             "dataset_name": dataset_name,
         }
+
+
+@tool
+def register_eda_report(
+    dataset_name: str,
+    overview: Dict[str, Any],
+    feature_analysis: Dict[str, Any],
+    relationships: Dict[str, Any],
+    data_quality: Dict[str, Any],
+    insights: List[str],
+    recommendations: List[str],
+) -> bool:
+    """
+    Register an exploratory data analysis (EDA) report for a dataset in the Object Registry.
+
+    This tool creates a structured report with findings from exploratory data analysis and
+    registers it in the Object Registry for use by other agents.
+
+    Args:
+        dataset_name: Name of the dataset that was analyzed
+        overview: General dataset statistics including shape, data types, memory usage
+        feature_analysis: Analysis of individual features with distributions and statistics
+        relationships: Correlation analysis and feature relationships
+        data_quality: Information about missing values, outliers, and data issues
+        insights: Key insights derived from the analysis
+        recommendations: Recommendations for preprocessing and modeling
+
+    Returns:
+        True if the report was successfully registered, False otherwise
+    """
+    object_registry = ObjectRegistry()
+
+    try:
+        # Create structured EDA report
+        eda_report = {
+            "dataset_name": dataset_name,
+            "timestamp": datetime.now().isoformat(),
+            "overview": overview,
+            "feature_analysis": feature_analysis,
+            "relationships": relationships,
+            "data_quality": data_quality,
+            "insights": insights,
+            "recommendations": recommendations,
+        }
+
+        # Register in registry
+        object_registry.register(dict, f"eda_report_{dataset_name}", eda_report)
+        logger.debug(f"✅ Registered EDA report for dataset '{dataset_name}'")
+        return True
+
+    except Exception as e:
+        logger.warning(f"⚠️ Error registering EDA report: {str(e)}")
+        return False
