@@ -39,6 +39,8 @@ graph TD
     User([User]) --> |"Intent & Datasets"| Model["Model Class"]
     
     subgraph "Multi-Agent System"
+        Model --> |"Data Registration"| EDA["EDA Agent"]
+        EDA --> |"Analysis & Reports"| SchemaResolver
         Model --> |"Schema Resolution"| SchemaResolver["Schema Resolver"]
         SchemaResolver --> |"Schemas"| Orchestrator
         Model --> |build| Orchestrator["Manager Agent"]
@@ -53,6 +55,7 @@ graph TD
     
     subgraph Registry["Object Registry"]
         Datasets[(Datasets)]
+        EdaReports[(EDA Reports)]
         Artifacts[(Model Artifacts)]
         Code[(Code Snippets)]
         Schemas[(I/O Schemas)]
@@ -70,10 +73,15 @@ graph TD
     Orchestrator <--> Registry
     Orchestrator <--> Tools
     MLS <--> Tools
+    MLS <--> EdaReports
     MLE <--> Tools
+    MLE <--> EdaReports
     MLOPS <--> Tools
     SchemaResolver <--> Registry
     SchemaResolver <--> Tools
+    SchemaResolver <--> EdaReports
+    EDA <--> Registry
+    EDA <--> Tools
     
     Orchestrator --> Result([Trained Model])
     Result --> Model
@@ -81,6 +89,28 @@ graph TD
 ```
 
 ## Key Components
+
+### EDA Agent
+
+**Class**: `EdaAgent`
+**Type**: `CodeAgent`
+
+The EDA Agent performs exploratory data analysis on datasets early in the workflow:
+
+```python
+eda_agent = EdaAgent(
+    model_id=provider_config.research_provider,
+    verbose=verbose,
+    chain_of_thought_callable=cot_callable,
+)
+```
+
+**Responsibilities**:
+- Analyzing datasets to understand structure, distributions, and relationships
+- Identifying data quality issues, outliers, and missing values
+- Generating key insights about the data
+- Providing recommendations for preprocessing and modeling
+- Registering EDA reports in the Object Registry for use by downstream agents
 
 ### Schema Resolver Agent
 
@@ -339,11 +369,17 @@ The multi-agent workflow follows these key steps:
    - User creates a `Model` instance with intent and datasets
    - User calls `model.build()` to start the process
 
-2. **Schema Resolution**:
+2. **Exploratory Data Analysis**:
+   - EdaAgent analyzes datasets to understand structure and characteristics
+   - Generates insights about data patterns, quality issues, and modeling considerations
+   - EDA reports are registered in the Object Registry for use by other agents
+
+3. **Schema Resolution**:
    - If schemas aren't provided, SchemaResolverAgent infers them
+   - The agent can leverage EDA findings to determine appropriate schemas
    - Schemas are registered in the Object Registry
 
-3. **Orchestration**:
+4. **Orchestration**:
    - Manager Agent selects metrics and splits datasets
    - Manager Agent initializes the solution planning phase
 
@@ -372,7 +408,7 @@ The multi-agent workflow follows these key steps:
 The system uses a hierarchical communication pattern:
 
 ```
-User → Model → Schema Resolver → Manager Agent → Specialist Agents → Manager Agent → Model → User
+User → Model → EDA Agent → Schema Resolver → Manager Agent → Specialist Agents → Manager Agent → Model → User
 ```
 
 Each agent communicates through structured task descriptions and responses:
@@ -515,7 +551,9 @@ class CustomModelValidator(Validator):
 
 - [PlexeAgent Class Definition](/plexe/internal/agents.py)
 - [Model Class Definition](/plexe/models.py)
+- [EdaAgent Definition](/plexe/agents/dataset_analyser.py)
 - [SchemaResolverAgent Definition](/plexe/agents/schema_resolver.py)
 - [Tool Definitions](/plexe/internal/models/tools/)
+- [Dataset Tools](/plexe/internal/models/tools/datasets.py)
 - [Executor Implementation](/plexe/internal/models/execution/)
 - [Object Registry](/plexe/internal/common/registries/objects.py)
