@@ -136,7 +136,7 @@ class Model:
         self.predictor_source: str | None = None
         self.artifacts: List[Artifact] = []
         self.metric: Metric | None = None
-        self.metadata: Dict[str, str] = dict()  # todo: initialise metadata, etc
+        self.metadata: Dict[str, Any] = dict()  # todo: initialise metadata, etc
 
         # Registries used to make datasets, artifacts and other objects available across the system
         self.object_registry = ObjectRegistry()
@@ -384,7 +384,7 @@ class Model:
 
             # Store EDA results in metadata
             for name, dataset in self.training_data.items():
-                self.metadata["eda_report"] = json.dumps(self.object_registry.get(dict, f"eda_report_{name}"))
+                self.metadata["eda_report"] = self.object_registry.get(dict, f"eda_report_{name}")
 
             self.state = ModelState.READY
 
