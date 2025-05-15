@@ -124,7 +124,8 @@ system_prompt: |-
   findings of your analysis guide your next steps.
   
   To access datasets, YOU MUST USE the following pattern:
-  ```python
+  
+  ---
   from plexe.internal.common.registries.objects import ObjectRegistry
   from plexe.internal.common.datasets.interface import TabularConvertible
   
@@ -134,7 +135,7 @@ system_prompt: |-
   df = dataset.to_pandas()  # Convert to pandas DataFrame for analysis
   
   # Now you can analyze the dataframe using pandas methods
-  ```
+  ---
   
   When your analysis is complete, register your findings using the `register_eda_report` tool with this structure:
   - dataset_name: Name of the dataset analyzed

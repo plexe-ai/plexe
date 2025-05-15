@@ -111,6 +111,7 @@ class PlexeAgent:
                 "- input schema for the model"
                 "- output schema for the model"
                 "- the name and comparison method of the metric to optimise"
+                "- the name of the dataset to use for training"
             ),
             model=LiteLLMModel(model_id=self.ml_researcher_model_id),
             tools=[get_dataset_preview, get_eda_report],

@@ -217,7 +217,7 @@ class Model:
 
             # Step 2: run the EDA agent to analyze datasets
             eda_agent = EdaAgent(
-                model_id=provider_config.research_provider,
+                model_id=provider_config.orchestrator_provider,
                 verbose=verbose,
                 chain_of_thought_callable=cot_callable,
             )
@@ -234,7 +234,7 @@ class Model:
 
             # Create and run the schema resolver agent
             schema_resolver_agent = SchemaResolverAgent(
-                model_id=provider_config.research_provider,
+                model_id=provider_config.orchestrator_provider,
                 verbose=verbose,
                 chain_of_thought_callable=cot_callable,
             )

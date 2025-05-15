@@ -6,12 +6,11 @@ exploratory data analysis reports before model building begins.
 """
 
 import logging
-from typing import Dict, List, Any, Callable
+from typing import List, Callable
 
 from smolagents import LiteLLMModel, CodeAgent
 
 from plexe.config import prompt_templates
-from plexe.internal.common.registries.objects import ObjectRegistry
 from plexe.internal.common.utils.agents import get_prompt_templates
 from plexe.internal.models.tools.datasets import register_eda_report
 from plexe.internal.models.tools.schemas import get_raw_dataset_schema
@@ -59,7 +58,8 @@ class EdaAgent:
             tools=[register_eda_report, get_raw_dataset_schema],
             add_base_tools=False,
             verbosity_level=self.verbosity,
-            planning_interval=3,
+            # planning_interval=3,
+            max_steps=30,
             step_callbacks=[chain_of_thought_callable],
             additional_authorized_imports=["pandas", "numpy", "plexe"],
             prompt_templates=get_prompt_templates("code_agent.yaml", "eda_prompt_templates.yaml"),
@@ -69,7 +69,7 @@ class EdaAgent:
         self,
         intent: str,
         dataset_names: List[str],
-    ) -> Dict[str, Any]:
+    ) -> bool:
         """
         Run the EDA agent to analyze datasets and create EDA reports.
 
@@ -95,27 +95,4 @@ class EdaAgent:
         # Run the agent to get analysis
         self.agent.run(task_description)
 
-        # Get the registered EDA reports from the registry
-        object_registry = ObjectRegistry()
-        eda_report_names = [name for name in object_registry.list() if str(dict) in name and "eda_report_" in name]
-
-        # Extract report summaries
-        summaries = []
-        for report_name in eda_report_names:
-            # Extract dataset name from report name (remove type prefix and eda_report_ prefix)
-            parts = report_name.split("://")
-            if len(parts) > 1:
-                dataset_name = parts[1].replace("eda_report_", "")
-                report = object_registry.get(dict, f"eda_report_{dataset_name}")
-                if report and "insights" in report:
-                    # Get the first few insights as summary
-                    insights = report.get("insights", [])
-                    if insights:
-                        summaries.extend(insights[:2])  # Take first two insights
-
-        # Return reports and indicate they're already registered
-        return {
-            "eda_report_names": eda_report_names,
-            "dataset_names": dataset_names,
-            "summary": summaries[:3],  # Limit to 3 most important insights
-        }
+        return True

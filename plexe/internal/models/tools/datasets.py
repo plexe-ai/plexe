@@ -273,15 +273,7 @@ def get_eda_report(dataset_name: str) -> Dict[str, Any]:
         dataset_name: Name of the dataset to retrieve the EDA report for
 
     Returns:
-        Dictionary containing the complete EDA report with the following sections:
-        - dataset_name: Name of the analyzed dataset
-        - timestamp: When the analysis was performed
-        - overview: General dataset statistics (shape, types, etc.)
-        - feature_analysis: Per-feature analysis of distributions and statistics
-        - relationships: Correlation analysis and feature relationships
-        - data_quality: Missing values, outliers, and data quality issues
-        - insights: Key findings that impact model development
-        - recommendations: Suggested preprocessing steps and modeling approaches
+        Dictionary containing the complete EDA report
     """
     object_registry = ObjectRegistry()
 

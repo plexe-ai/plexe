@@ -5,7 +5,9 @@ For ML models, schemas define the expected data types and structure for:
 - Output schema: What data the model will return after processing
 
 Given this ML task: "{{intent}}"
-And these available datasets: {{datasets}}
+
+And these available datasets:
+{{datasets}}
 
 {% if has_input_schema and has_output_schema %}
 Review both user-provided schemas against the dataset structure:
@@ -22,7 +24,7 @@ Infer both input and output schemas based on the model intent and datasets.
 {% endif %}
 
 Workflow:
-1. Examine datasets using get_dataset_preview to understand schema, structure, properties
+1. Examine datasets using get_eda_report and get_dataset_preview tools to understand schema, structure, properties
 2. Based on your analysis, determine appropriate input and output schemas
 3. Call register_final_model_schemas with your determined schemas and reasoning
 
