@@ -221,16 +221,10 @@ class Model:
                 verbose=verbose,
                 chain_of_thought_callable=cot_callable,
             )
-            eda_result = eda_agent.run(
+            eda_agent.run(
                 intent=self.intent,
                 dataset_names=list(self.training_data.keys()),
             )
-
-            # Store EDA results in metadata
-            if eda_result and "summary" in eda_result:
-                self.metadata["eda_insights"] = eda_result.get("summary", [])
-                self.metadata["eda_report_names"] = eda_result.get("eda_report_names", [])
-                logger.info(f"✅ EDA completed with {len(eda_result.get('eda_report_names', []))} reports")
 
             # Step 3: define model schemas using the SchemaResolverAgent (only if schemas are not provided)
             if self.input_schema is not None:
@@ -388,16 +382,9 @@ class Model:
             self.metadata["ops_provider"] = str(provider_config.ops_provider)
             self.metadata["tool_provider"] = str(provider_config.tool_provider)
 
-            # Store EDA report references
-            if not self.metadata.get("eda_report_names"):
-                try:
-                    eda_report_refs = [
-                        name for name in self.object_registry.list() if str(dict) in name and "eda_report_" in name
-                    ]
-                    if eda_report_refs:
-                        self.metadata["eda_report_names"] = eda_report_refs
-                except Exception as e:
-                    logger.debug(f"Error retrieving EDA reports for metadata: {str(e)}")
+            # Store EDA results in metadata
+            for name, dataset in self.training_data.items():
+                self.metadata["eda_report"] = json.dumps(self.object_registry.get(dict, f"eda_report_{name}"))
 
             self.state = ModelState.READY
 

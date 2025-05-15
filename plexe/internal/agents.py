@@ -23,7 +23,12 @@ from plexe.internal.models.tools.training import (
 )
 from plexe.internal.models.tools.evaluation import get_review_finalised_model
 from plexe.internal.models.tools.metrics import get_select_target_metric
-from plexe.internal.models.tools.datasets import split_datasets, create_input_sample, get_dataset_preview
+from plexe.internal.models.tools.datasets import (
+    split_datasets,
+    create_input_sample,
+    get_dataset_preview,
+    get_eda_report,
+)
 from plexe.internal.models.tools.schemas import get_raw_dataset_schema
 from plexe.internal.models.tools.execution import get_executor_tool
 from plexe.internal.models.tools.response_formatting import (
@@ -108,7 +113,7 @@ class PlexeAgent:
                 "- the name and comparison method of the metric to optimise"
             ),
             model=LiteLLMModel(model_id=self.ml_researcher_model_id),
-            tools=[get_dataset_preview],
+            tools=[get_dataset_preview, get_eda_report],
             add_base_tools=False,
             verbosity_level=self.specialist_verbosity,
             prompt_templates=get_prompt_templates("toolcalling_agent.yaml", "mls_prompt_templates.yaml"),

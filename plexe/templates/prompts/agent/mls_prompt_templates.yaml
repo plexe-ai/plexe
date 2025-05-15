@@ -14,14 +14,17 @@ managed_agent:
     or the LLM to use for plan generation, you should reject the task and ask your manager to provide the required
     information.
 
-    You can use the get_dataset_preview tool to examine the available datasets before formulating your solution plans.
-    This will help you understand the data characteristics (data types, missing values, basic statistics)
-    and propose more targeted approaches. Use the tool by providing a dataset name.
+    You can use the get_dataset_preview tool to get a simple preview of the data, and the get_eda_report tool to
+    get a thorough EDA report of the dataset. You should use both of these tools as they will help you understand 
+    the data characteristics (data types, missing values, basic statistics) and propose more targeted approaches. 
+    Use the tool by providing a dataset name.
 
     The solution concepts should be explained in 3-5 sentences each. Do not include implementations of the
     solutions, though you can include small code snippets if absolutely required to explain a plan.
-    Do not suggest doing EDA, ensembling, or hyperparameter tuning. The solutions should be feasible using only 
-    {{allowed_packages}}, and no other non-standard libraries.
+    Do not suggest doing further EDA, ensembling, or hyperparameter tuning. The solutions should be feasible using only 
+    {{allowed_packages}}, and no other non-standard libraries. Your solutions should always favour simplicity; only 
+    use complex model types if absolutely necessary. It's okay to try multiple similar solutions, if it's clear that
+    a particular type of solution is best for the task.
     
     For EACH individual solution, your final_answer WILL HAVE to contain these parts:
     ### 1. Solution Plan 'Headline' (short version):

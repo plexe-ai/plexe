@@ -14,7 +14,7 @@ from smolagents import LiteLLMModel, CodeAgent
 
 from plexe.config import prompt_templates
 from plexe.internal.common.registries.objects import ObjectRegistry
-from plexe.internal.models.tools.datasets import get_dataset_preview
+from plexe.internal.models.tools.datasets import get_dataset_preview, get_eda_report
 from plexe.internal.models.tools.schemas import register_final_model_schemas
 
 logger = logging.getLogger(__name__)
@@ -56,7 +56,7 @@ class SchemaResolverAgent:
                 "schemas for ML models based on intent and available datasets."
             ),
             model=LiteLLMModel(model_id=self.model_id),
-            tools=[get_dataset_preview, register_final_model_schemas],
+            tools=[get_dataset_preview, get_eda_report, register_final_model_schemas],
             add_base_tools=False,
             verbosity_level=self.verbosity,
             step_callbacks=[chain_of_thought_callable],
