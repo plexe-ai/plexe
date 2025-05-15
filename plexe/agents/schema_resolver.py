@@ -10,12 +10,12 @@ import json
 import logging
 from typing import Dict, List, Any, Callable
 
-from smolagents import ToolCallingAgent, LiteLLMModel
+from smolagents import LiteLLMModel, CodeAgent
 
 from plexe.config import prompt_templates
 from plexe.internal.common.registries.objects import ObjectRegistry
 from plexe.internal.models.tools.datasets import get_dataset_preview
-from plexe.internal.models.tools.schemas import get_raw_dataset_schema, register_final_model_schemas
+from plexe.internal.models.tools.schemas import register_final_model_schemas
 
 logger = logging.getLogger(__name__)
 
@@ -49,14 +49,14 @@ class SchemaResolverAgent:
         self.verbosity = 1 if verbose else 0
 
         # Create the schema resolver agent with the necessary tools
-        self.agent = ToolCallingAgent(
+        self.agent = CodeAgent(
             name="SchemaResolver",
             description=(
                 "Expert schema resolver that determines the appropriate input and output "
                 "schemas for ML models based on intent and available datasets."
             ),
             model=LiteLLMModel(model_id=self.model_id),
-            tools=[get_dataset_preview, get_raw_dataset_schema, register_final_model_schemas],
+            tools=[get_dataset_preview, register_final_model_schemas],
             add_base_tools=False,
             verbosity_level=self.verbosity,
             step_callbacks=[chain_of_thought_callable],

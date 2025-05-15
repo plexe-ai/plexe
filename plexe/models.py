@@ -222,7 +222,7 @@ class Model:
 
             # Create and run the schema resolver agent
             schema_resolver_agent = SchemaResolverAgent(
-                model_id=provider_config.tool_provider,
+                model_id=provider_config.research_provider,
                 verbose=verbose,
                 chain_of_thought_callable=cot_callable,
             )

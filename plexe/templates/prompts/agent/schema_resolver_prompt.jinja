@@ -22,10 +22,9 @@ Infer both input and output schemas based on the model intent and datasets.
 {% endif %}
 
 Workflow:
-1. Examine datasets using get_dataset_preview to understand structure
-2. For relevant datasets, use get_raw_dataset_schema for detailed type info
-3. Based on your analysis, determine appropriate input and output schemas
-4. Call register_final_model_schemas with your determined schemas and reasoning
+1. Examine datasets using get_dataset_preview to understand schema, structure, properties
+2. Based on your analysis, determine appropriate input and output schemas
+3. Call register_final_model_schemas with your determined schemas and reasoning
 
 Key requirements:
 1. Model schemas may DIFFER from raw data if transformations are needed
