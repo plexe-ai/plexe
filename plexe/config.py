@@ -192,15 +192,6 @@ class _PromptTemplates:
     def planning_select_metric(self, problem_statement) -> str:
         return self._render("planning/select_metric.jinja", problem_statement=problem_statement)
 
-    def planning_generate(self, problem_statement, metric_to_optimise) -> str:
-        return self._render(
-            "planning/generate.jinja",
-            problem_statement=problem_statement,
-            metric_to_optimise=metric_to_optimise,
-            allowed_packages=config.code_generation.allowed_packages,
-            deep_learning_available=config.code_generation.deep_learning_available,
-        )
-
     def schema_base(self) -> str:
         return self._render("schemas/base.jinja")
 

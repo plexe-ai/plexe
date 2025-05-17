@@ -27,22 +27,6 @@ class SolutionPlanGenerator:
         """
         self.provider: Provider = provider
 
-    def generate_solution_plan(self, problem_statement: str, metric_to_optimise: str) -> str:
-        """
-        Generates a solution plan for the given problem statement.
-
-        :param problem_statement: definition of the problem
-        :param metric_to_optimise: the metric to optimise
-        :return: the generated solution plan
-        """
-        return self.provider.query(
-            system_message=prompt_templates.planning_system(),
-            user_message=prompt_templates.planning_generate(
-                problem_statement=problem_statement,
-                metric_to_optimise=metric_to_optimise,
-            ),
-        )
-
     def select_target_metric(self, problem_statement: str) -> Metric:
         """
         Selects the metric to optimise for the given problem statement and dataset.
