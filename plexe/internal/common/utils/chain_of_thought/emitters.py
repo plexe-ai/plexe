@@ -136,10 +136,12 @@ class ConsoleEmitter(ChainOfThoughtEmitter):
         """Get the color for an agent based on its role."""
         agent_colors = {
             "System": "bright_blue",
-            "ML Research Scientist": "green",
-            "ML Engineer": "yellow",
-            "ML Ops Engineer": "magenta",
+            "MLResearchScientist": "green",
+            "MLEngineer": "yellow",
+            "MLOperationsEngineer": "magenta",
             "Orchestrator": "cyan",
+            "DatasetAnalyser": "red",
+            "SchemaResolver": "orange",
             # Default color
             "default": "blue",
         }
