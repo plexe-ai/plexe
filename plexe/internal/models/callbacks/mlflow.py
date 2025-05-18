@@ -146,8 +146,8 @@ class MLFlowCallback(Callback):
         mlflow.log_params(
             {
                 "intent": info.intent,
-                # "input_schema": str(info.input_schema.model_fields),
-                # "output_schema": str(info.output_schema.model_fields),
+                "input_schema": str(info.input_schema.model_fields),
+                "output_schema": str(info.output_schema.model_fields),
                 "provider": str(info.provider),
                 "run_timeout": info.run_timeout,
                 "iteration": info.iteration,
