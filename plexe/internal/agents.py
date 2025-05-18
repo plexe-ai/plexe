@@ -141,7 +141,6 @@ class PlexeAgent:
                 validate_training_code,
                 get_fix_training_code(self.tool_model_id),
                 get_executor_tool(distributed),
-                get_dataset_preview,
                 format_final_mle_agent_response,
             ],
             add_base_tools=False,
