@@ -4,6 +4,7 @@ from typing import Type
 import pandas as pd
 
 from plexe.internal.common.provider import Provider
+from plexe.internal.datasets.core.generation.simple_llm import SimpleLLMDataGenerator
 
 
 class DatasetGenerator:
@@ -17,13 +18,11 @@ class DatasetGenerator:
         :param [str] description: The description of the data to generate.
         :param [Type[BaseModel]] schema: The schema for the data to generate.
         """
-        from .core.generation.combined import CombinedDataGenerator
-        from .config import Config
 
         self.provider = provider
         self.description = description
         self.schema = schema
-        self.generator = CombinedDataGenerator(self.provider, Config())
+        self.generator = SimpleLLMDataGenerator(provider=self.provider)
 
     def generate(self, n_samples: int, existing_data: pd.DataFrame = None) -> pd.DataFrame:
         """

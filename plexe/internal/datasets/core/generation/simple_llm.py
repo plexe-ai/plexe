@@ -1,12 +1,16 @@
 import asyncio
 import math
+import logging
 from typing import Type
 
 import pandas as pd
 from pydantic import BaseModel
 
 from plexe.internal.common.provider import Provider
+from plexe.internal.common.utils.response import extract_json_array
 from .base import BaseDataGenerator
+
+logger = logging.getLogger(__name__)
 
 
 class SimpleLLMDataGenerator(BaseDataGenerator):
@@ -16,19 +20,26 @@ class SimpleLLMDataGenerator(BaseDataGenerator):
     """
 
     def __init__(self, provider: Provider = None):
+        """
+        Initialize the SimpleLLMDataGenerator.
+
+        :param provider: The provider to use for LLM queries.
+        """
+        from ...config import Config
+
         self.llm = provider
-        self.system_instruction = (
-            "You are an expert in data science, data engineering, and any problem domain you encounter. "
-            "You are speaking to someone who is, likewise, an expert in all these areas. "
-            "Expectations for your performance are extremely high. Mediocrity is not acceptable. "
-        )
+        config = Config()
+        self.system_instruction = config.BASE_INSTRUCTION + config.GENERATOR_INSTRUCTION
+        self.batch_size = config.BATCH_SIZE
 
     def generate(
         self, intent: str, n_generate: int, schema: Type[BaseModel], existing_data: pd.DataFrame = None
     ) -> pd.DataFrame:
         # basic problem specification
         base_prompt = (
-            f"Give me a dataset of samples for the following ML problem:\n\n" f"PROBLEM DESCRIPTION:\n{intent}\n\n"
+            f"Give me a dataset of samples for the following ML problem:\n\n"
+            f"PROBLEM DESCRIPTION:\n{intent}\n\n"
+            f"SCHEMA:\n{schema.model_fields}\n\n"
         )
 
         df_generated = pd.DataFrame(
@@ -36,17 +47,19 @@ class SimpleLLMDataGenerator(BaseDataGenerator):
         )
 
         # prepare prompts for all batches
-        batch_size = 60
-        num_batches = math.ceil(n_generate / batch_size)
+        num_batches = math.ceil(n_generate / self.batch_size)
         records_left = n_generate
 
         prompts = []
         for _ in range(num_batches):
-            n_generate_this_iteration = min(records_left, batch_size)
+            n_generate_this_iteration = min(records_left, self.batch_size)
             records_left -= n_generate_this_iteration
 
             # add sample data to the prompt if available
-            sample_str = existing_data.sample(5).to_string() if existing_data is not None else ""
+            sample_str = ""
+            if existing_data is not None and len(existing_data) > 0:
+                num_samples = min(5, len(existing_data))
+                sample_str = existing_data.sample(num_samples).to_string()
             prompt = (
                 f"{base_prompt}"
                 f"SAMPLE DATA:{sample_str}\n\n"
@@ -68,7 +81,7 @@ class SimpleLLMDataGenerator(BaseDataGenerator):
             try:
                 return await loop.run_in_executor(None, self.llm.query, self.system_instruction, prompt, schema)
             except Exception as err:
-                print(f"Error during generation: {err}")
+                logger.error(f"Error during generation: {err}")
                 return None  # Indicate failure
 
         # Function to run all tasks asynchronously
@@ -79,7 +92,7 @@ class SimpleLLMDataGenerator(BaseDataGenerator):
         # generate results asynchronously retry failed batches
         pending_prompts = prompts.copy()
         while pending_prompts:
-            print(f"Generating data for {len(pending_prompts)} batches...")
+            logger.info(f"Generating data for {len(pending_prompts)} batches...")
             responses = asyncio.run(run_tasks(pending_prompts))
 
             failed_prompts = []
@@ -87,11 +100,13 @@ class SimpleLLMDataGenerator(BaseDataGenerator):
             for response, (prompt, n_generate_this_iteration) in zip(responses, pending_prompts):
                 if response is not None:
                     try:
-                        response_text = response.text.replace("json", "").replace("`", "")
-                        # convert the data to pd dataframe and append to the generated data
+                        # Clean the response using our utility function
+                        response_text = extract_json_array(response.text)
+                        # Convert the data to pd dataframe and append to the generated data
                         df_generated = pd.concat([df_generated, pd.read_json(str(response_text))], ignore_index=True)
+                        logger.debug(f"Successfully generated {len(pd.read_json(str(response_text)))} samples")
                     except Exception as e:
-                        print(f"Error processing data: {e}")
+                        logger.error(f"Error processing data: {e}")
                         # Add the prompt back to failed_prompts for retry
                         failed_prompts.append((prompt, n_generate_this_iteration))
                 else:
@@ -102,9 +117,9 @@ class SimpleLLMDataGenerator(BaseDataGenerator):
             pending_prompts = failed_prompts
 
             if failed_prompts:
-                print(f"Retrying {len(failed_prompts)} failed batches...")
+                logger.warning(f"Retrying {len(failed_prompts)} failed batches...")
             else:
-                print("All batches processed successfully.")
+                logger.info("All batches processed successfully.")
 
         # Parse the response and return the synthetic data
         return df_generated

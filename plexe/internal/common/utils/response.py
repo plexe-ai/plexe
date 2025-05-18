@@ -113,3 +113,36 @@ def extract_performance(output: str) -> float | None:
 
     except Exception as e:
         raise RuntimeError(f"Error extracting run performance: {e}") from e
+
+
+def extract_json_array(text: str) -> str:
+    """
+    Extract a JSON array from an LLM response, handling common formatting issues.
+
+    This function cleans up LLM responses that may contain JSON arrays embedded in
+    markdown code blocks, additional explanatory text, or other formatting artifacts.
+
+    Args:
+        text: The raw text output from an LLM
+
+    Returns:
+        A cleaned JSON array string ready for parsing
+    """
+    cleaned_text = text
+
+    # Remove code block markers if present
+    if "```" in cleaned_text:
+        json_match = re.search(r"```(?:json)?\s*(.*?)\s*```", cleaned_text, re.DOTALL)
+        if json_match:
+            cleaned_text = json_match.group(1)
+
+    # Remove any language tags or backticks
+    cleaned_text = cleaned_text.replace("json", "").replace("`", "").strip()
+
+    # Find the actual JSON array if needed
+    start_idx = cleaned_text.find("[")
+    end_idx = cleaned_text.rfind("]")
+    if start_idx >= 0 and end_idx >= 0:
+        cleaned_text = cleaned_text[start_idx : end_idx + 1]
+
+    return cleaned_text
