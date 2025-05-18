@@ -102,10 +102,12 @@ class SimpleLLMDataGenerator(BaseDataGenerator):
                 f"The data should be distributed in a way that is consistent with the problem domain. "
                 f"Make absolutely sure to give me EXACTLY {n_generate_this_iteration} records. "
                 f"You must give me no fewer than and no more than {n_generate_this_iteration} records. "
-                f"In your response, only include the dataset as a JSON string, no other text. "
+                f"FORMAT: Return a JSON ARRAY of objects. Each object represents one record. "
+                f"The JSON should be wrapped in square brackets [ ] as an array, not a single object. "
+                f"In your response, only include the dataset as a JSON array, no other text. "
                 f"The output must be a raw JSON string with no formatting characters. "
                 f"Do not give me any code, any descriptions, any explanations, or any other text of any kind. "
-                f"Only give me a raw JSON string with the data, and no other information whatsoever."
+                f"Only give me a raw JSON string with the data in array format, and no other information whatsoever."
             )
             prompts.append((prompt, n_generate_this_iteration))
 
@@ -168,7 +170,11 @@ class SimpleLLMDataGenerator(BaseDataGenerator):
         :return: DataFrame with generated data or None if failed
         """
         try:
-            response = await asyncio.to_thread(self.llm.query, self.system_instruction, prompt, schema)
+
+            class ResponseSchema(BaseModel):
+                records: List[schema]
+
+            response = await asyncio.to_thread(self.llm.query, self.system_instruction, prompt, ResponseSchema)
 
             if response is None:
                 logger.error("Received None response from LLM")

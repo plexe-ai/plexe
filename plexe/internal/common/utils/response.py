@@ -176,9 +176,14 @@ def json_to_dataframe(text: str) -> "pd.DataFrame":
         # Parse the JSON
         data = json.loads(json_text)
 
-        # Validate it's an array
+        # Handle both single object and array of objects
         if not isinstance(data, list):
-            raise ValueError(f"JSON is not an array: {json_text[:100]}...")
+            # If it's a single object, convert it to a list with one item
+            if isinstance(data, dict):
+                logger.warning("JSON is a single object, converting to list")
+                data = [data]
+            else:
+                raise ValueError(f"JSON is not an array or object: {json_text[:100]}...")
 
         # Check if it's empty
         if len(data) == 0:
