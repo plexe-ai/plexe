@@ -49,3 +49,5 @@ Ensure the output maximizes model performance while adhering to all constraints.
 ## 5. Hints
 - Start by getting the metric to optimize, splitting the dataset into train/validation, and creating the input sample.
   These are the natural first steps.
+- When comparing model performance, don't just naively compare the metrics. For example, a "mean absolute error" of
+  exactly 0 is almost certainly a bugged model or a sign of overfitting, so this should be ignored.
