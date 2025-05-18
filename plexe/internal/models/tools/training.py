@@ -14,7 +14,7 @@ from plexe.internal.models.generation.training import TrainingCodeGenerator
 logger = logging.getLogger(__name__)
 
 
-def get_generate_training_code(llm_to_use: str) -> Callable:
+def get_training_code_generation_tool(llm_to_use: str) -> Callable:
     """Returns a tool function to generate training code with the model ID pre-filled."""
 
     @tool
@@ -38,7 +38,7 @@ def get_generate_training_code(llm_to_use: str) -> Callable:
     return generate_training_code
 
 
-def get_fix_training_code(llm_to_use: str) -> Callable:
+def get_training_code_fixing_tool(llm_to_use: str) -> Callable:
     """Returns a tool function to fix training code with the model ID pre-filled."""
 
     @tool
