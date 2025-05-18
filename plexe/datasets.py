@@ -108,7 +108,13 @@ class DatasetGenerator:
 
         if self._data is None:
             self._data = generated_data
+        elif num_samples == 0:
+            # When num_samples is 0, we're just adding columns to existing data
+            # SimpleLLMDataGenerator.generate already handles this correctly by returning
+            # the existing data with new columns added, so we just replace _data directly
+            self._data = generated_data
         else:
+            # When adding new rows, concatenate them with existing data
             self._data = pd.concat([self._data, generated_data], ignore_index=True)
 
     def _validate_schema(self, data: pd.DataFrame, allow_new_columns: bool = False):
