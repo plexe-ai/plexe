@@ -183,7 +183,6 @@ class PlexeAgent:
                 get_review_finalised_model(self.tool_model_id),
                 split_datasets,
                 create_input_sample,
-                get_dataset_preview,
                 get_raw_dataset_schema,
                 format_final_orchestrator_agent_response,
             ],
