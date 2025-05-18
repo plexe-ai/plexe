@@ -156,6 +156,52 @@ def create_input_sample(input_schema: Dict[str, str], n_samples: int = 5) -> boo
 
 
 @tool
+def drop_null_columns(dataset_name: str) -> Dict[str, str]:
+    """
+    Drop all columns from the dataset that are completely null and register the modified dataset.
+
+    Args:
+        dataset_name: Name of the dataset to modify
+
+    Returns:
+        Dictionary containing results of the operation:
+        - dataset_name: Name of the modified dataset
+        - n_dropped: Number of columns dropped
+    """
+    object_registry = ObjectRegistry()
+
+    try:
+        # Get dataset from registry
+        dataset = object_registry.get(TabularConvertible, dataset_name)
+        df = dataset.to_pandas()
+
+        # Drop columns with all null values
+        null_columns = df.columns[df.isnull().all()]
+        n_dropped = len(null_columns)
+        df.drop(columns=null_columns, inplace=True)
+
+        # Unregister the original dataset
+        object_registry.delete(TabularConvertible, dataset_name)
+
+        # Register the modified dataset
+        object_registry.register(TabularConvertible, dataset_name, df)
+
+        logger.debug(f"✅ Dropped {n_dropped} null columns from dataset '{dataset_name}'")
+        return {
+            "dataset_name": dataset_name,
+            "n_dropped": n_dropped,
+        }
+
+    except Exception as e:
+        logger.warning(f"⚠️ Error dropping null columns: {str(e)}")
+        return {
+            "error": f"Failed to drop null columns from dataset '{dataset_name}': {str(e)}",
+            "dataset_name": dataset_name,
+            "n_dropped": 0,
+        }
+
+
+@tool
 def get_dataset_preview(dataset_name: str) -> Dict[str, Any]:
     """
     Generate a concise preview of a dataset with statistical information to help agents understand the data.

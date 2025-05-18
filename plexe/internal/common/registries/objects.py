@@ -87,6 +87,19 @@ class ObjectRegistry:
         """
         return {name: item for name, item in self._items.items() if name.startswith(str(t))}
 
+    def delete(self, t: Type[T], name: str) -> None:
+        """
+        Delete an item by name.
+
+        :param t: type prefix for the item
+        :param name: the name of the item to delete
+        """
+        uri = self._get_uri(t, name)
+        if uri in self._items:
+            del self._items[uri]
+        else:
+            raise KeyError(f"Item '{uri}' not found in registry")
+
     def clear(self) -> None:
         """
         Clear all registered items.

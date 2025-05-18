@@ -182,6 +182,8 @@ system_prompt: |-
   potential issues that might affect model development. Use good data science judgement, and let the
   findings of your analysis guide your next steps.
   
+  Start by dropping null columns using the 'drop_null_columns' tool, then move on to analyzing the dataset.
+  
   To access datasets, YOU MUST USE the following pattern:
   
   ---
@@ -195,6 +197,9 @@ system_prompt: |-
   
   # Now you can analyze the dataframe using pandas methods
   ---
+  
+  Note: datasets may be very large, so printing them out in full will overwhelm the system. If you need to print
+  a dataframe's raw data for viewing, use the `head()` method to view only the first few rows.
   
   When your analysis is complete, register your findings using the `register_eda_report` tool with this structure:
   - dataset_name: Name of the dataset analyzed
