@@ -12,8 +12,11 @@ Users can either pass raw datasets directly to models or leverage this class for
 """
 
 from typing import Iterator, Type, Dict, Optional
+import logging
 import pandas as pd
 from pydantic import BaseModel
+
+logger = logging.getLogger(__name__)
 
 from plexe.internal.common.datasets.interface import TabularConvertible
 from plexe.internal.common.provider import Provider
@@ -81,8 +84,9 @@ class DatasetGenerator:
                 raise ValueError("Dataset must be convertible to pandas DataFrame.")
 
             # If schema is provided, validate data against schema
+            # but only validate existing columns, not new ones being added
             if schema is not None:
-                self._validate_schema(self._data)
+                self._validate_schema(self._data, allow_new_columns=True)
             # If no schema provided, infer it from data
             else:
                 schemas = SchemaResolver(self.provider, self.description).resolve({"data": self._data})
@@ -107,16 +111,21 @@ class DatasetGenerator:
         else:
             self._data = pd.concat([self._data, generated_data], ignore_index=True)
 
-    def _validate_schema(self, data: pd.DataFrame):
+    def _validate_schema(self, data: pd.DataFrame, allow_new_columns: bool = False):
         """
         Ensure data matches the schema by checking column presence.
 
         :param data: DataFrame to validate against the schema
-        :raises ValueError: If required columns from schema are missing
+        :param allow_new_columns: If True, allow schema to have columns that don't exist in data yet
+        :raises ValueError: If required columns from schema are missing and not allowed
         """
         for key in self.schema.model_fields.keys():
             if key not in data.columns:
-                raise ValueError(f"Dataset does not match schema, missing column in dataset: {key}")
+                if not allow_new_columns:
+                    raise ValueError(f"Dataset does not match schema, missing column in dataset: {key}")
+                else:
+                    # When augmenting with new columns, we'll skip validation for those columns
+                    logger.debug(f"Allowing new column that will be added through augmentation: {key}")
 
     @property
     def data(self) -> pd.DataFrame:
