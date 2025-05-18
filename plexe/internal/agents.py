@@ -9,6 +9,7 @@ from typing import List, Dict, Optional, Callable
 
 from smolagents import CodeAgent, LiteLLMModel, ToolCallingAgent
 
+from plexe.agents.model_trainer import ModelTrainerAgent
 from plexe.config import config
 from plexe.internal.common.registries.objects import ObjectRegistry
 from plexe.internal.common.utils.agents import get_prompt_templates
@@ -17,27 +18,21 @@ from plexe.internal.models.entities.code import Code
 from plexe.internal.models.entities.metric import Metric
 from plexe.internal.models.entities.metric import MetricComparator, ComparisonMethod
 from plexe.internal.models.interfaces.predictor import Predictor
-from plexe.internal.models.tools.training import (
-    get_generate_training_code,
-    get_fix_training_code,
-)
-from plexe.internal.models.tools.evaluation import get_review_finalised_model
-from plexe.internal.models.tools.metrics import get_select_target_metric
+from plexe.internal.models.tools.context import get_inference_context_tool
 from plexe.internal.models.tools.datasets import (
     split_datasets,
     create_input_sample,
     get_dataset_preview,
     get_eda_report,
 )
-from plexe.internal.models.tools.schemas import get_raw_dataset_schema
-from plexe.internal.models.tools.execution import get_executor_tool
+from plexe.internal.models.tools.evaluation import get_review_finalised_model
+from plexe.internal.models.tools.metrics import get_select_target_metric
 from plexe.internal.models.tools.response_formatting import (
     format_final_orchestrator_agent_response,
-    format_final_mle_agent_response,
     format_final_mlops_agent_response,
 )
-from plexe.internal.models.tools.context import get_inference_context_tool
-from plexe.internal.models.tools.validation import validate_training_code, validate_inference_code
+from plexe.internal.models.tools.schemas import get_raw_dataset_schema
+from plexe.internal.models.tools.validation import validate_inference_code
 
 logger = logging.getLogger(__name__)
 
@@ -121,33 +116,13 @@ class PlexeAgent:
             step_callbacks=[self.chain_of_thought_callable],
         )
 
-        # Create model trainer agent - implements training code
-        self.mle_agent = ToolCallingAgent(
-            name="MLEngineer",
-            description=(
-                "Expert ML engineer that implements, trains and validates ML models based on provided plans. "
-                "To work effectively, as part of the 'task' prompt the agent STRICTLY requires:"
-                "- the ML task definition (i.e. 'intent')"
-                "- input schema for the model"
-                "- output schema for the model"
-                "- the name and comparison method of the metric to optimise"
-                "- the full solution plan that outlines how to solve this problem"
-                "- the split train/validation dataset names"
-                "- the working directory to use for model execution"
-            ),
-            model=LiteLLMModel(model_id=self.ml_engineer_model_id),
-            tools=[
-                get_generate_training_code(self.tool_model_id),
-                validate_training_code,
-                get_fix_training_code(self.tool_model_id),
-                get_executor_tool(distributed),
-                format_final_mle_agent_response,
-            ],
-            add_base_tools=False,
-            verbosity_level=self.specialist_verbosity,
-            prompt_templates=get_prompt_templates("toolcalling_agent.yaml", "mle_prompt_templates.yaml"),
-            step_callbacks=[self.chain_of_thought_callable],
-        )
+        self.mle_agent = ModelTrainerAgent(
+            ml_engineer_model_id=self.ml_engineer_model_id,
+            tool_model_id=self.tool_model_id,
+            distributed=self.distributed,
+            verbose=verbose,
+            chain_of_thought_callable=self.chain_of_thought_callable,
+        ).agent
 
         # Create predictor builder agent - creates inference code
         self.mlops_engineer = CodeAgent(
