@@ -46,7 +46,7 @@ class MLFlowCallback(Callback):
         except Exception as e:
             raise RuntimeError(f"❌  Error cleaning up active runs: {e}") from e
 
-        # Set up MLFlow tracking URI and experiment
+        # Configure MLFlow Tracking
         try:
             # Set connection timeout for API calls
             import os
@@ -58,6 +58,18 @@ class MLFlowCallback(Callback):
         except Exception as e:
             raise RuntimeError(f"❌  Error setting up MLFlow: {e}") from e
 
+        # Create experiment
+        self.experiment_id = mlflow.create_experiment(self.experiment_name)
+        mlflow.set_experiment(experiment_name=self.experiment_name)
+        logger.debug(f"✅  MLFlow configured with experiment '{self.experiment_name}' (ID: {self.experiment_id})")
+
+        # Set up MLFlow Tracing
+        try:
+            mlflow.smolagents.autolog()
+            logger.debug("✅  MLFlow smolagents autolog enabled")
+        except ModuleNotFoundError:
+            logger.debug("❌  MLFlow smolagents autolog not available. Please install the required package.")
+
     def on_build_start(self, info: BuildStateInfo) -> None:
         """
         Start MLFlow parent run and log initial parameters.
@@ -68,10 +80,11 @@ class MLFlowCallback(Callback):
         experiment = mlflow.get_experiment_by_name(self.experiment_name)
         if experiment is None:
             self.experiment_id = mlflow.create_experiment(self.experiment_name)
+            mlflow.set_experiment(experiment_name=self.experiment_name)
+            logger.debug(f"✅  MLFlow configured with experiment '{self.experiment_name}' (ID: {self.experiment_id})")
+            print(f"✅  MLFlow: tracking URI '{self.tracking_uri}', experiment '{self.experiment_name}'")
         else:
             self.experiment_id = experiment.experiment_id
-        logger.debug(f"✅  MLFlow configured with experiment '{self.experiment_name}' (ID: {self.experiment_id})")
-        print(f"✅  MLFlow: tracking URI '{self.tracking_uri}', experiment '{self.experiment_name}'")
         # TODO: Start an MLFlow parent run
 
     def on_build_end(self, info: BuildStateInfo) -> None:

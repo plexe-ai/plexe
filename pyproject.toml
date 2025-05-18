@@ -47,10 +47,10 @@ numpy = ">=1.23.2,<2.0.0"
 black = "^24.10.0"
 jinja2 = "^3.1.6"
 platformdirs = "^4.3.7"
-mlflow = "^2.21.3"
+mlflow = "^3.0.0rc2"
 ray = "^2.9.0"
 rich = "^13.7.1"
-smolagents = "1.13.0"
+smolagents = "1.14.0"
 
 # Deep learning dependencies
 torch = { version = ">=2.0.0,<2.3.0", optional = true }
