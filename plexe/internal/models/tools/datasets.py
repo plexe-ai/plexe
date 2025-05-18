@@ -301,26 +301,29 @@ def get_dataset_preview(dataset_name: str) -> Dict[str, Any]:
 def register_eda_report(
     dataset_name: str,
     overview: Dict[str, Any],
-    feature_analysis: Dict[str, Any],
-    relationships: Dict[str, Any],
-    data_quality: Dict[str, Any],
+    feature_engineering_opportunities: Dict[str, Any],
+    data_quality_challenges: Dict[str, Any],
+    data_preprocessing_requirements: Dict[str, Any],
+    feature_importance: Dict[str, Any],
     insights: List[str],
     recommendations: List[str],
 ) -> bool:
     """
     Register an exploratory data analysis (EDA) report for a dataset in the Object Registry.
 
-    This tool creates a structured report with findings from exploratory data analysis and
-    registers it in the Object Registry for use by other agents.
+    This tool creates a structured report with actionable ML engineering insights from exploratory
+    data analysis and registers it in the Object Registry for use by other agents.
 
     Args:
         dataset_name: Name of the dataset that was analyzed
-        overview: General dataset statistics including shape, data types, memory usage
-        feature_analysis: Analysis of individual features with distributions and statistics
-        relationships: Correlation analysis and feature relationships
-        data_quality: Information about missing values, outliers, and data issues
-        insights: Key insights derived from the analysis
-        recommendations: Recommendations for preprocessing and modeling
+        overview: Essential dataset statistics including target variable analysis
+        feature_engineering_opportunities: Specific transformation needs, interaction effects,
+                                          and engineered features that would improve model performance
+        data_quality_challenges: Critical data issues with specific handling recommendations
+        data_preprocessing_requirements: Necessary preprocessing steps with clear justification
+        feature_importance: Assessment of feature predictive potential and relevance
+        insights: Key insights derived from the analysis that directly impact feature engineering
+        recommendations: Specific, prioritized actions for preprocessing and feature engineering
 
     Returns:
         True if the report was successfully registered, False otherwise
@@ -328,14 +331,15 @@ def register_eda_report(
     object_registry = ObjectRegistry()
 
     try:
-        # Create structured EDA report
+        # Create structured EDA report with actionable ML focus
         eda_report = {
             "dataset_name": dataset_name,
             "timestamp": datetime.now().isoformat(),
             "overview": overview,
-            "feature_analysis": feature_analysis,
-            "relationships": relationships,
-            "data_quality": data_quality,
+            "feature_engineering_opportunities": feature_engineering_opportunities,
+            "data_quality_challenges": data_quality_challenges,
+            "data_preprocessing_requirements": data_preprocessing_requirements,
+            "feature_importance": feature_importance,
             "insights": insights,
             "recommendations": recommendations,
         }

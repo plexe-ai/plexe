@@ -16,12 +16,12 @@ def format_eda_report_markdown(eda_report: Dict[Any, Any]) -> str:
     if not eda_report:
         return ""
 
-    markdown = [f"# Exploratory Data Analysis Report: {eda_report.get('dataset_name', 'Dataset')}\n"]
+    markdown = [f"# ML-Focused Data Analysis Report: {eda_report.get('dataset_name', 'Dataset')}\n"]
     markdown.append(f"Generated: {eda_report.get('timestamp', '')}\n")
 
     # Dataset Overview
     if overview := eda_report.get("overview", {}):
-        markdown.append("## Dataset Overview\n")
+        markdown.append("## Essential Dataset Overview\n")
         for key, value in overview.items():
             if isinstance(value, dict):
                 markdown.append(f"### {str(key).replace('_', ' ').title()}\n")
@@ -30,34 +30,40 @@ def format_eda_report_markdown(eda_report: Dict[Any, Any]) -> str:
                 markdown.append(f"**{str(key).replace('_', ' ').title()}**: {value}\n")
         markdown.append("\n")
 
-    # Feature Analysis
-    if feature_analysis := eda_report.get("feature_analysis", {}):
-        markdown.append("## Feature Analysis\n")
-        markdown.append(_dict_to_markdown(feature_analysis, level=2))
+    # Feature Engineering Opportunities
+    if feature_engineering := eda_report.get("feature_engineering_opportunities", {}):
+        markdown.append("## Feature Engineering Opportunities\n")
+        markdown.append(_dict_to_markdown(feature_engineering, level=2))
         markdown.append("\n")
 
-    # Relationships
-    if relationships := eda_report.get("relationships", {}):
-        markdown.append("## Feature Relationships\n")
-        markdown.append(_dict_to_markdown(relationships, level=2))
-        markdown.append("\n")
-
-    # Data Quality
-    if data_quality := eda_report.get("data_quality", {}):
-        markdown.append("## Data Quality Issues\n")
+    # Data Quality Challenges
+    if data_quality := eda_report.get("data_quality_challenges", {}):
+        markdown.append("## Data Quality Challenges\n")
         markdown.append(_dict_to_markdown(data_quality, level=2))
+        markdown.append("\n")
+
+    # Data Preprocessing Requirements
+    if preprocessing := eda_report.get("data_preprocessing_requirements", {}):
+        markdown.append("## Data Preprocessing Requirements\n")
+        markdown.append(_dict_to_markdown(preprocessing, level=2))
+        markdown.append("\n")
+
+    # Feature Importance
+    if importance := eda_report.get("feature_importance", {}):
+        markdown.append("## Feature Importance Analysis\n")
+        markdown.append(_dict_to_markdown(importance, level=2))
         markdown.append("\n")
 
     # Key Insights
     if insights := eda_report.get("insights", []):
-        markdown.append("## Key Insights\n")
+        markdown.append("## Key ML Insights\n")
         for insight in insights:
             markdown.append(f"- {insight}\n")
         markdown.append("\n")
 
     # Recommendations
     if recommendations := eda_report.get("recommendations", []):
-        markdown.append("## Modeling Recommendations\n")
+        markdown.append("## Actionable Recommendations\n")
         for recommendation in recommendations:
             markdown.append(f"- {recommendation}\n")
 
