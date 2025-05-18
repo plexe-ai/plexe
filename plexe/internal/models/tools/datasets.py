@@ -278,6 +278,10 @@ def get_eda_report(dataset_name: str) -> Dict[str, Any]:
     object_registry = ObjectRegistry()
 
     try:
+        # If name ends in _train, _val, or _test, strip it to get the original dataset name
+        if dataset_name.endswith(("_train", "_val", "_test")):
+            dataset_name = dataset_name.rsplit("_", 1)[0]
+
         # Check if EDA report exists
         report_key = f"eda_report_{dataset_name}"
 
