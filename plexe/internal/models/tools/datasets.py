@@ -14,6 +14,7 @@ from typing import Dict, List, Any
 import numpy as np
 from smolagents import tool
 
+from plexe.internal.common.datasets.adapter import DatasetAdapter
 from plexe.internal.common.datasets.interface import TabularConvertible
 from plexe.internal.common.registries.objects import ObjectRegistry
 
@@ -175,16 +176,48 @@ def drop_null_columns(dataset_name: str) -> Dict[str, str]:
         dataset = object_registry.get(TabularConvertible, dataset_name)
         df = dataset.to_pandas()
 
-        # Drop columns with all null values
-        null_columns = df.columns[df.isnull().all()]
-        n_dropped = len(null_columns)
-        df.drop(columns=null_columns, inplace=True)
+        # Drop columns with all null values TODO: make this more intelligent
+        # Drop columns with >=50% missing values
+        null_columns = df.columns[df.isnull().mean() >= 0.5]
+
+        # Drop constant columns (zero variance)
+        constant_columns = [col for col in df.columns if df[col].nunique(dropna=False) == 1]
+
+        # Drop quasi-constant columns (e.g., one value in >95% of rows)
+        quasi_constant_columns = [
+            col for col in df.columns if (df[col].value_counts(dropna=False, normalize=True).values[0] > 0.95)
+        ]
+
+        # Drop columns with all unique values (likely IDs)
+        unique_columns = [col for col in df.columns if df[col].nunique(dropna=False) == len(df)]
+
+        # Drop duplicate columns
+        duplicate_columns = []
+        seen = {}
+        for col in df.columns:
+            col_data = df[col].to_numpy()
+            key = col_data.tobytes() if hasattr(col_data, "tobytes") else tuple(col_data)
+            if key in seen:
+                duplicate_columns.append(col)
+            else:
+                seen[key] = col
+
+        # Combine all columns to drop (set to avoid duplicates)
+        all_bad_columns = (
+            set(null_columns)
+            | set(constant_columns)
+            | set(quasi_constant_columns)
+            | set(unique_columns)
+            | set(duplicate_columns)
+        )
+        n_dropped = len(all_bad_columns)
+        df.drop(columns=list(all_bad_columns), inplace=True)
 
         # Unregister the original dataset
         object_registry.delete(TabularConvertible, dataset_name)
 
         # Register the modified dataset
-        object_registry.register(TabularConvertible, dataset_name, df)
+        object_registry.register(TabularConvertible, dataset_name, DatasetAdapter.coerce(df))
 
         logger.debug(f"✅ Dropped {n_dropped} null columns from dataset '{dataset_name}'")
         return {
