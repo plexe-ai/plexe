@@ -8,6 +8,7 @@ import logging
 
 from smolagents import CodeAgent, LiteLLMModel
 
+from plexe.config import config
 from plexe.internal.common.utils.agents import get_prompt_templates
 from plexe.internal.models.tools.execution import get_executor_tool
 from plexe.internal.models.tools.response_formatting import format_final_mle_agent_response
@@ -60,6 +61,11 @@ class ModelTrainerAgent:
                 format_final_mle_agent_response,
             ],
             add_base_tools=False,
+            additional_authorized_imports=[
+                "plexe",
+                "plexe.*",
+            ]
+            + config.code_generation.authorized_agent_imports,
             verbosity_level=self.verbosity,
             prompt_templates=get_prompt_templates(
                 base_template_name="code_agent.yaml", override_template_name="mle_prompt_templates.yaml"
