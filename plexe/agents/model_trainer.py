@@ -6,11 +6,12 @@ This agent implements the training code, validates it, and executes the training
 
 import logging
 
-from smolagents import ToolCallingAgent, LiteLLMModel
+from smolagents import CodeAgent, LiteLLMModel
 
 from plexe.internal.common.utils.agents import get_prompt_templates
 from plexe.internal.models.tools.execution import get_executor_tool
 from plexe.internal.models.tools.response_formatting import format_final_mle_agent_response
+from plexe.internal.models.tools.schemas import get_raw_dataset_schema
 from plexe.internal.models.tools.training import get_training_code_generation_tool, get_training_code_fixing_tool
 from plexe.internal.models.tools.validation import validate_training_code
 
@@ -36,7 +37,7 @@ class ModelTrainerAgent:
         self.verbosity = 1 if verbose else 0
 
         # Create model trainer agent - implements training code
-        self.agent = ToolCallingAgent(
+        self.agent = CodeAgent(
             name="MLEngineer",
             description=(
                 "Expert ML engineer that implements, trains and validates ML models based on provided plans. "
@@ -53,12 +54,15 @@ class ModelTrainerAgent:
             tools=[
                 get_training_code_generation_tool(tool_model_id),
                 validate_training_code,
+                get_raw_dataset_schema,
                 get_training_code_fixing_tool(tool_model_id),
                 get_executor_tool(distributed),
                 format_final_mle_agent_response,
             ],
             add_base_tools=False,
             verbosity_level=self.verbosity,
-            prompt_templates=get_prompt_templates("toolcalling_agent.yaml", "mle_prompt_templates.yaml"),
+            prompt_templates=get_prompt_templates(
+                base_template_name="code_agent.yaml", override_template_name="mle_prompt_templates.yaml"
+            ),
             step_callbacks=[chain_of_thought_callable],
         )
