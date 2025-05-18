@@ -61,7 +61,7 @@ class EdaAgent:
             # planning_interval=3,
             max_steps=30,
             step_callbacks=[chain_of_thought_callable],
-            additional_authorized_imports=["pandas", "numpy", "plexe"],
+            additional_authorized_imports=["pandas", "numpy", "plexe", "plexe.*", "scipy"],
             prompt_templates=get_prompt_templates("code_agent.yaml", "eda_prompt_templates.yaml"),
         )
 
