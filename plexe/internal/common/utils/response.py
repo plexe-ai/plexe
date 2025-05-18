@@ -1,6 +1,7 @@
 import json
 import re
 import logging
+import pandas as pd
 
 import black
 
@@ -146,3 +147,53 @@ def extract_json_array(text: str) -> str:
         cleaned_text = cleaned_text[start_idx : end_idx + 1]
 
     return cleaned_text
+
+
+def json_to_dataframe(text: str) -> "pd.DataFrame":
+    """
+    Convert LLM-generated JSON text to a pandas DataFrame.
+
+    This function handles common errors in LLM responses when creating DataFrames:
+    1. Extracts and cleans the JSON array from text
+    2. Validates it's a proper array structure
+    3. Creates a DataFrame with appropriate error handling
+
+    Args:
+        text: Raw text output from an LLM that should contain a JSON array
+
+    Returns:
+        pandas DataFrame created from the JSON data
+
+    Raises:
+        ValueError: If the response can't be parsed as a valid JSON array
+    """
+    import pandas as pd
+
+    # Extract the JSON array text
+    json_text = extract_json_array(text)
+
+    try:
+        # Parse the JSON
+        data = json.loads(json_text)
+
+        # Validate it's an array
+        if not isinstance(data, list):
+            raise ValueError(f"JSON is not an array: {json_text[:100]}...")
+
+        # Check if it's empty
+        if len(data) == 0:
+            logger.warning("JSON array is empty")
+            # Return empty DataFrame
+            return pd.DataFrame()
+
+        # Create DataFrame from the parsed JSON array
+        return pd.DataFrame(data)
+
+    except json.JSONDecodeError as e:
+        # Log details about the error
+        logger.error(f"Failed to parse JSON: {str(e)}")
+        logger.debug(f"Attempted to parse: {json_text[:200]}...")
+        raise ValueError(f"Invalid JSON format: {str(e)}")
+    except Exception as e:
+        logger.error(f"Error converting JSON to DataFrame: {str(e)}")
+        raise ValueError(f"Error converting JSON to DataFrame: {str(e)}")
