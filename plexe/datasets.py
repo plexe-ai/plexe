@@ -11,7 +11,7 @@ The Dataset class offers functionalities for:
 Users can either pass raw datasets directly to models or leverage this class for dataset management and augmentation.
 """
 
-from typing import Iterator, Type, Dict
+from typing import Iterator, Type, Dict, Optional
 import pandas as pd
 from pydantic import BaseModel
 
@@ -31,14 +31,15 @@ class DatasetGenerator:
     - Wrap real datasets (pandas etc.).
     - Generate synthetic data from scratch.
     - Augment existing datasets with synthetic samples.
+    - Add new columns to existing datasets using an extended schema.
 
     Example:
         >>> synthetic_dataset = DatasetGenerator(
         >>>     description="Synthetic reviews",
-        >>>     provider="openai/gpt-4",
+        >>>     provider="openai/gpt-4o",
         >>>     schema=MovieReviewSchema,
-        >>>     num_samples=100
         >>> )
+        >>> synthetic_dataset.generate(100)  # Generate 100 samples
         >>> model.build(datasets={"train": synthetic_dataset})
     """
 
@@ -50,6 +51,8 @@ class DatasetGenerator:
         data: pd.DataFrame = None,
     ) -> None:
         """
+        Initialize a new DatasetGenerator.
+
         :param description: A human-readable description of the dataset
         :param provider: LLM provider used for synthetic data generation
         :param schema: The schema the data should match, if any
@@ -60,79 +63,114 @@ class DatasetGenerator:
         self.provider = Provider(provider)
 
         # Internal attributes for data management
-        self._data: pd.DataFrame = data
+        self._data: Optional[pd.DataFrame] = None
         self._index = 0
+        self.schema = None
 
-        # TODO: simplify this logic and use DatasetAdapter to support more dataset types
-        if schema is not None and data is not None:
+        # Process schema and data inputs
+        if schema is not None:
+            # Convert schema to Pydantic BaseModel if it's a dictionary
             self.schema = map_to_basemodel("data", schema)
-            self._validate_schema(data)
+
+        if data is not None:
+            # Convert and validate input data
             data_wrapper = DatasetAdapter.coerce(data)
             if isinstance(data_wrapper, TabularConvertible):
                 self._data = data_wrapper.to_pandas()
             else:
                 raise ValueError("Dataset must be convertible to pandas DataFrame.")
-        elif data is not None:
-            data_wrapper = DatasetAdapter.coerce(data)
-            if isinstance(data_wrapper, TabularConvertible):
-                self._data = data_wrapper.to_pandas()
+
+            # If schema is provided, validate data against schema
+            if schema is not None:
+                self._validate_schema(self._data)
+            # If no schema provided, infer it from data
             else:
-                raise ValueError("Dataset must be convertible to pandas DataFrame.")
+                schemas = SchemaResolver(self.provider, self.description).resolve({"data": self._data})
+                self.schema = merge_models("data", list(schemas))
 
-            schemas = SchemaResolver(self.provider, self.description).resolve({"data": self._data})
-            self.schema = merge_models("data", list(schemas))
-        elif schema is not None:
-            self.schema = map_to_basemodel("data", schema)
-
+        # Initialize data generator
         self.data_generator = DataGenerator(self.provider, self.description, self.schema)
 
     def generate(self, num_samples: int):
-        """Generates synthetic data if a provider is available."""
-        self._data = pd.concat([self._data, self.data_generator.generate(num_samples, self._data)], ignore_index=True)
+        """
+        Generate synthetic data samples or augment existing data.
+
+        If num_samples is 0 and existing data is provided with a new schema,
+        this will transform the existing data to match the new schema (adding columns).
+
+        :param num_samples: Number of new samples to generate
+        """
+        generated_data = self.data_generator.generate(num_samples, self._data)
+
+        if self._data is None:
+            self._data = generated_data
+        else:
+            self._data = pd.concat([self._data, generated_data], ignore_index=True)
 
     def _validate_schema(self, data: pd.DataFrame):
-        """Ensures data matches the schema."""
+        """
+        Ensure data matches the schema by checking column presence.
+
+        :param data: DataFrame to validate against the schema
+        :raises ValueError: If required columns from schema are missing
+        """
         for key in self.schema.model_fields.keys():
             if key not in data.columns:
                 raise ValueError(f"Dataset does not match schema, missing column in dataset: {key}")
 
     @property
     def data(self) -> pd.DataFrame:
-        """Returns the dataset."""
+        """
+        Get the dataset as a pandas DataFrame.
+
+        :return: The dataset as a DataFrame
+        :raises ValueError: If no data has been set or generated
+        """
         if self._data is None:
-            raise ValueError("No data has been set or generated.")
+            raise ValueError("No data has been set or generated. Call generate() first.")
         return self._data
 
     def __len__(self) -> int:
-        """Returns the number of samples in the dataset."""
-        if isinstance(self._data, pd.DataFrame):
+        """
+        Get the number of samples in the dataset.
+
+        :return: Number of rows in the dataset, or 0 if no data
+        """
+        if self._data is not None:
             return len(self._data)
         return 0
 
     def __iter__(self) -> Iterator:
-        """Returns an iterator over the dataset."""
+        """
+        Get an iterator over the dataset rows.
+
+        :return: Self as iterator
+        """
         self._index = 0
         return self
 
     def __next__(self):
-        """Returns the next item in the dataset."""
+        """
+        Get the next item when iterating over the dataset.
+
+        :return: Dictionary representing the next row
+        :raises StopIteration: When all rows have been processed
+        """
         if self._data is None or self._index >= len(self):
             raise StopIteration
 
-        if isinstance(self._data, pd.DataFrame):
-            row = self._data.iloc[self._index].to_dict()
-        else:
-            raise TypeError("Unsupported data type in dataset.")
-
+        row = self._data.iloc[self._index].to_dict()
         self._index += 1
         return row
 
     def __getitem__(self, index: int):
-        """Returns the dataset item at a given index."""
+        """
+        Get a dataset item by index.
+
+        :param index: Row index to retrieve
+        :return: Dictionary representing the row at the given index
+        :raises IndexError: If dataset is empty
+        """
         if self._data is None:
             raise IndexError("Dataset is empty.")
-
-        if isinstance(self._data, pd.DataFrame):
-            return self._data.iloc[index].to_dict()
-        else:
-            raise TypeError("Unsupported data type in dataset.")
+        return self._data.iloc[index].to_dict()
