@@ -47,7 +47,8 @@ def split_datasets(
         {
             "train_datasets": List of training dataset names,
             "validation_datasets": List of validation dataset names,
-            "test_datasets": List of test dataset names
+            "test_datasets": List of test dataset names,
+            "dataset_sizes": Dictionary with sizes of each dataset type to sanity check the splits
         }
     """
     # Initialize the dataset registry
@@ -57,6 +58,9 @@ def split_datasets(
     train_dataset_names = []
     validation_dataset_names = []
     test_dataset_names = []
+
+    # Initialize the dataset sizes lists
+    dataset_sizes = {"train": [], "validation": [], "test": []}
 
     logger.debug("🔪 Splitting datasets into train, validation, and test sets")
     for name in datasets:
@@ -83,6 +87,11 @@ def split_datasets(
         validation_dataset_names.append(val_name)
         test_dataset_names.append(test_name)
 
+        # Store dataset sizes
+        dataset_sizes["train"].append(len(train_ds))
+        dataset_sizes["validation"].append(len(val_ds))
+        dataset_sizes["test"].append(len(test_ds))
+
         logger.debug(
             f"✅ Split dataset {name} into train/validation/test with sizes "
             f"{len(train_ds)}/{len(val_ds)}/{len(test_ds)}"
@@ -92,6 +101,7 @@ def split_datasets(
         "train_datasets": train_dataset_names,
         "validation_datasets": validation_dataset_names,
         "test_datasets": test_dataset_names,
+        "dataset_sizes": dataset_sizes,
     }
 
 
