@@ -60,6 +60,7 @@ from plexe.internal.common.registries.objects import ObjectRegistry
 from plexe.internal.common.utils.model_utils import calculate_model_size, format_code_snippet
 from plexe.internal.common.utils.pydantic_utils import map_to_basemodel, format_schema
 from plexe.internal.common.utils.model_state import ModelState
+from plexe.internal.common.utils.markdown_utils import format_eda_report_markdown
 from plexe.internal.models.entities.artifact import Artifact
 from plexe.internal.models.entities.description import (
     ModelDescription,
@@ -383,8 +384,21 @@ class Model:
             self.metadata["tool_provider"] = str(provider_config.tool_provider)
 
             # Store EDA results in metadata
+            eda_reports = {}
+            eda_markdown_reports = {}
             for name, dataset in self.training_data.items():
-                self.metadata["eda_report"] = self.object_registry.get(dict, f"eda_report_{name}")
+                try:
+                    eda_report = self.object_registry.get(dict, f"eda_report_{name}")
+                    eda_reports[name] = eda_report
+                    # Generate markdown version of the report
+                    eda_markdown = format_eda_report_markdown(eda_report)
+                    eda_markdown_reports[name] = eda_markdown
+                except KeyError:
+                    logger.debug(f"No EDA report found for dataset '{name}'")
+
+            # Store both raw and markdown versions in metadata
+            self.metadata["eda_reports"] = eda_reports
+            self.metadata["eda_markdown_reports"] = eda_markdown_reports
 
             self.state = ModelState.READY
 

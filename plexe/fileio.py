@@ -118,6 +118,14 @@ def save_model(model: Model, path: str | Path) -> str:
                 info.size = len(content)
                 tar.addfile(info, io.BytesIO(content))
 
+            # Save EDA markdown reports if available
+            if "eda_markdown_reports" in model.metadata and model.metadata["eda_markdown_reports"]:
+                for dataset_name, report_markdown in model.metadata["eda_markdown_reports"].items():
+                    info = tarfile.TarInfo(f"metadata/eda_report_{dataset_name}.md")
+                    content = report_markdown.encode("utf-8")
+                    info.size = len(content)
+                    tar.addfile(info, io.BytesIO(content))
+
     except Exception as e:
         logger.error(f"Error saving model: {e}")
         if Path(path).exists():
@@ -169,6 +177,14 @@ def load_model(path: str | Path) -> Model:
             if "metadata/constraints.pkl" in [m.name for m in tar.getmembers()]:
                 constraints = pickle.loads(tar.extractfile("metadata/constraints.pkl").read())
 
+            # Load EDA markdown reports if available
+            eda_markdown_reports = {}
+            for member in tar.getmembers():
+                if member.name.startswith("metadata/eda_report_") and member.name.endswith(".md"):
+                    dataset_name = member.name.replace("metadata/eda_report_", "").replace(".md", "")
+                    report_content = tar.extractfile(member).read().decode("utf-8")
+                    eda_markdown_reports[dataset_name] = report_content
+
             # Get handles for all model artifacts
             artifact_handles = []
             for member in tar.getmembers():
@@ -206,6 +222,10 @@ def load_model(path: str | Path) -> Model:
             model.metadata = metadata
             model.identifier = identifier
             model.trainer_source = trainer_source
+
+            # Add to the metadata if reports were found
+            if eda_markdown_reports:
+                model.metadata["eda_markdown_reports"] = eda_markdown_reports
             model.predictor_source = predictor_source
 
             if predictor_source:

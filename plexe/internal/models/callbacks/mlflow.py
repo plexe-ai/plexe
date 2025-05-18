@@ -94,6 +94,29 @@ class MLFlowCallback(Callback):
         :param info: Information about the model building process end.
         """
         try:
+            # Only try to access metadata if the node attribute exists and has metadata
+            if hasattr(info, "node") and info.node and hasattr(info.node, "metadata"):
+                node_metadata = getattr(info.node, "metadata", {})
+                if node_metadata and "eda_markdown_reports" in node_metadata:
+                    for dataset_name, report_markdown in node_metadata["eda_markdown_reports"].items():
+                        try:
+                            # Save markdown to a file
+                            report_path = Path(f"eda_report_{dataset_name}.md")
+                            with open(report_path, "w") as f:
+                                f.write(report_markdown)
+                            # Log as artifact
+                            mlflow.log_artifact(str(report_path))
+                            # Clean up
+                            report_path.unlink(missing_ok=True)
+                            logger.debug(f"✅ Logged EDA report for dataset '{dataset_name}' as MLflow artifact")
+                        except Exception as e:
+                            logger.warning(f"⚠️ Could not log EDA report for dataset '{dataset_name}': {e}")
+                            # Attempt cleanup
+                            try:
+                                Path(f"eda_report_{dataset_name}.md").unlink(missing_ok=True)
+                            except Exception:
+                                pass
+
             if mlflow.active_run():
                 mlflow.end_run()
         except Exception as e:
