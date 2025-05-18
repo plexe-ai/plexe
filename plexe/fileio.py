@@ -71,7 +71,7 @@ def save_model(model: Model, path: str | Path) -> str:
             for key, value in metadata.items():
                 if key in ["metrics", "metadata"]:
                     info = tarfile.TarInfo(f"metadata/{key}.json")
-                    content = json.dumps(value, indent=2).encode("utf-8")
+                    content = json.dumps(value, indent=2, default=str).encode("utf-8")
                 else:
                     info = tarfile.TarInfo(f"metadata/{key}.txt")
                     content = str(value).encode("utf-8")
@@ -81,7 +81,7 @@ def save_model(model: Model, path: str | Path) -> str:
             for name, schema in [("input_schema", model.input_schema), ("output_schema", model.output_schema)]:
                 schema_dict = {name: field.annotation.__name__ for name, field in schema.model_fields.items()}
                 info = tarfile.TarInfo(f"schemas/{name}.json")
-                content = json.dumps(schema_dict).encode("utf-8")
+                content = json.dumps(schema_dict, default=str).encode("utf-8")
                 info.size = len(content)
                 tar.addfile(info, io.BytesIO(content))
 
