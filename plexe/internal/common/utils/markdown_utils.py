@@ -3,7 +3,7 @@
 from typing import Dict, List, Any, Union
 
 
-def format_eda_report_markdown(eda_report: Dict[str, Any]) -> str:
+def format_eda_report_markdown(eda_report: Dict[Any, Any]) -> str:
     """
     Convert an EDA report dictionary to a well-formatted markdown document.
 
@@ -24,10 +24,10 @@ def format_eda_report_markdown(eda_report: Dict[str, Any]) -> str:
         markdown.append("## Dataset Overview\n")
         for key, value in overview.items():
             if isinstance(value, dict):
-                markdown.append(f"### {key.replace('_', ' ').title()}\n")
+                markdown.append(f"### {str(key).replace('_', ' ').title()}\n")
                 markdown.append(_dict_to_markdown(value, level=3))
             else:
-                markdown.append(f"**{key.replace('_', ' ').title()}**: {value}\n")
+                markdown.append(f"**{str(key).replace('_', ' ').title()}**: {value}\n")
         markdown.append("\n")
 
     # Feature Analysis
@@ -83,7 +83,7 @@ def _dict_to_markdown(data: Union[Dict, List, Any], level: int = 0) -> str:
     if isinstance(data, dict):
         for key, value in data.items():
             header_prefix = "#" * (level + 1)
-            key_formatted = key.replace("_", " ").title()
+            key_formatted = str(key).replace("_", " ").title()
 
             if isinstance(value, dict):
                 result.append(f"{header_prefix} {key_formatted}\n")
