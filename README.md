@@ -129,6 +129,8 @@ Generate synthetic data or infer schemas automatically:
 ```python
 # Generate synthetic data
 dataset = plexe.DatasetGenerator(
+    description="Example dataset with features and target",
+    provider="openai/gpt-4o-mini",
     schema={"features": str, "target": int}
 )
 dataset.generate(500)  # Generate 500 samples
@@ -180,16 +182,7 @@ See [CONTRIBUTING.md](CONTRIBUTING.md) for guidelines. Join our [Discord](https:
 ## 6. License
 [Apache-2.0 License](LICENSE)
 
-## 7. Product Roadmap
-
-- [X] Fine-tuning and transfer learning for small pre-trained models
-- [X] Use Pydantic for schemas and split data generation into a separate module
-- [X] Plexe self-hosted platform ⭐ (More details coming soon!)
-- [X] Lightweight installation option without heavy deep learning dependencies
-- [X] Distributed training with Ray on AWS
-- [ ] Support for non-tabular data types in model generation
-
-## 8. Citation
+## 7. Citation
 If you use Plexe in your research, please cite it as follows:
 
 ```bibtex
