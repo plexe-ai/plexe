@@ -130,22 +130,29 @@ def test_build_start(mock_create_experiment, mock_get_experiment, _, setup_env):
 @patch("mlflow.set_tracking_uri")
 @patch("mlflow.get_experiment_by_name")
 @patch("mlflow.create_experiment")
-def test_build_start_new_experiment(mock_create_experiment, mock_get_experiment, _, setup_env):
+@patch("mlflow.set_experiment")
+@patch("mlflow.active_run", return_value=None)
+def test_build_start_new_experiment(
+    mock_active_run, mock_set_experiment, mock_create_experiment, mock_get_experiment, mock_set_tracking_uri, setup_env
+):
     """Test on_build_start with a new experiment."""
     # Set up mocks for a new experiment
     mock_get_experiment.return_value = None
-    # For init
+    # Mock the create_experiment return values for both initialization and on_build_start
     mock_create_experiment.side_effect = ["init-experiment-id", "new-experiment-id"]
 
-    # Initialize callback with active_run patched
-    with patch("mlflow.active_run", return_value=None):
-        with patch("mlflow.set_experiment"):
-            callback = MLFlowCallback(tracking_uri="http://localhost:5000", experiment_name="new-experiment")
+    # Initialize callback
+    callback = MLFlowCallback(tracking_uri="http://localhost:5000", experiment_name="new-experiment")
 
     # The first call to create_experiment happens during initialization
     assert mock_create_experiment.call_count == 1
-    # Reset call count for clarity
+    # Reset mock for clarity
     mock_create_experiment.reset_mock()
+    mock_set_experiment.reset_mock()
+    mock_get_experiment.reset_mock()
+
+    # Now ensure get_experiment_by_name returns None to simulate experiment not found
+    mock_get_experiment.return_value = None
 
     # Call on_build_start which should create a new experiment since mock_get_experiment returns None
     callback.on_build_start(setup_env["build_info"])
@@ -155,6 +162,7 @@ def test_build_start_new_experiment(mock_create_experiment, mock_get_experiment,
 
     # Since get_experiment returns None, create_experiment should be called again
     mock_create_experiment.assert_called_once_with("new-experiment")
+    mock_set_experiment.assert_called_once()
 
     # Experiment ID should be set to the new ID from the second call to create_experiment
     assert callback.experiment_id == "new-experiment-id"
