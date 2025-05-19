@@ -12,6 +12,7 @@ from datetime import datetime
 from typing import Dict, List, Any
 
 import numpy as np
+import pandas as pd
 from smolagents import tool
 
 from plexe.internal.common.datasets.adapter import DatasetAdapter
@@ -22,26 +23,22 @@ logger = logging.getLogger(__name__)
 
 
 @tool
-def split_datasets(
-    datasets: List[str],
-    train_ratio: float = 0.9,
-    val_ratio: float = 0.1,
-    test_ratio: float = 0.0,
-    is_time_series: bool = False,
-    time_index_column: str = None,
+def register_split_datasets(
+    dataset_names: List[str],
+    train_datasets: List[pd.DataFrame],
+    validation_datasets: List[pd.DataFrame],
+    test_datasets: List[pd.DataFrame],
 ) -> Dict[str, List[str]]:
     """
-    Split datasets into train, validation, and test sets and register the new split datasets with
-    the dataset registry. After splitting and registration, the new dataset names can be used as valid references
-    for datasets.
+    Register train, validation, and test datasets in the object registry after custom splitting.
+
+    This tool allows the agent to register datasets after performing custom splitting logic.
 
     Args:
-        datasets: List of names for the datasets that need to be split
-        train_ratio: Ratio of data to use for training (default: 0.9)
-        val_ratio: Ratio of data to use for validation (default: 0.1)
-        test_ratio: Ratio of data to use for testing (default: 0.0)
-        is_time_series: Whether the data is chronological time series data (default: False)
-        time_index_column: Column name that represents the time index, required if is_time_series=True
+        dataset_names: Original dataset names that were split
+        train_datasets: List of pandas DataFrames containing training data
+        validation_datasets: List of pandas DataFrames containing validation data
+        test_datasets: List of pandas DataFrames containing test data
 
     Returns:
         Dictionary containing lists of registered dataset names:
@@ -49,9 +46,16 @@ def split_datasets(
             "train_datasets": List of training dataset names,
             "validation_datasets": List of validation dataset names,
             "test_datasets": List of test dataset names,
-            "dataset_sizes": Dictionary with sizes of each dataset type to sanity check the splits
+            "dataset_sizes": Dictionary with sizes of each dataset type
         }
     """
+    if (
+        len(dataset_names) != len(train_datasets)
+        or len(dataset_names) != len(validation_datasets)
+        or len(dataset_names) != len(test_datasets)
+    ):
+        raise ValueError("The number of dataset names must match the number of train, validation, and test datasets")
+
     # Initialize the dataset registry
     object_registry = ObjectRegistry()
 
@@ -60,28 +64,24 @@ def split_datasets(
     validation_dataset_names = []
     test_dataset_names = []
 
-    # Initialize the dataset sizes lists
+    # Initialize the dataset sizes dictionary
     dataset_sizes = {"train": [], "validation": [], "test": []}
 
-    logger.debug("🔪 Splitting datasets into train, validation, and test sets")
-    for name in datasets:
-        dataset = object_registry.get(TabularConvertible, name)
-        train_ds, val_ds, test_ds = dataset.split(
-            train_ratio=train_ratio,
-            val_ratio=val_ratio,
-            test_ratio=test_ratio,
-            is_time_series=is_time_series,
-            time_index_column=time_index_column,
-        )
+    # Register each split dataset
+    for i, name in enumerate(dataset_names):
+        # Convert pandas DataFrames to TabularDataset objects
+        train_ds = DatasetAdapter.coerce(train_datasets[i])
+        val_ds = DatasetAdapter.coerce(validation_datasets[i])
+        test_ds = DatasetAdapter.coerce(test_datasets[i])
 
         # Register split datasets in the registry
         train_name = f"{name}_train"
         val_name = f"{name}_val"
         test_name = f"{name}_test"
 
-        object_registry.register(TabularConvertible, train_name, train_ds)
-        object_registry.register(TabularConvertible, val_name, val_ds)
-        object_registry.register(TabularConvertible, test_name, test_ds)
+        object_registry.register(TabularConvertible, train_name, train_ds, overwrite=True)
+        object_registry.register(TabularConvertible, val_name, val_ds, overwrite=True)
+        object_registry.register(TabularConvertible, test_name, test_ds, overwrite=True)
 
         # Store dataset names
         train_dataset_names.append(train_name)
@@ -94,7 +94,7 @@ def split_datasets(
         dataset_sizes["test"].append(len(test_ds))
 
         logger.debug(
-            f"✅ Split dataset {name} into train/validation/test with sizes "
+            f"✅ Registered custom split of dataset {name} into train/validation/test with sizes "
             f"{len(train_ds)}/{len(val_ds)}/{len(test_ds)}"
         )
 

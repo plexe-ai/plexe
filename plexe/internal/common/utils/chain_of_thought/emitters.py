@@ -142,6 +142,7 @@ class ConsoleEmitter(ChainOfThoughtEmitter):
             "Orchestrator": "cyan",
             "DatasetAnalyser": "red",
             "SchemaResolver": "orange",
+            "DatasetSplitter": "purple",
             # Default color
             "default": "blue",
         }

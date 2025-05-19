@@ -10,6 +10,7 @@ from typing import List, Dict, Optional, Callable
 from smolagents import CodeAgent, LiteLLMModel, ToolCallingAgent
 
 from plexe.agents.model_trainer import ModelTrainerAgent
+from plexe.agents.dataset_splitter import DatasetSplitterAgent
 from plexe.config import config
 from plexe.internal.common.registries.objects import ObjectRegistry
 from plexe.internal.common.utils.agents import get_prompt_templates
@@ -20,7 +21,6 @@ from plexe.internal.models.entities.metric import MetricComparator, ComparisonMe
 from plexe.internal.models.interfaces.predictor import Predictor
 from plexe.internal.models.tools.context import get_inference_context_tool
 from plexe.internal.models.tools.datasets import (
-    split_datasets,
     create_input_sample,
     get_dataset_preview,
     get_eda_report,
@@ -31,7 +31,6 @@ from plexe.internal.models.tools.response_formatting import (
     format_final_orchestrator_agent_response,
     format_final_mlops_agent_response,
 )
-from plexe.internal.models.tools.schemas import get_raw_dataset_schema
 from plexe.internal.models.tools.validation import validate_inference_code
 
 logger = logging.getLogger(__name__)
@@ -116,6 +115,14 @@ class PlexeAgent:
             step_callbacks=[self.chain_of_thought_callable],
         )
 
+        # Create dataset splitter agent - intelligently splits datasets
+        self.dataset_splitter_agent = DatasetSplitterAgent(
+            model_id=self.orchestrator_model_id,
+            verbose=verbose,
+            chain_of_thought_callable=self.chain_of_thought_callable,
+        ).agent
+
+        # Create model trainer agent - implements training code
         self.mle_agent = ModelTrainerAgent(
             ml_engineer_model_id=self.ml_engineer_model_id,
             tool_model_id=self.tool_model_id,
@@ -155,12 +162,10 @@ class PlexeAgent:
             tools=[
                 get_select_target_metric(self.tool_model_id),
                 get_review_finalised_model(self.tool_model_id),
-                split_datasets,
                 create_input_sample,
-                get_raw_dataset_schema,
                 format_final_orchestrator_agent_response,
             ],
-            managed_agents=[self.ml_research_agent, self.mle_agent, self.mlops_engineer],
+            managed_agents=[self.ml_research_agent, self.dataset_splitter_agent, self.mle_agent, self.mlops_engineer],
             add_base_tools=False,
             verbosity_level=self.orchestrator_verbosity,
             additional_authorized_imports=config.code_generation.authorized_agent_imports,

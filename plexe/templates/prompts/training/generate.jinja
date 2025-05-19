@@ -1,5 +1,5 @@
 Write a Python script to train a machine learning model that solves the TASK outlined below, 
-using the approach outlined in the plan below.
+using the approach outlined in the plan below. This must be a production-ready script.
 
 # TASK:
 {{ problem_statement }}
@@ -30,6 +30,8 @@ metric in the format `metric_name: metric_value`.
 - Use only {{ allowed_packages }}. Do NOT use any packages that are not part of this list of the Python standard library.
 
 - Do not skip steps or combine preprocessors and models in the same joblib file.
+- Do not simplify by ignoring important features; this is not an exploratory task, this script trains the model that
+  will be used in production. For example, do not neglect to one-hot encode categorical features.
 
 {% if use_validation_files %}
 IMPORTANT: You MUST use the training datasets for training the model and the validation datasets for evaluating

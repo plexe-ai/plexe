@@ -30,16 +30,17 @@ class ObjectRegistry:
     def _get_uri(t: Type[T], name: str) -> str:
         return f"{str(t)}://{name}"
 
-    def register(self, t: Type[T], name: str, item: T) -> None:
+    def register(self, t: Type[T], name: str, item: T, overwrite: bool = False) -> None:
         """
         Register an item with a given name.
 
         :param t: type prefix for the item
         :param name: identifier for the item - must be unique within the prefix
         :param item: the item to register
+        :param overwrite: whether to overwrite an existing item with the same name
         """
         uri = self._get_uri(t, name)
-        if uri in self._items:
+        if not overwrite and uri in self._items:
             raise ValueError(f"Item '{uri}' already registered, use a different name")
         self._items[uri] = item
 

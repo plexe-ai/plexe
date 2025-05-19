@@ -24,6 +24,7 @@ managed_agent:
     - Generate Python training code using the 'generate_training_code' tool.
     - Validate and execute the code using the 'validate_training_code' and 'execute_training_code' tools.
     - If validation or execution fails, debug/fix using your tools and retry.
+    - IMPORTANT: DO NOT write the code yourself. USE THE TOOLS provided.
 
     ## Final Answer
     - If you built a model, use 'format_final_mle_agent_response' to create a dictionary with:

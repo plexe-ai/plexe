@@ -47,7 +47,8 @@ Ensure the output maximizes model performance while adhering to all constraints.
    code they produce in any subsequent instructions.
 
 ## 5. Hints
-- Start by getting the metric to optimize, splitting the dataset into train/validation, and creating the input sample.
-  These are the natural first steps.
+- Start by getting the metric to optimize, using DatasetSplitter agent for dataset splitting, and creating the input sample.
+- When using DatasetSplitter, provide the ML task intent and clear context so the agent can understand what an
+  appropriate split for the task is.
 - When comparing model performance, don't just naively compare the metrics. For example, a "mean absolute error" of
   exactly 0 is almost certainly a bugged model or a sign of overfitting, so this should be ignored.
