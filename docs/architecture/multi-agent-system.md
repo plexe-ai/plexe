@@ -10,7 +10,9 @@
 - [Overview](#overview)
 - [Architecture Diagram](#architecture-diagram)
 - [Key Components](#key-components)
+  - [EDA Agent](#eda-agent)
   - [Schema Resolver Agent](#schema-resolver-agent)
+  - [Dataset Splitter Agent](#dataset-splitter-agent)
   - [Manager Agent (Orchestrator)](#manager-agent-orchestrator)
   - [ML Research Scientist Agent](#ml-research-scientist-agent)
   - [ML Engineer Agent](#ml-engineer-agent)
@@ -45,10 +47,12 @@ graph TD
         SchemaResolver --> |"Schemas"| Orchestrator
         Model --> |build| Orchestrator["Manager Agent"]
         Orchestrator --> |"Plan Task"| MLS["ML Researcher"]
+        Orchestrator --> |"Split Task"| DS["Dataset Splitter"]
         Orchestrator --> |"Implement Task"| MLE["ML Engineer"]
         Orchestrator --> |"Inference Task"| MLOPS["ML Operations"]
         
         MLS --> |"Solution Plans"| Orchestrator
+        DS --> |"Split Datasets"| Orchestrator
         MLE --> |"Training Code"| Orchestrator
         MLOPS --> |"Inference Code"| Orchestrator
     end
@@ -82,6 +86,8 @@ graph TD
     SchemaResolver <--> EdaReports
     EDA <--> Registry
     EDA <--> Tools
+    DS <--> Registry
+    DS <--> Tools
     
     Orchestrator --> Result([Trained Model])
     Result --> Model
@@ -115,15 +121,15 @@ eda_agent = EdaAgent(
 ### Schema Resolver Agent
 
 **Class**: `SchemaResolverAgent`
-**Type**: `ToolCallingAgent`
+**Type**: `CodeAgent`
 
 The Schema Resolver Agent infers input and output schemas from intent and dataset samples:
 
 ```python
 schema_resolver = SchemaResolverAgent(
-    model_id=provider_config.tool_provider,
+    model_id=provider_config.orchestrator_provider,
+    verbose=verbose,
     chain_of_thought_callable=cot_callable,
-    verbosity_level=1,
 )
 ```
 
@@ -132,6 +138,27 @@ schema_resolver = SchemaResolverAgent(
 - Inferring appropriate input and output schemas
 - Registering schemas with the Object Registry
 - Providing automatic schema resolution when schemas aren't specified
+
+### Dataset Splitter Agent
+
+**Class**: `DatasetSplitterAgent`
+**Type**: `CodeAgent`
+
+The Dataset Splitter Agent handles the intelligent partitioning of datasets:
+
+```python
+dataset_splitter_agent = DatasetSplitterAgent(
+    model_id=orchestrator_model_id,
+    verbose=verbose,
+    chain_of_thought_callable=chain_of_thought_callable,
+)
+```
+
+**Responsibilities**:
+- Analyzing datasets to determine appropriate splitting strategies
+- Handling specialized splitting needs (time-series, imbalanced data)
+- Creating train/validation/test splits with proper stratification
+- Registering split datasets in the Object Registry for downstream use
 
 ### Manager Agent (Orchestrator)
 
@@ -147,13 +174,10 @@ self.manager_agent = CodeAgent(
     tools=[
         get_select_target_metric(self.tool_model_id),
         get_review_finalised_model(self.tool_model_id),
-        split_datasets,
         create_input_sample,
-        get_dataset_preview,
-        get_raw_dataset_schema,
         format_final_orchestrator_agent_response,
     ],
-    managed_agents=[self.ml_research_agent, self.mle_agent, self.mlops_engineer],
+    managed_agents=[self.ml_research_agent, self.dataset_splitter_agent, self.mle_agent, self.mlops_engineer],
     add_base_tools=False,
     verbosity_level=self.orchestrator_verbosity,
     additional_authorized_imports=config.code_generation.authorized_agent_imports,
@@ -188,9 +212,10 @@ self.ml_research_agent = ToolCallingAgent(
         "- input schema for the model"
         "- output schema for the model"
         "- the name and comparison method of the metric to optimise"
+        "- the name of the dataset to use for training"
     ),
     model=LiteLLMModel(model_id=self.ml_researcher_model_id),
-    tools=[get_dataset_preview],
+    tools=[get_dataset_preview, get_eda_report],
     add_base_tools=False,
     verbosity_level=self.specialist_verbosity,
     prompt_templates=get_prompt_templates("toolcalling_agent.yaml", "mls_prompt_templates.yaml"),
@@ -206,38 +231,19 @@ self.ml_research_agent = ToolCallingAgent(
 
 ### ML Engineer Agent
 
-**Class**: `PlexeAgent.mle_agent`  
-**Type**: `ToolCallingAgent`
+**Class**: `ModelTrainerAgent`  
+**Type**: `CodeAgent`
 
 This agent handles the implementation and training of models:
 
 ```python
-self.mle_agent = ToolCallingAgent(
-    name="MLEngineer",
-    description=(
-        "Expert ML engineer that implements, trains and validates ML models based on provided plans. "
-        "To work effectively, as part of the 'task' prompt the agent STRICTLY requires:"
-        "- the ML task definition (i.e. 'intent')"
-        "- input schema for the model"
-        "- output schema for the model"
-        "- the name and comparison method of the metric to optimise"
-        "- the full solution plan that outlines how to solve this problem"
-        "- the split train/validation dataset names"
-        "- the working directory to use for model execution"
-    ),
-    model=LiteLLMModel(model_id=self.ml_engineer_model_id),
-    tools=[
-        get_generate_training_code(self.tool_model_id),
-        validate_training_code,
-        get_fix_training_code(self.tool_model_id),
-        get_executor_tool(self.distributed),
-        format_final_mle_agent_response,
-    ],
-    add_base_tools=False,
-    verbosity_level=self.specialist_verbosity,
-    prompt_templates=get_prompt_templates("toolcalling_agent.yaml", "mle_prompt_templates.yaml"),
-    step_callbacks=[self.chain_of_thought_callable],
-)
+self.mle_agent = ModelTrainerAgent(
+    ml_engineer_model_id=self.ml_engineer_model_id,
+    tool_model_id=self.tool_model_id,
+    distributed=self.distributed,
+    verbose=verbose,
+    chain_of_thought_callable=self.chain_of_thought_callable,
+).agent
 ```
 
 **Responsibilities**:
@@ -258,21 +264,21 @@ This agent focuses on productionizing the model through inference code:
 self.mlops_engineer = CodeAgent(
     name="MLOperationsEngineer",
     description=(
-        "Expert ML operations engineer that writes inference code for ML models to be used in production. "
-        "To work effectively, as part of the 'task' prompt the agent STRICTLY requires:"
+        "Expert ML operations engineer that analyzes training code and creates high-quality production-ready "
+        "inference code for ML models. To work effectively, as part of the 'task' prompt the agent STRICTLY requires:"
         "- input schema for the model"
         "- output schema for the model"
         "- the 'training code id' of the training code produced by the MLEngineer agent"
     ),
     model=LiteLLMModel(model_id=self.ml_ops_engineer_model_id),
     tools=[
-        get_generate_inference_code(self.tool_model_id),
+        get_inference_context_tool(self.tool_model_id),
         validate_inference_code,
-        get_fix_inference_code(self.tool_model_id),
         format_final_mlops_agent_response,
     ],
     add_base_tools=False,
     verbosity_level=self.specialist_verbosity,
+    additional_authorized_imports=config.code_generation.authorized_agent_imports + ["plexe", "plexe.*"],
     prompt_templates=get_prompt_templates("code_agent.yaml", "mlops_prompt_templates.yaml"),
     planning_interval=8,
     step_callbacks=[self.chain_of_thought_callable],
@@ -326,13 +332,13 @@ The system includes specialized tools that agents can use to perform specific ta
 def get_select_target_metric(model_id: str) -> Callable:
     """Factory function that returns a tool for selecting appropriate target metrics."""
     @tool
-    def select_target_metric(task: str, provider: str) -> Dict:
+    def select_target_metric(task: str) -> Dict:
         """Selects the appropriate target metric to optimise for the given task."""
 ```
 
 **Code Generation Tools**:
 ```python
-def get_generate_training_code(model_id: str) -> Callable:
+def get_training_code_generation_tool(llm_to_use: str) -> Callable:
     """Factory function that returns a tool for generating training code."""
     @tool
     def generate_training_code(
@@ -342,14 +348,16 @@ def get_generate_training_code(model_id: str) -> Callable:
         """Generates training code based on the solution plan."""
 ```
 
-**Validation Tools**:
+**Dataset Tools**:
 ```python
 @tool
-def validate_inference_code(
-    inference_code: str, model_artifact_names: List[str],
-    input_schema: Dict[str, str], output_schema: Dict[str, str],
-) -> Dict:
-    """Validates inference code for syntax, security, and correctness."""
+def register_split_datasets(
+    dataset_names: List[str],
+    train_datasets: List[pd.DataFrame],
+    validation_datasets: List[pd.DataFrame],
+    test_datasets: List[pd.DataFrame],
+) -> Dict[str, List[str]]:
+    """Register train, validation, and test datasets in the object registry."""
 ```
 
 **Execution Tools**:
@@ -380,23 +388,28 @@ The multi-agent workflow follows these key steps:
    - Schemas are registered in the Object Registry
 
 4. **Orchestration**:
-   - Manager Agent selects metrics and splits datasets
+   - Manager Agent selects metrics and coordinates the process
    - Manager Agent initializes the solution planning phase
 
-4. **Solution Planning**:
+5. **Dataset Splitting**:
+   - Dataset Splitter Agent analyzes data characteristics
+   - Creates appropriate train/validation/test splits
+   - Registers split datasets in the Object Registry
+
+6. **Solution Planning**:
    - ML Research Scientist proposes solution approaches
    - Manager Agent evaluates and selects approaches
 
-5. **Model Implementation**:
+7. **Model Implementation**:
    - ML Engineer generates and executes training code
    - Model artifacts are registered in the Object Registry
    - Process may iterate through multiple approaches
 
-6. **Inference Code Generation**:
+8. **Inference Code Generation**:
    - ML Operations Engineer generates compatible inference code
    - Code is validated with sample inputs
 
-7. **Finalization**:
+9. **Finalization**:
    - Manager Agent reviews and finalizes the model
    - All artifacts and code are collected
    - Completed model is returned to the user
@@ -421,7 +434,6 @@ result = self.manager_agent.run(
         "working_dir": self.working_dir,
         "input_schema": format_schema(self.input_schema),
         "output_schema": format_schema(self.output_schema),
-        "provider": provider_config.tool_provider,
         "max_iterations": max_iterations,
         "timeout": timeout,
         "run_timeout": run_timeout,
@@ -440,7 +452,7 @@ class ProcessExecutor(Executor):
     def run(self) -> ExecutionResult:
         """Execute code in a subprocess and return results."""
         process = subprocess.Popen(
-            [sys.executable, str(code_file)],
+            [sys.executable, str(self.code_file)],
             stdout=subprocess.PIPE,
             stderr=subprocess.PIPE,
             cwd=str(self.working_dir),
@@ -553,6 +565,8 @@ class CustomModelValidator(Validator):
 - [Model Class Definition](/plexe/models.py)
 - [EdaAgent Definition](/plexe/agents/dataset_analyser.py)
 - [SchemaResolverAgent Definition](/plexe/agents/schema_resolver.py)
+- [DatasetSplitterAgent Definition](/plexe/agents/dataset_splitter.py)
+- [ModelTrainerAgent Definition](/plexe/agents/model_trainer.py)
 - [Tool Definitions](/plexe/internal/models/tools/)
 - [Dataset Tools](/plexe/internal/models/tools/datasets.py)
 - [Executor Implementation](/plexe/internal/models/execution/)
