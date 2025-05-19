@@ -21,8 +21,8 @@ managed_agent:
 
     ## Instructions
     If all information is present:
-    - Generate Python training code using the appropriate tool.
-    - Validate and execute the code using your tools.
+    - Generate Python training code using the 'generate_training_code' tool.
+    - Validate and execute the code using the 'validate_training_code' and 'execute_training_code' tools.
     - If validation or execution fails, debug/fix using your tools and retry.
 
     ## Final Answer
