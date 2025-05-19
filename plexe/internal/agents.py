@@ -7,8 +7,9 @@ import types
 from dataclasses import dataclass, field
 from typing import List, Dict, Optional, Callable
 
-from smolagents import CodeAgent, LiteLLMModel, ToolCallingAgent
+from smolagents import CodeAgent, LiteLLMModel
 
+from plexe.agents.model_planner import ModelPlannerAgent
 from plexe.agents.model_trainer import ModelTrainerAgent
 from plexe.agents.dataset_splitter import DatasetSplitterAgent
 from plexe.config import config
@@ -22,8 +23,6 @@ from plexe.internal.models.interfaces.predictor import Predictor
 from plexe.internal.models.tools.context import get_inference_context_tool
 from plexe.internal.models.tools.datasets import (
     create_input_sample,
-    get_dataset_preview,
-    get_eda_report,
 )
 from plexe.internal.models.tools.evaluation import get_review_finalised_model
 from plexe.internal.models.tools.metrics import get_select_target_metric
@@ -96,24 +95,11 @@ class PlexeAgent:
         self.specialist_verbosity = 1 if verbose else 0
 
         # Create solution planner agent - plans ML approaches
-        self.ml_research_agent = ToolCallingAgent(
-            name="MLResearchScientist",
-            description=(
-                "Expert ML researcher that develops detailed solution ideas and plans for ML use cases. "
-                "To work effectively, as part of the 'task' prompt the agent STRICTLY requires:"
-                "- the ML task definition (i.e. 'intent')"
-                "- input schema for the model"
-                "- output schema for the model"
-                "- the name and comparison method of the metric to optimise"
-                "- the name of the dataset to use for training"
-            ),
-            model=LiteLLMModel(model_id=self.ml_researcher_model_id),
-            tools=[get_dataset_preview, get_eda_report],
-            add_base_tools=False,
-            verbosity_level=self.specialist_verbosity,
-            prompt_templates=get_prompt_templates("toolcalling_agent.yaml", "mls_prompt_templates.yaml"),
-            step_callbacks=[self.chain_of_thought_callable],
-        )
+        self.ml_research_agent = ModelPlannerAgent(
+            model_id=ml_researcher_model_id,
+            verbose=verbose,
+            chain_of_thought_callable=chain_of_thought_callable,
+        ).agent
 
         # Create dataset splitter agent - intelligently splits datasets
         self.dataset_splitter_agent = DatasetSplitterAgent(
