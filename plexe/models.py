@@ -46,7 +46,6 @@ import pandas as pd
 from pydantic import BaseModel
 
 from plexe.config import prompt_templates
-from plexe.constraints import Constraint
 from plexe.datasets import DatasetGenerator
 from plexe.callbacks import Callback, BuildStateInfo, ChainOfThoughtModelCallback
 from plexe.internal.common.utils.chain_of_thought.emitters import ConsoleEmitter
@@ -106,7 +105,6 @@ class Model:
         intent: str,
         input_schema: Type[BaseModel] | Dict[str, type] = None,
         output_schema: Type[BaseModel] | Dict[str, type] = None,
-        constraints: List[Constraint] = None,
         distributed: bool = False,
     ):
         """
@@ -116,8 +114,6 @@ class Model:
         :param intent: A human-readable, natural language description of the model's expected intent.
         :param input_schema: a pydantic model or dictionary defining the input schema
         :param output_schema: a pydantic model or dictionary defining the output schema
-        :param constraints: A list of Constraint objects that represent rules which must be
-            satisfied by every input/output pair for the model.
         :param distributed: Whether to use distributed training with Ray if available.
         """
         # todo: analyse natural language inputs and raise errors where applicable
@@ -126,7 +122,6 @@ class Model:
         self.intent: str = intent
         self.input_schema: Type[BaseModel] = map_to_basemodel("in", input_schema) if input_schema else None
         self.output_schema: Type[BaseModel] = map_to_basemodel("out", output_schema) if output_schema else None
-        self.constraints: List[Constraint] = constraints or []
         self.training_data: Dict[str, Dataset] = dict()
         self.distributed: bool = distributed
 
@@ -465,7 +460,6 @@ class Model:
         schemas = SchemaInfo(
             input=format_schema(self.input_schema),
             output=format_schema(self.output_schema),
-            constraints=[str(constraint) for constraint in self.constraints],
         )
 
         # Create implementation info

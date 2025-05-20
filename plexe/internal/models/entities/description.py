@@ -19,7 +19,6 @@ class SchemaInfo(DataClassJsonMixin):
 
     input: Dict[str, Any]
     output: Dict[str, Any]
-    constraints: List[str] = field(default_factory=list)
 
 
 @dataclass
