@@ -45,7 +45,7 @@ from pydantic import BaseModel
 
 from plexe.config import prompt_templates
 from plexe.datasets import DatasetGenerator
-from plexe.callbacks import Callback, BuildStateInfo, ChainOfThoughtModelCallback
+from plexe.callbacks import Callback, BuildStateInfo, ChainOfThoughtModelCallback, ModelCheckpointCallback
 from plexe.internal.common.utils.chain_of_thought.emitters import ConsoleEmitter
 from plexe.agents.schema_resolver import SchemaResolverAgent
 from plexe.agents.dataset_analyser import EdaAgent
@@ -56,7 +56,7 @@ from plexe.internal.common.provider import ProviderConfig
 from plexe.internal.common.registries.objects import ObjectRegistry
 from plexe.internal.common.utils.model_utils import calculate_model_size, format_code_snippet
 from plexe.internal.common.utils.pydantic_utils import map_to_basemodel, format_schema
-from plexe.internal.common.utils.model_state import ModelState
+from plexe.core.state import ModelState  # Import from core package
 from plexe.internal.common.utils.markdown_utils import format_eda_report_markdown
 from plexe.internal.models.entities.artifact import Artifact
 from plexe.internal.models.entities.description import (
@@ -148,7 +148,8 @@ class Model:
         run_timeout: int = 1800,
         callbacks: List[Callback] = None,
         verbose: bool = False,
-        chain_of_thought: bool = True,
+        resume: bool = False,
+        enable_checkpointing: bool = True,
     ) -> None:
         """
         Build the model using the provided dataset and optional data generation configuration.
@@ -161,23 +162,37 @@ class Model:
         :param run_timeout: maximum time in seconds for each individual model training run
         :param callbacks: list of callbacks to notify during the model building process
         :param verbose: whether to display detailed agent logs during model building (default: False)
-        :param chain_of_thought: whether to display chain of thought output (default: True)
+        :param resume: whether to resume from the checkpoint if the model was loaded from one (default: False)
+        :param enable_checkpointing: whether to enable automatic checkpointing (default: True)
         :return:
         """
+        # Check if we should resume from a checkpoint
+        start_iteration = 0
+        resuming_from_checkpoint = False
+        previous_solutions = []
+
+        if resume and hasattr(self, "_checkpoint_data") and self._checkpoint_data:
+            resuming_from_checkpoint = True
+            start_iteration = self._checkpoint_data.get("iteration", 0) + 1
+            previous_solutions = self._checkpoint_data.get("solutions", [])
+            logger.info(f"Resuming build from checkpoint (iteration {start_iteration})")
+
         # Ensure the object registry is cleared before building
         self.object_registry.clear()
 
         # Initialize callbacks list if not provided
         callbacks = callbacks or []
 
-        # Add chain of thought callback if requested
-        cot_callable = None
-        if chain_of_thought:
-            cot_model_callback = ChainOfThoughtModelCallback(emitter=ConsoleEmitter())
-            callbacks.append(cot_model_callback)
+        # Add automatic checkpointing callback if enabled
+        if enable_checkpointing and not any(isinstance(cb, ModelCheckpointCallback) for cb in callbacks):
+            callbacks.append(ModelCheckpointCallback())
 
-            # Get the underlying callback for use with agents
-            cot_callable = cot_model_callback.get_chain_of_thought_callable()
+        # Add chain of thought callback
+        cot_model_callback = ChainOfThoughtModelCallback(emitter=ConsoleEmitter())
+        callbacks.append(cot_model_callback)
+
+        # Get the underlying callback for use with agents
+        cot_callable = cot_model_callback.get_chain_of_thought_callable()
 
         # Register all callbacks in the object registry
         self.object_registry.register_multiple(Callback, {f"{i}": c for i, c in enumerate(callbacks)})
@@ -260,6 +275,7 @@ class Model:
                                 name: self.object_registry.get(TabularConvertible, name)
                                 for name in self.training_data.keys()
                             },
+                            model=self,  # Include reference to model for checkpoint callback
                         )
                     )
                 except Exception as e:
@@ -300,6 +316,15 @@ class Model:
                 max_iterations=max_iterations,
                 schema_reasoning=schema_reasoning,
             )
+
+            # Add resumption context if we're resuming from a checkpoint
+            if resuming_from_checkpoint:
+                agent_prompt += (
+                    f"\n\nRESUMING FROM CHECKPOINT: Starting at iteration {start_iteration}. "
+                    f"Previous solutions attempted: {len(previous_solutions)}. "
+                    f"Please continue from where we left off, incorporating lessons learned from prior attempts."
+                )
+
             agent = PlexeAgent(
                 orchestrator_model_id=provider_config.orchestrator_provider,
                 ml_researcher_model_id=provider_config.research_provider,
@@ -311,18 +336,23 @@ class Model:
                 distributed=self.distributed,
                 chain_of_thought_callable=cot_callable,
             )
-            generated = agent.run(
-                agent_prompt,
-                additional_args={
-                    "intent": self.intent,
-                    "working_dir": self.working_dir,
-                    "input_schema": format_schema(self.input_schema),
-                    "output_schema": format_schema(self.output_schema),
-                    "max_iterations": max_iterations,
-                    "timeout": timeout,
-                    "run_timeout": run_timeout,
-                },
-            )
+
+            # Prepare agent args
+            additional_args = {
+                "intent": self.intent,
+                "working_dir": self.working_dir,
+                "input_schema": format_schema(self.input_schema),
+                "output_schema": format_schema(self.output_schema),
+                "max_iterations": max_iterations,
+                "timeout": timeout,
+                "run_timeout": run_timeout,
+            }
+
+            # Add checkpoint information if resuming
+            if resuming_from_checkpoint:
+                additional_args.update({"start_iteration": start_iteration, "previous_solutions": previous_solutions})
+
+            generated = agent.run(agent_prompt, additional_args=additional_args)
 
             # Run callbacks for build end
             for callback in self.object_registry.get_all(Callback).values():
@@ -341,6 +371,7 @@ class Model:
                                 name: self.object_registry.get(TabularConvertible, name)
                                 for name in self.training_data.keys()
                             },
+                            model=self,  # Include reference to model for checkpoint callback
                         )
                     )
                 except Exception as e:

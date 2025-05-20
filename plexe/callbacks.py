@@ -9,7 +9,7 @@ or other operations to be performed at key points.
 import logging
 from abc import ABC
 from dataclasses import dataclass
-from typing import Optional, Type, Dict
+from typing import Optional, Type, Dict, Any
 
 from pydantic import BaseModel
 
@@ -62,6 +62,10 @@ class BuildStateInfo:
     node: Optional[Node] = None
     """The solution node being evaluated in the current iteration."""
 
+    # Reference to the model being built (for callbacks that need direct model access)
+    model: Any = None
+    """Reference to the model being built."""
+
 
 class Callback(ABC):
     """
@@ -99,10 +103,12 @@ class Callback(ABC):
 # Import at the end to avoid circular dependencies
 from plexe.internal.models.callbacks.mlflow import MLFlowCallback
 from plexe.internal.models.callbacks.chain_of_thought import ChainOfThoughtModelCallback
+from plexe.internal.models.callbacks.checkpoint import ModelCheckpointCallback
 
 __all__ = [
     "Callback",
     "BuildStateInfo",
     "MLFlowCallback",
     "ChainOfThoughtModelCallback",
+    "ModelCheckpointCallback",
 ]

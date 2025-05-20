@@ -2,7 +2,7 @@
 This module provides a generic Registry pattern implementation for storing and retrieving objects by name or prefix.
 """
 
-from typing import Dict, List, Type, TypeVar
+from typing import Dict, List, Type, TypeVar, Any
 
 
 T = TypeVar("T")
@@ -114,3 +114,50 @@ class ObjectRegistry:
         :return: List of item names in the registry
         """
         return list(self._items.keys())
+
+    def get_all_solutions(self) -> List[Dict[str, Any]]:
+        """
+        Get all solutions tracked during model building.
+
+        This method extracts solution information from the registry, focusing on
+        code, performance metrics, and other solution-specific data for checkpointing.
+
+        :return: List of solution data dictionaries
+        """
+        solutions = []
+
+        # Extract training code and their results
+        from plexe.internal.models.entities.code import Code
+        from plexe.internal.models.entities.node import Node
+
+        # Get all code objects
+        code_items = self.get_all(Code)
+        node_items = self.get_all(Node)
+
+        # Build solution data from code and node objects
+        for uri, code_obj in code_items.items():
+            if isinstance(code_obj, Code):
+                # Extract code ID and try to find associated node
+                code_id = uri.split("://")[1]
+                solution_data = {
+                    "code_id": code_id,
+                    "code": code_obj.code,
+                    "iteration": getattr(code_obj, "iteration", 0),
+                }
+
+                # Look for associated node to get performance metrics
+                for node_uri, node in node_items.items():
+                    if isinstance(node, Node) and node.training_code == code_obj.code:
+                        if node.performance:
+                            solution_data["performance"] = {
+                                "name": node.performance.name,
+                                "value": node.performance.value,
+                                "comparison_method": getattr(
+                                    node.performance.comparator, "comparison_method", "HIGHER_IS_BETTER"
+                                ),
+                            }
+                        break
+
+                solutions.append(solution_data)
+
+        return solutions

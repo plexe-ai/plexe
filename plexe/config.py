@@ -37,8 +37,11 @@ def is_package_available(package_name: str) -> bool:
 class _Config:
     @dataclass(frozen=True)
     class _FileStorageConfig:
-        model_cache_dir: str = field(default=".smolcache/")
+        cache_dir: str = field(default=".plexecache/")
         model_dir: str = field(default="model_files/")
+        checkpoint_dir: str = field(default="checkpoints/")
+        delete_checkpoints_on_success: bool = field(default=False)
+        keep_checkpoints: int = field(default=3)
 
     @dataclass(frozen=True)
     class _LoggingConfig:
