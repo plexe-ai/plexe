@@ -5,7 +5,6 @@ This module provides file I/O utilities for saving and loading models to and fro
 import io
 import json
 import logging
-import pickle
 import tarfile
 import types
 from pathlib import Path
@@ -112,12 +111,6 @@ def save_model(model: Model, path: str | Path) -> str:
                 info.size = len(content)
                 tar.addfile(info, io.BytesIO(content))
 
-            if model.constraints:
-                info = tarfile.TarInfo("metadata/constraints.pkl")
-                content = pickle.dumps(model.constraints)
-                info.size = len(content)
-                tar.addfile(info, io.BytesIO(content))
-
             # Save EDA markdown reports if available
             if "eda_markdown_reports" in model.metadata and model.metadata["eda_markdown_reports"]:
                 for dataset_name, report_markdown in model.metadata["eda_markdown_reports"].items():
@@ -172,11 +165,6 @@ def load_model(path: str | Path) -> Model:
             if "code/predictor.py" in [m.name for m in tar.getmembers()]:
                 predictor_source = tar.extractfile("code/predictor.py").read().decode("utf-8")
 
-            # Extract constraints if available
-            constraints = []
-            if "metadata/constraints.pkl" in [m.name for m in tar.getmembers()]:
-                constraints = pickle.loads(tar.extractfile("metadata/constraints.pkl").read())
-
             # Load EDA markdown reports if available
             eda_markdown_reports = {}
             for member in tar.getmembers():
@@ -214,9 +202,7 @@ def load_model(path: str | Path) -> Model:
             )
 
             # Create the model instance
-            model = Model(
-                intent=intent, input_schema=input_schema, output_schema=output_schema, constraints=constraints
-            )
+            model = Model(intent=intent, input_schema=input_schema, output_schema=output_schema)
             model.state = state
             model.metric = metrics
             model.metadata = metadata

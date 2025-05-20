@@ -1,14 +1,12 @@
 """
 This module defines the `Model` class, which represents a machine learning model.
 
-A `Model` is characterized by a natural language description of its intent, structured input and output schemas,
-and optional constraints that the model must satisfy. This class provides methods for building the model, making
-predictions, and inspecting its state, metadata, and metrics.
+A `Model` is characterized by a natural language description of its intent, structured input and output schemas.
+This class provides methods for building the model, making predictions, and inspecting its state, metadata, and metrics.
 
 Key Features:
 - Intent: A natural language description of the model's purpose.
 - Input/Output Schema: Defines the structure and types of inputs and outputs.
-- Constraints: Rules that must hold true for input/output pairs.
 - Mutable State: Tracks the model's lifecycle, training metrics, and metadata.
 - Build Process: Integrates solution generation with callbacks.
 - Chain of Thought: Captures the reasoning steps of the model building process.
@@ -79,14 +77,12 @@ class Model:
     Represents a model that transforms inputs to outputs according to a specified intent.
 
     A `Model` is defined by a human-readable description of its expected intent, as well as structured
-    definitions of its input schema, output schema, and any constraints that must be satisfied by the model.
+    definitions of its input schema and output schema.
 
     Attributes:
         intent (str): A human-readable, natural language description of the model's expected intent.
         output_schema (dict): A mapping of output key names to their types.
         input_schema (dict): A mapping of input key names to their types.
-        constraints (List[Constraint]): A list of Constraint objects that represent rules which must be
-            satisfied by every input/output pair for the model.
 
     Example:
         model = Model(
@@ -109,7 +105,7 @@ class Model:
     ):
         """
         Initialise a model with a natural language description of its intent, as well as
-        structured definitions of its input schema, output schema, and any constraints.
+        structured definitions of its input schema and output schema.
 
         :param intent: A human-readable, natural language description of the model's expected intent.
         :param input_schema: a pydantic model or dictionary defining the input schema
