@@ -567,7 +567,7 @@ class CustomModelValidator(Validator):
 - [SchemaResolverAgent Definition](/plexe/agents/schema_resolver.py)
 - [DatasetSplitterAgent Definition](/plexe/agents/dataset_splitter.py)
 - [ModelTrainerAgent Definition](/plexe/agents/model_trainer.py)
-- [Tool Definitions](/plexe/internal/models/tools/)
+- [Tool Definitions](/plexe/tools/)
 - [Dataset Tools](/plexe/tools/datasets.py)
 - [Executor Implementation](/plexe/internal/models/execution/)
 - [Object Registry](/plexe/internal/common/registries/objects.py)

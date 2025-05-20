@@ -11,7 +11,7 @@ The core architecture is as follows: agents go in `plexe/agents/*`, tools in `pl
 - `plexe/models.py`: Core `Model` class with build/predict functionality
 - `plexe/agents/schema_resolver.py`: Agent inferring input/output schemas
 - `plexe/internal/agents.py`: Multi-agent system implementation (`PlexeAgent` class)
-- `plexe/internal/models/tools/`: Tools for code generation, execution, validation
+- `plexe/tools/`: Tools for code generation, execution, validation
 - `plexe/config.py`: Configuration management and prompt templates
 - `plexe/internal/common/registries/objects.py`: Shared object registry for agents
 - `plexe/datasets.py`: Dataset handling and synthetic data generation
