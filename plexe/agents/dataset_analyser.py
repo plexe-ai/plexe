@@ -12,8 +12,8 @@ from smolagents import LiteLLMModel, CodeAgent
 
 from plexe.config import prompt_templates
 from plexe.internal.common.utils.agents import get_prompt_templates
-from plexe.internal.models.tools.datasets import register_eda_report, drop_null_columns
-from plexe.internal.models.tools.schemas import get_raw_dataset_schema
+from plexe.tools.datasets import register_eda_report, drop_null_columns
+from plexe.tools.schemas import get_raw_dataset_schema
 
 logger = logging.getLogger(__name__)
 

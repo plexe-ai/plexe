@@ -10,11 +10,11 @@ from smolagents import CodeAgent, LiteLLMModel
 
 from plexe.config import config
 from plexe.internal.common.utils.agents import get_prompt_templates
-from plexe.internal.models.tools.execution import get_executor_tool
-from plexe.internal.models.tools.response_formatting import format_final_mle_agent_response
-from plexe.internal.models.tools.schemas import get_raw_dataset_schema
-from plexe.internal.models.tools.training import get_training_code_generation_tool, get_training_code_fixing_tool
-from plexe.internal.models.tools.validation import validate_training_code
+from plexe.tools.execution import get_executor_tool
+from plexe.tools.response_formatting import format_final_mle_agent_response
+from plexe.tools.schemas import get_raw_dataset_schema
+from plexe.tools.training import get_training_code_generation_tool, get_training_code_fixing_tool
+from plexe.tools.validation import validate_training_code
 
 logger = logging.getLogger(__name__)
 

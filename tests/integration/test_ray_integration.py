@@ -58,7 +58,7 @@ def test_model_with_ray(sample_dataset):
     assert model.metric is not None
 
     # Get executor classes
-    from plexe.internal.models.tools.execution import _get_executor_class
+    from plexe.tools.execution import _get_executor_class
     from plexe.internal.models.execution.ray_executor import RayExecutor
 
     # Verify model has the distributed flag set

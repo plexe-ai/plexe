@@ -5,7 +5,7 @@ from unittest.mock import patch
 
 import importlib
 
-from plexe.internal.models.tools.execution import _get_executor_class
+from plexe.tools.execution import _get_executor_class
 from plexe.internal.models.execution.process_executor import ProcessExecutor
 
 

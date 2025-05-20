@@ -13,8 +13,8 @@ from smolagents import CodeAgent, LiteLLMModel
 
 from plexe.config import config
 from plexe.internal.common.utils.agents import get_prompt_templates
-from plexe.internal.models.tools.datasets import get_dataset_preview, get_eda_report
-from plexe.internal.models.tools.datasets import register_split_datasets
+from plexe.tools.datasets import get_dataset_preview, get_eda_report
+from plexe.tools.datasets import register_split_datasets
 
 logger = logging.getLogger(__name__)
 

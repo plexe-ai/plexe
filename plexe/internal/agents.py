@@ -20,17 +20,17 @@ from plexe.internal.models.entities.code import Code
 from plexe.internal.models.entities.metric import Metric
 from plexe.internal.models.entities.metric import MetricComparator, ComparisonMethod
 from plexe.internal.models.interfaces.predictor import Predictor
-from plexe.internal.models.tools.context import get_inference_context_tool
-from plexe.internal.models.tools.datasets import (
+from plexe.tools.context import get_inference_context_tool
+from plexe.tools.datasets import (
     create_input_sample,
 )
-from plexe.internal.models.tools.evaluation import get_review_finalised_model
-from plexe.internal.models.tools.metrics import get_select_target_metric
-from plexe.internal.models.tools.response_formatting import (
+from plexe.tools.evaluation import get_review_finalised_model
+from plexe.tools.metrics import get_select_target_metric
+from plexe.tools.response_formatting import (
     format_final_orchestrator_agent_response,
     format_final_mlops_agent_response,
 )
-from plexe.internal.models.tools.validation import validate_inference_code
+from plexe.tools.validation import validate_inference_code
 
 logger = logging.getLogger(__name__)
 

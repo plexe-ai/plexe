@@ -3,7 +3,7 @@ import logging
 from smolagents import ToolCallingAgent, LiteLLMModel
 
 from plexe.internal.common.utils.agents import get_prompt_templates
-from plexe.internal.models.tools.datasets import get_dataset_preview, get_eda_report
+from plexe.tools.datasets import get_dataset_preview, get_eda_report
 
 logger = logging.getLogger(__name__)
 
