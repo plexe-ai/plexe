@@ -26,10 +26,13 @@ from plexe.internal.models.entities.metric import Metric
 logger = logging.getLogger(__name__)
 warnings.filterwarnings("ignore", category=UserWarning, module="mlflow")
 
-# Constants
-ARTIFACT_DIR = "artifacts"
-LOG_DIR = "logs"
-EDA_DIR = "eda_reports"
+# Artifact directory structure
+ARTIFACTS = {
+    "code": "artifacts/code",
+    "models": "artifacts/models",
+    "reports": "artifacts/reports",
+    "exceptions": "logs/exceptions",
+}
 
 
 class MLFlowCallback(Callback):
@@ -61,448 +64,389 @@ class MLFlowCallback(Callback):
         """Configure MLFlow tracking and clean up any active runs."""
         try:
             # End any active runs from previous sessions
-            self._end_active_run()
+            if mlflow.active_run():
+                mlflow.end_run()
 
             # Configure MLFlow environment
             os.environ["MLFLOW_HTTP_REQUEST_TIMEOUT"] = str(self.connect_timeout)
             mlflow.set_tracking_uri(self.tracking_uri)
-            logger.debug(f"✅ MLFlow configured with tracking URI '{self.tracking_uri}'")
 
-            # Set up MLFlow tracing if available
-            try:
-                mlflow.smolagents.autolog()
-                logger.debug("✅ MLFlow smolagents autolog enabled")
-            except ModuleNotFoundError:
-                logger.debug("⚠️ MLFlow smolagents autolog not available")
-
-        except Exception as e:
-            logger.error(f"❌ Error setting up MLFlow: {e}")
-            raise RuntimeError(f"Failed to setup MLFlow: {e}") from e
-
-    def _end_active_run(self) -> None:
-        """Safely end any active MLFlow run."""
-        try:
-            if mlflow.active_run():
-                mlflow.end_run()
-        except Exception as e:
-            logger.warning(f"⚠️ Error ending active MLFlow run: {e}")
-
-    def _get_or_create_experiment(self) -> str:
-        """Get or create the MLFlow experiment and return its ID."""
-        try:
-            # Try to get existing experiment
+            # Explicitly set the experiment first to avoid default experiment use for traces
             experiment = mlflow.get_experiment_by_name(self.experiment_name)
             if experiment:
-                return experiment.experiment_id
+                self.experiment_id = experiment.experiment_id
+                mlflow.set_experiment(experiment_name=self.experiment_name)
+            else:
+                self.experiment_id = mlflow.create_experiment(self.experiment_name)
+                mlflow.set_experiment(experiment_id=self.experiment_id)
 
-            # Create if not exists
-            experiment_id = mlflow.create_experiment(self.experiment_name)
-            mlflow.set_experiment(experiment_name=self.experiment_name)
-            logger.debug(f"✅ MLFlow experiment created: '{self.experiment_name}' (ID: {experiment_id})")
-            print(f"✅ MLFlow: tracking URI '{self.tracking_uri}', experiment '{self.experiment_name}'")
-            return experiment_id
+            # Enable autologging for smolagents AFTER setting experiment
+            try:
+                mlflow.smolagents.autolog()
+            except ModuleNotFoundError:
+                pass
+
         except Exception as e:
-            logger.error(f"❌ Error creating MLFlow experiment: {e}")
-            raise RuntimeError(f"Failed to create MLFlow experiment: {e}") from e
+            logger.error(f"Failed to setup MLFlow: {e}")
+            raise RuntimeError(f"Failed to setup MLFlow: {e}") from e
+
+    def _timestamp(self) -> str:
+        """Get formatted timestamp for runs and logs."""
+        return datetime.datetime.now().strftime("%Y%m%d-%H%M%S")
+
+    def _safe_get(self, obj, *attrs, default=None):
+        """Safely access nested attributes."""
+        if obj is None:
+            return default
+
+        current = obj
+        for attr in attrs:
+            if not hasattr(current, attr):
+                return default
+            current = getattr(current, attr)
+        return current
+
+    def _get_or_create_experiment(self) -> str:
+        """
+        Get or create the MLFlow experiment and return its ID.
+        Reuses experiment_id if already set during initialization.
+        """
+        # If we already have an experiment ID, ensure it's active and return it
+        if self.experiment_id:
+            mlflow.set_experiment(experiment_id=self.experiment_id)
+            return self.experiment_id
+
+        # Otherwise, look up by name or create
+        experiment = mlflow.get_experiment_by_name(self.experiment_name)
+        if experiment:
+            self.experiment_id = experiment.experiment_id
+        else:
+            # Create if not exists
+            self.experiment_id = mlflow.create_experiment(self.experiment_name)
+
+        # Set the experiment as active and notify user
+        mlflow.set_experiment(experiment_id=self.experiment_id)
+        print(f"✅ MLFlow: tracking URI '{self.tracking_uri}', experiment '{self.experiment_name}'")
+        return self.experiment_id
 
     def _ensure_parent_run_active(self) -> bool:
-        """
-        Ensure the parent run is active, activating it if needed.
-
-        Returns:
-            True if parent run is active, False otherwise.
-        """
-        if not self.parent_run_id:
-            logger.warning("⚠️ No parent run ID available")
+        """Ensure the parent run is active, activating it if needed."""
+        if not self.parent_run_id or not self.experiment_id:
             return False
 
+        active_run = mlflow.active_run()
+
+        # If already active and it's the parent run, we're good
+        if active_run and active_run.info.run_id == self.parent_run_id:
+            return True
+
+        # End any active run and start the parent run
+        if active_run:
+            mlflow.end_run()
+
+        # Ensure experiment is active before starting the run
+        mlflow.set_experiment(experiment_id=self.experiment_id)
+
         try:
-            active_run = mlflow.active_run()
-            # If already active and it's the parent run, we're good
-            if active_run and active_run.info.run_id == self.parent_run_id:
-                return True
-
-            # If another run is active, end it first
-            if active_run:
-                mlflow.end_run()
-
-            # Start the parent run
             mlflow.start_run(run_id=self.parent_run_id)
             return True
         except Exception as e:
-            logger.warning(f"⚠️ Could not activate parent run: {e}")
+            logger.warning(f"Could not activate parent run: {e}")
             return False
 
-    def _safe_log_artifact(self, content: str, filename: str, directory: str = None) -> None:
+    def _safe_log_artifact(self, content: str, filename: str, artifact_dir: str = None) -> None:
         """
         Safely log an artifact by writing to a temporary file first.
 
         Args:
             content: Content to write to the file
             filename: Name of the file in MLFlow
-            directory: Optional subdirectory for organization
+            artifact_dir: Optional artifact subdirectory
         """
-        if not mlflow.active_run():
-            logger.warning(f"⚠️ Cannot log artifact '{filename}': No active run")
+        if not mlflow.active_run() or not content:
             return
 
-        # Create unique temp path
+        # Create unique temp file
         with tempfile.NamedTemporaryFile(mode="w", delete=False, suffix=Path(filename).suffix) as tmp:
             tmp_path = Path(tmp.name)
 
         try:
-            # Write content to temp file
+            # Write content and log
             with open(tmp_path, "w") as f:
                 f.write(content)
 
-            # Log file to MLFlow in specified directory
-            if directory:
-                # Create artifact subdirectory structure
-                artifact_path = directory
-                mlflow.log_artifact(str(tmp_path), artifact_path)
+            if artifact_dir:
+                mlflow.log_artifact(str(tmp_path), artifact_dir)
             else:
                 mlflow.log_artifact(str(tmp_path))
 
-            logger.debug(f"✅ Logged artifact: {filename}")
-
         except Exception as e:
-            logger.warning(f"⚠️ Failed to log artifact '{filename}': {e}")
+            logger.warning(f"Failed to log artifact '{filename}': {e}")
         finally:
             # Clean up temp file
             if tmp_path.exists():
                 tmp_path.unlink()
 
     def _extract_model_context(self, info: BuildStateInfo) -> Dict[str, Any]:
-        """
-        Extract useful context about the model for logging.
-
-        Args:
-            info: Build state information
-
-        Returns:
-            Dictionary of model context information
-        """
+        """Extract essential model context for logging."""
         context = {"intent": info.intent, "provider": str(info.provider)}
 
-        # Add timing information if available
+        # Add timing and iteration information
         if info.timeout:
-            context["total_timeout_seconds"] = info.timeout
+            context["timeout_seconds"] = info.timeout
         if info.run_timeout:
             context["run_timeout_seconds"] = info.run_timeout
         if info.max_iterations:
             context["max_iterations"] = info.max_iterations
 
-        # Add model info if available
-        if info.model:
-            model = info.model
-            if hasattr(model, "identifier"):
-                context["model_id"] = model.identifier
-            if hasattr(model, "run_id"):
-                context["run_id"] = model.run_id
-            if hasattr(model, "state"):
-                context["model_state"] = str(model.state)
+        # Add model ID if available
+        model_id = self._safe_get(info.model, "identifier")
+        if model_id:
+            context["model_id"] = model_id
 
-        # Add schema information
+        # Add basic schema and dataset info
         if info.input_schema:
-            field_names = list(info.input_schema.model_fields.keys())
-            context["input_schema_fields"] = ", ".join(field_names)
-            context["input_schema_field_count"] = len(field_names)
-
+            context["input_schema_fields"] = len(info.input_schema.model_fields)
         if info.output_schema:
-            field_names = list(info.output_schema.model_fields.keys())
-            context["output_schema_fields"] = ", ".join(field_names)
-            context["output_schema_field_count"] = len(field_names)
-
-        # Add dataset information if available
+            context["output_schema_fields"] = len(info.output_schema.model_fields)
         if info.datasets:
-            dataset_summary = {}
-            for name, dataset in info.datasets.items():
-                if hasattr(dataset, "shape"):
-                    shape = dataset.shape
-                    dataset_summary[name] = f"{shape[0]} rows, {shape[1]} columns"
-            context["datasets"] = dataset_summary
             context["dataset_count"] = len(info.datasets)
 
         return context
 
-    def on_build_start(self, info: BuildStateInfo) -> None:
-        """
-        Start MLFlow parent run and log initial parameters.
+    def _log_metric(self, metric: Metric, prefix: str = "", step: Optional[int] = None) -> None:
+        """Safely log a Plexe Metric object to MLFlow."""
+        if not mlflow.active_run() or not metric:
+            return
 
-        Args:
-            info: Information about the model building process start.
-        """
+        metric_name = self._safe_get(metric, "name")
+        metric_value = self._safe_get(metric, "value")
+
+        if not metric_name or metric_value is None:
+            return
+
+        # Clean metric name and convert value
+        clean_name = re.sub(r"[^a-zA-Z0-9_]", "", f"{prefix}{metric_name}")
+
         try:
-            # Get or create experiment
+            # Try to log as numeric
+            value = float(metric_value)
+            if step is not None:
+                mlflow.log_metric(clean_name, value, step=step)
+            else:
+                mlflow.log_metric(clean_name, value)
+        except (ValueError, TypeError):
+            # If not numeric, log as tag
+            mlflow.set_tag(f"metric_{clean_name}", str(metric_value))
+            mlflow.set_tag("non_numeric_metrics", "true")
+
+    def on_build_start(self, info: BuildStateInfo) -> None:
+        """Start MLFlow parent run and log initial parameters."""
+        try:
+            # Ensure experiment is set and active
             self.experiment_id = self._get_or_create_experiment()
 
-            # Extract model information for descriptive run name
-            model_id = info.model.identifier if hasattr(info.model, "identifier") else "unknown"
-            timestamp = datetime.datetime.now().strftime("%Y%m%d-%H%M%S")
+            # Get model info and timestamp
+            model_id = self._safe_get(info.model, "identifier", "unknown")
+            timestamp = self._timestamp()
 
-            # Start parent run with informative name
+            # End any active run before starting parent
+            if mlflow.active_run():
+                mlflow.end_run()
+
+            # Ensure the experiment is active before starting the run
+            mlflow.set_experiment(experiment_id=self.experiment_id)
+
+            # Start parent run
             parent_run = mlflow.start_run(
                 run_name=f"model-{model_id}-{timestamp}",
                 experiment_id=self.experiment_id,
-                description=f"Model building for: {info.intent[:100]}...",
+                description=f"Model building: {info.intent[:100]}...",
             )
             self.parent_run_id = parent_run.info.run_id
-            logger.debug(f"✅ Started MLFlow parent run: {self.parent_run_id}")
+            logger.info(f"Started parent run '{parent_run.info.run_id}' in experiment '{self.experiment_name}'")
 
-            # Extract and log common parameters
-            model_context = self._extract_model_context(info)
-
-            # Log parameters and tags
-            mlflow.log_params(model_context)
+            # Log common parameters and tags
+            mlflow.log_params(self._extract_model_context(info))
             mlflow.set_tags({"provider": str(info.provider), "run_type": "parent", "build_timestamp": timestamp})
 
-            # Log intent as a note for better visibility in UI
+            # Log intent
             if info.intent:
                 self._safe_log_artifact(content=info.intent, filename="intent.txt")
 
         except Exception as e:
-            logger.error(f"❌ Error in on_build_start: {e}")
-            # Don't re-raise to allow build process to continue
+            logger.error(f"Error starting build in MLFlow: {e}")
 
     def on_iteration_start(self, info: BuildStateInfo) -> None:
-        """
-        Start a new nested child run for this iteration.
-
-        Args:
-            info: Information about the iteration start.
-        """
+        """Start a new nested child run for this iteration."""
         if not self.parent_run_id:
-            logger.warning("⚠️ Cannot start iteration: No parent run exists")
             return
 
         try:
-            # Create meaningful run name including iteration number
-            timestamp = datetime.datetime.now().strftime("%Y%m%d-%H%M%S")
+            # Ensure experiment is active
+            mlflow.set_experiment(experiment_id=self.experiment_id)
+
+            # Create nested run under the parent
+            timestamp = self._timestamp()
             run_name = f"iteration-{info.iteration}-{timestamp}"
 
-            # Start nested run under the parent
             mlflow.start_run(
                 run_name=run_name,
                 experiment_id=self.experiment_id,
                 nested=True,
-                description=f"Iteration {info.iteration} of model training",
+                description=f"Iteration {info.iteration}",
             )
-            logger.debug(f"✅ Started MLFlow nested run for iteration {info.iteration}")
 
-            # Log iteration-specific parameters
-            iteration_params = {"iteration": info.iteration, "timestamp": timestamp}
+            # Log iteration parameters
+            mlflow.log_params({"iteration": info.iteration})
+            mlflow.set_tags(
+                {"run_type": "iteration", "iteration": str(info.iteration), "parent_run_id": self.parent_run_id}
+            )
 
-            mlflow.log_params(iteration_params)
-            mlflow.set_tags({"run_type": "iteration", "iteration": str(info.iteration)})
-
-            # Log training datasets only if available
+            # Log datasets if available
             if info.datasets:
                 for name, data in info.datasets.items():
                     try:
                         mlflow.log_input(mlflow.data.from_pandas(data.to_pandas(), name=name), context="training")
                     except Exception as e:
-                        logger.warning(f"⚠️ Could not log dataset '{name}': {e}")
+                        logger.warning(f"Could not log dataset '{name}': {e}")
 
         except Exception as e:
-            logger.error(f"❌ Error in on_iteration_start: {e}")
+            logger.error(f"Error starting iteration in MLFlow: {e}")
 
     def on_iteration_end(self, info: BuildStateInfo) -> None:
-        """
-        Log metrics for this iteration and end the child run.
-
-        Args:
-            info: Information about the iteration end.
-        """
+        """Log metrics for this iteration and end the child run."""
         if not mlflow.active_run():
-            logger.warning("⚠️ Cannot end iteration: No active run")
             return
 
         try:
-            # Record validation datasets
-            if info.datasets:
-                for name, data in info.datasets.items():
-                    try:
-                        mlflow.log_input(mlflow.data.from_pandas(data.to_pandas(), name=name), context="validation")
-                    except Exception as e:
-                        logger.warning(f"⚠️ Could not log validation dataset '{name}': {e}")
-
-            # Only process node data if node exists
-            if info.node:
-                # Log training code if available
-                if hasattr(info.node, "training_code") and info.node.training_code:
+            # Process node data if available
+            node = info.node
+            if node:
+                # Log training code
+                training_code = self._safe_get(node, "training_code")
+                if training_code:
                     self._safe_log_artifact(
-                        content=info.node.training_code, filename="trainer_source.py", directory=f"{ARTIFACT_DIR}/code"
+                        content=training_code, filename="trainer_source.py", artifact_dir=ARTIFACTS["code"]
                     )
 
                 # Log performance metrics
-                if hasattr(info.node, "performance") and info.node.performance:
-                    self._log_metric(info.node.performance)
+                performance = self._safe_get(node, "performance")
+                if performance:
+                    self._log_metric(performance)
 
                 # Log execution time
-                if hasattr(info.node, "execution_time") and info.node.execution_time:
-                    mlflow.log_metric("execution_time", info.node.execution_time)
+                execution_time = self._safe_get(node, "execution_time")
+                if execution_time:
+                    mlflow.log_metric("execution_time", execution_time)
 
                 # Log exception information
-                if hasattr(info.node, "exception_was_raised") and info.node.exception_was_raised:
-                    exception_type = "unknown"
-                    if hasattr(info.node, "exception") and info.node.exception:
-                        exception_type = type(info.node.exception).__name__
+                exception_raised = self._safe_get(node, "exception_was_raised", False)
+                if exception_raised:
+                    exception_obj = self._safe_get(node, "exception")
+                    exception_type = type(exception_obj).__name__ if exception_obj else "unknown"
 
                     mlflow.set_tags({"exception_raised": "true", "exception_type": exception_type})
 
-                    # Log exception details if available
-                    if hasattr(info.node, "exception") and info.node.exception:
+                    # Log exception details
+                    if exception_obj:
                         self._safe_log_artifact(
-                            content=str(info.node.exception),
+                            content=str(exception_obj),
                             filename=f"exception-iteration-{info.iteration}.txt",
-                            directory=f"{LOG_DIR}/exceptions",
+                            artifact_dir=ARTIFACTS["exceptions"],
                         )
 
                 # Log model artifacts
-                if hasattr(info.node, "model_artifacts") and info.node.model_artifacts:
-                    for artifact in info.node.model_artifacts:
-                        if Path(artifact).exists():
-                            try:
-                                mlflow.log_artifact(str(artifact), artifact_path=f"{ARTIFACT_DIR}/models")
-                            except Exception as e:
-                                logger.warning(f"⚠️ Could not log artifact {artifact}: {e}")
+                artifacts = self._safe_get(node, "model_artifacts", [])
+                for artifact in artifacts:
+                    if Path(artifact).exists():
+                        try:
+                            mlflow.log_artifact(str(artifact), ARTIFACTS["models"])
+                        except Exception:
+                            pass
 
-            # Determine run status based on iteration outcome
+            # Determine run status
             status = "FINISHED"
-            if info.node and hasattr(info.node, "exception_was_raised") and info.node.exception_was_raised:
-                status = "FAILED"
-            elif info.node and hasattr(info.node, "performance") and info.node.performance is None:
-                status = "FAILED"
-            elif (
-                info.node
-                and hasattr(info.node, "performance")
-                and hasattr(info.node.performance, "is_worst")
-                and info.node.performance.is_worst
+            if (
+                self._safe_get(node, "exception_was_raised", False)
+                or self._safe_get(node, "performance") is None
+                or self._safe_get(node, "performance", "is_worst", False)
             ):
                 status = "FAILED"
 
             # End the child run
             mlflow.end_run(status=status)
-            logger.debug(f"✅ Ended MLFlow run for iteration {info.iteration} with status: {status}")
 
         except Exception as e:
-            logger.error(f"❌ Error in on_iteration_end: {e}")
-            # Try to end run even if there was an error
+            logger.error(f"Error ending iteration in MLFlow: {e}")
             try:
                 mlflow.end_run(status="FAILED")
             except Exception:
                 pass
 
     def on_build_end(self, info: BuildStateInfo) -> None:
-        """
-        Log final model details and end MLFlow parent run.
-
-        Args:
-            info: Information about the model building process end.
-        """
+        """Log final model details and end MLFlow parent run."""
         try:
             # End any active child run first
             active_run = mlflow.active_run()
             if active_run and active_run.info.run_id != self.parent_run_id:
                 mlflow.end_run()
 
-            # Activate parent run for final logging
+            # Ensure parent run is active
             if not self._ensure_parent_run_active():
-                logger.warning("⚠️ Cannot complete build_end: Parent run unavailable")
                 return
 
-            # Log EDA reports if available
-            if info.node and hasattr(info.node, "metadata"):
-                node_metadata = getattr(info.node, "metadata", {})
-                if node_metadata and "eda_markdown_reports" in node_metadata:
-                    for dataset_name, report_markdown in node_metadata["eda_markdown_reports"].items():
-                        self._safe_log_artifact(
-                            content=report_markdown, filename=f"eda_report_{dataset_name}.md", directory=f"{EDA_DIR}"
-                        )
+            # Log EDA reports
+            node_metadata = self._safe_get(info.node, "metadata", {})
+            if node_metadata and "eda_markdown_reports" in node_metadata:
+                for dataset_name, report_markdown in node_metadata["eda_markdown_reports"].items():
+                    self._safe_log_artifact(
+                        content=report_markdown,
+                        filename=f"eda_report_{dataset_name}.md",
+                        artifact_dir=ARTIFACTS["reports"],
+                    )
 
-            # Log best metrics from model if available
-            if info.model:
-                model = info.model
-
+            # Log model information
+            model = info.model
+            if model:
                 # Log best model metric
-                if hasattr(model, "metric") and model.metric:
-                    metric = model.metric
-                    if hasattr(metric, "name") and hasattr(metric, "value"):
-                        mlflow.log_metric(f"best_{metric.name}", float(metric.value))
+                metric = self._safe_get(model, "metric")
+                if metric and hasattr(metric, "name") and hasattr(metric, "value"):
+                    mlflow.log_metric(f"best_{metric.name}", float(metric.value))
 
-                # Log best iteration
+                # Log model artifacts and status
                 mlflow.set_tag("best_iteration", str(info.iteration))
 
-                # Log model artifacts
-                if hasattr(model, "artifacts") and model.artifacts:
-                    artifact_names = [a.name for a in model.artifacts]
+                # Log artifact names
+                artifacts = self._safe_get(model, "artifacts", [])
+                if artifacts:
+                    artifact_names = [a.name for a in artifacts]
                     mlflow.set_tag("model_artifacts", ", ".join(artifact_names))
 
                 # Log model state
-                if hasattr(model, "state"):
-                    mlflow.set_tag("final_model_state", str(model.state))
+                state = self._safe_get(model, "state")
+                if state:
+                    mlflow.set_tag("final_model_state", str(state))
 
                 # Log final model code
-                if hasattr(model, "trainer_source") and model.trainer_source:
+                trainer_source = self._safe_get(model, "trainer_source")
+                if trainer_source:
                     self._safe_log_artifact(
-                        content=model.trainer_source, filename="final_trainer.py", directory=f"{ARTIFACT_DIR}/final"
+                        content=trainer_source, filename="final_trainer.py", artifact_dir=ARTIFACTS["code"]
                     )
 
-                if hasattr(model, "predictor_source") and model.predictor_source:
+                predictor_source = self._safe_get(model, "predictor_source")
+                if predictor_source:
                     self._safe_log_artifact(
-                        content=model.predictor_source, filename="final_predictor.py", directory=f"{ARTIFACT_DIR}/final"
+                        content=predictor_source, filename="final_predictor.py", artifact_dir=ARTIFACTS["code"]
                     )
 
             # End the parent run
             mlflow.end_run()
-            logger.debug("✅ Ended MLFlow parent run")
 
         except Exception as e:
-            logger.error(f"❌ Error in on_build_end: {e}")
-            # Try to end any active run
+            logger.error(f"Error finalizing build in MLFlow: {e}")
             try:
                 mlflow.end_run()
             except Exception:
                 pass
-
-    @staticmethod
-    def _log_metric(metric: Metric, prefix: str = "", step: Optional[int] = None) -> None:
-        """
-        Safely log a Plexe Metric object to MLFlow.
-
-        Args:
-            metric: Plexe Metric object
-            prefix: Optional prefix for the metric name
-            step: Optional step (iteration) for the metric
-        """
-        if not mlflow.active_run():
-            logger.warning("⚠️ Cannot log metric: No active run")
-            return
-
-        if not metric or not hasattr(metric, "name") or not hasattr(metric, "value"):
-            logger.warning("⚠️ Cannot log invalid metric")
-            return
-
-        try:
-            # Clean the metric name to ensure it's valid for MLFlow
-            metric_name = re.sub(r"[^a-zA-Z0-9_]", "", f"{prefix}{metric.name}")
-
-            # Convert value to float, or log as tag if not possible
-            try:
-                value = float(metric.value)
-
-                # Log the metric
-                if step is not None:
-                    mlflow.log_metric(metric_name, value, step=step)
-                else:
-                    mlflow.log_metric(metric_name, value)
-
-                logger.debug(f"✅ Logged metric: {metric_name}={value}")
-
-            except (ValueError, TypeError) as e:
-                logger.debug(f"⚠️ Could not convert metric {metric.name} to float: {e}")
-                mlflow.set_tag(f"metric_{metric_name}", str(metric.value))
-                mlflow.set_tag("non_numeric_metrics", "true")
-
-        except Exception as e:
-            logger.warning(f"⚠️ Failed to log metric {metric.name}: {e}")
