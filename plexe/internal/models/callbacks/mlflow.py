@@ -26,13 +26,7 @@ from plexe.internal.models.entities.metric import Metric
 logger = logging.getLogger(__name__)
 warnings.filterwarnings("ignore", category=UserWarning, module="mlflow")
 
-# Artifact directory structure
-ARTIFACTS = {
-    "code": "artifacts/code",
-    "models": "artifacts/models",
-    "reports": "artifacts/reports",
-    "exceptions": "logs/exceptions",
-}
+# No longer using subdirectories for artifacts
 
 
 class MLFlowCallback(Callback):
@@ -154,14 +148,13 @@ class MLFlowCallback(Callback):
             logger.warning(f"Could not activate parent run: {e}")
             return False
 
-    def _safe_log_artifact(self, content: str, filename: str, artifact_dir: str = None) -> None:
+    def _safe_log_artifact(self, content: str, filename: str) -> None:
         """
         Safely log an artifact by writing to a temporary file first.
 
         Args:
             content: Content to write to the file
             filename: Name of the file in MLFlow
-            artifact_dir: Optional artifact subdirectory
         """
         if not mlflow.active_run() or not content:
             return
@@ -175,10 +168,7 @@ class MLFlowCallback(Callback):
             with open(tmp_path, "w") as f:
                 f.write(content)
 
-            if artifact_dir:
-                mlflow.log_artifact(str(tmp_path), artifact_dir)
-            else:
-                mlflow.log_artifact(str(tmp_path))
+            mlflow.log_artifact(str(tmp_path))
 
         except Exception as e:
             logger.warning(f"Failed to log artifact '{filename}': {e}")
@@ -286,12 +276,8 @@ class MLFlowCallback(Callback):
             # Ensure experiment is active
             mlflow.set_experiment(experiment_id=self.experiment_id)
 
-            # Create nested run under the parent
-            timestamp = self._timestamp()
-            run_name = f"iteration-{info.iteration}-{timestamp}"
-
+            # Create nested run under the parent, letting MLflow decide the name
             mlflow.start_run(
-                run_name=run_name,
                 experiment_id=self.experiment_id,
                 nested=True,
                 description=f"Iteration {info.iteration}",
@@ -327,7 +313,7 @@ class MLFlowCallback(Callback):
                 training_code = self._safe_get(node, "training_code")
                 if training_code:
                     self._safe_log_artifact(
-                        content=training_code, filename="trainer_source.py", artifact_dir=ARTIFACTS["code"]
+                        content=training_code, filename=f"trainer_source_iteration_{info.iteration}.py"
                     )
 
                 # Log performance metrics
@@ -351,9 +337,7 @@ class MLFlowCallback(Callback):
                     # Log exception details
                     if exception_obj:
                         self._safe_log_artifact(
-                            content=str(exception_obj),
-                            filename=f"exception-iteration-{info.iteration}.txt",
-                            artifact_dir=ARTIFACTS["exceptions"],
+                            content=str(exception_obj), filename=f"exception-iteration-{info.iteration}.txt"
                         )
 
                 # Log model artifacts
@@ -361,7 +345,7 @@ class MLFlowCallback(Callback):
                 for artifact in artifacts:
                     if Path(artifact).exists():
                         try:
-                            mlflow.log_artifact(str(artifact), ARTIFACTS["models"])
+                            mlflow.log_artifact(str(artifact))
                         except Exception:
                             pass
 
@@ -401,11 +385,7 @@ class MLFlowCallback(Callback):
             node_metadata = self._safe_get(info.node, "metadata", {})
             if node_metadata and "eda_markdown_reports" in node_metadata:
                 for dataset_name, report_markdown in node_metadata["eda_markdown_reports"].items():
-                    self._safe_log_artifact(
-                        content=report_markdown,
-                        filename=f"eda_report_{dataset_name}.md",
-                        artifact_dir=ARTIFACTS["reports"],
-                    )
+                    self._safe_log_artifact(content=report_markdown, filename=f"eda_report_{dataset_name}.md")
 
             # Log model information
             model = info.model
@@ -432,15 +412,11 @@ class MLFlowCallback(Callback):
                 # Log final model code
                 trainer_source = self._safe_get(model, "trainer_source")
                 if trainer_source:
-                    self._safe_log_artifact(
-                        content=trainer_source, filename="final_trainer.py", artifact_dir=ARTIFACTS["code"]
-                    )
+                    self._safe_log_artifact(content=trainer_source, filename="final_trainer.py")
 
                 predictor_source = self._safe_get(model, "predictor_source")
                 if predictor_source:
-                    self._safe_log_artifact(
-                        content=predictor_source, filename="final_predictor.py", artifact_dir=ARTIFACTS["code"]
-                    )
+                    self._safe_log_artifact(content=predictor_source, filename="final_predictor.py")
 
             # End the parent run
             mlflow.end_run()
