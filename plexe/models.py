@@ -302,6 +302,10 @@ class Model:
 
             generated = agent.run(agent_prompt, additional_args=additional_args)
 
+            # Capture inferred schemas
+            self.input_schema = map_to_basemodel("InputSchema", self.object_registry.get(dict, "input_schema"))
+            self.output_schema = map_to_basemodel("OutputSchema", self.object_registry.get(dict, "output_schema"))
+
             # Run callbacks for build end
             for callback in self.object_registry.get_all(Callback).values():
                 try:
