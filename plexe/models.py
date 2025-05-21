@@ -149,7 +149,7 @@ class Model:
         callbacks: List[Callback] = None,
         verbose: bool = False,
         resume: bool = False,
-        enable_checkpointing: bool = True,
+        enable_checkpointing: bool = False,
     ) -> None:
         """
         Build the model using the provided dataset and optional data generation configuration.
