@@ -5,7 +5,6 @@ This module provides a callback implementation that logs model building
 metrics, parameters, and artifacts to MLFlow.
 """
 
-# Standard library imports at the top level
 import os
 import re
 import tempfile
@@ -13,20 +12,15 @@ import datetime
 from pathlib import Path
 from typing import Dict, Any, Optional, List
 
-# Third-party imports
 import mlflow
 import logging
 import warnings
 
-# Plexe imports
 from plexe.callbacks import Callback, BuildStateInfo
 from plexe.internal.models.entities.metric import Metric
 
-# Setup logger and constants
 logger = logging.getLogger(__name__)
 warnings.filterwarnings("ignore", category=UserWarning, module="mlflow")
-
-# No longer using subdirectories for artifacts
 
 
 class MLFlowCallback(Callback):
