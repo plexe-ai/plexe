@@ -201,8 +201,6 @@ class Model:
         if run_timeout is not None and timeout is not None and run_timeout > timeout:
             raise ValueError(f"Run timeout ({run_timeout}s) cannot exceed total timeout ({timeout}s)")
 
-        # TODO: validate that schema features are present in the dataset
-        # TODO: validate that datasets do not contain duplicate features
         try:
             # Convert string provider to config if needed
             if isinstance(provider, str):
