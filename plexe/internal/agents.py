@@ -9,9 +9,10 @@ from typing import List, Dict, Optional, Callable
 
 from smolagents import CodeAgent, LiteLLMModel
 
+from plexe.agents.dataset_splitter import DatasetSplitterAgent
+from plexe.agents.model_packager import ModelPackagerAgent
 from plexe.agents.model_planner import ModelPlannerAgent
 from plexe.agents.model_trainer import ModelTrainerAgent
-from plexe.agents.dataset_splitter import DatasetSplitterAgent
 from plexe.config import config
 from plexe.internal.common.registries.objects import ObjectRegistry
 from plexe.internal.common.utils.agents import get_prompt_templates
@@ -20,7 +21,6 @@ from plexe.internal.models.entities.code import Code
 from plexe.internal.models.entities.metric import Metric
 from plexe.internal.models.entities.metric import MetricComparator, ComparisonMethod
 from plexe.internal.models.interfaces.predictor import Predictor
-from plexe.tools.context import get_inference_context_tool
 from plexe.tools.datasets import (
     create_input_sample,
 )
@@ -28,9 +28,7 @@ from plexe.tools.evaluation import get_review_finalised_model
 from plexe.tools.metrics import get_select_target_metric
 from plexe.tools.response_formatting import (
     format_final_orchestrator_agent_response,
-    format_final_mlops_agent_response,
 )
-from plexe.tools.validation import validate_inference_code
 
 logger = logging.getLogger(__name__)
 
@@ -118,28 +116,12 @@ class PlexeAgent:
         ).agent
 
         # Create predictor builder agent - creates inference code
-        self.mlops_engineer = CodeAgent(
-            name="MLOperationsEngineer",
-            description=(
-                "Expert ML operations engineer that analyzes training code and creates high-quality production-ready "
-                "inference code for ML models. To work effectively, as part of the 'task' prompt the agent STRICTLY requires:"
-                "- input schema for the model"
-                "- output schema for the model"
-                "- the 'training code id' of the training code produced by the MLEngineer agent"
-            ),
-            model=LiteLLMModel(model_id=self.ml_ops_engineer_model_id),
-            tools=[
-                get_inference_context_tool(self.tool_model_id),
-                validate_inference_code,
-                format_final_mlops_agent_response,
-            ],
-            add_base_tools=False,
-            verbosity_level=self.specialist_verbosity,
-            additional_authorized_imports=config.code_generation.authorized_agent_imports + ["plexe", "plexe.*"],
-            prompt_templates=get_prompt_templates("code_agent.yaml", "mlops_prompt_templates.yaml"),
-            planning_interval=8,
-            step_callbacks=[self.chain_of_thought_callable],
-        )
+        self.mlops_engineer = ModelPackagerAgent(
+            model_id=self.ml_ops_engineer_model_id,
+            tool_model_id=self.tool_model_id,
+            verbose=verbose,
+            chain_of_thought_callable=self.chain_of_thought_callable,
+        ).agent
 
         # Create orchestrator agent - coordinates the workflow
         self.manager_agent = CodeAgent(
