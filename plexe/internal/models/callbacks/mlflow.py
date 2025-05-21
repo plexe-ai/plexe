@@ -367,10 +367,11 @@ class MLFlowCallback(Callback):
 
             # Determine run status
             status = "FINISHED"
+            performance = self._safe_get(node, "performance")
             if (
                 self._safe_get(node, "exception_was_raised", False)
-                or self._safe_get(node, "performance") is None
-                or self._safe_get(node, "performance", "is_worst", False)
+                or performance is None
+                or (hasattr(performance, "is_worst") and performance.is_worst)
             ):
                 status = "FAILED"
 
