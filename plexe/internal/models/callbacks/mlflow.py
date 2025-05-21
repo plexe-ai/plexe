@@ -11,7 +11,7 @@ import re
 import tempfile
 import datetime
 from pathlib import Path
-from typing import Dict, Any, Optional
+from typing import Dict, Any, Optional, List
 
 # Third-party imports
 import mlflow
@@ -84,11 +84,13 @@ class MLFlowCallback(Callback):
             logger.error(f"Failed to setup MLFlow: {e}")
             raise RuntimeError(f"Failed to setup MLFlow: {e}") from e
 
-    def _timestamp(self) -> str:
+    @staticmethod
+    def _timestamp() -> str:
         """Get formatted timestamp for runs and logs."""
         return datetime.datetime.now().strftime("%Y%m%d-%H%M%S")
 
-    def _safe_get(self, obj, *attrs, default=None):
+    @staticmethod
+    def _safe_get(obj: Any, attrs: List[str], default: Any = None):
         """Safely access nested attributes."""
         if obj is None:
             return default
@@ -148,7 +150,8 @@ class MLFlowCallback(Callback):
             logger.warning(f"Could not activate parent run: {e}")
             return False
 
-    def _safe_log_artifact(self, content: str, filename: str) -> None:
+    @staticmethod
+    def _safe_log_artifact(content: str, filename: str) -> None:
         """
         Safely log an artifact by writing to a temporary file first.
 
@@ -190,7 +193,7 @@ class MLFlowCallback(Callback):
             context["max_iterations"] = info.max_iterations
 
         # Add model ID if available
-        model_id = self._safe_get(info.model, "identifier")
+        model_id = self._safe_get(info.model, ["identifier"])
         if model_id:
             context["model_id"] = model_id
 
@@ -209,8 +212,8 @@ class MLFlowCallback(Callback):
         if not mlflow.active_run() or not metric:
             return
 
-        metric_name = self._safe_get(metric, "name")
-        metric_value = self._safe_get(metric, "value")
+        metric_name = self._safe_get(metric, ["name"])
+        metric_value = self._safe_get(metric, ["value"])
 
         if not metric_name or metric_value is None:
             return
@@ -237,7 +240,7 @@ class MLFlowCallback(Callback):
             self.experiment_id = self._get_or_create_experiment()
 
             # Get model info and timestamp
-            model_id = self._safe_get(info.model, "identifier", "unknown")
+            model_id = self._safe_get(info.model, ["identifier"], "unknown")
             timestamp = self._timestamp()
 
             # End any active run before starting parent
@@ -310,26 +313,26 @@ class MLFlowCallback(Callback):
             node = info.node
             if node:
                 # Log training code
-                training_code = self._safe_get(node, "training_code")
+                training_code = self._safe_get(node, ["training_code"])
                 if training_code:
                     self._safe_log_artifact(
                         content=training_code, filename=f"trainer_source_iteration_{info.iteration}.py"
                     )
 
                 # Log performance metrics
-                performance = self._safe_get(node, "performance")
+                performance = self._safe_get(node, ["performance"])
                 if performance:
                     self._log_metric(performance)
 
                 # Log execution time
-                execution_time = self._safe_get(node, "execution_time")
+                execution_time = self._safe_get(node, ["execution_time"])
                 if execution_time:
                     mlflow.log_metric("execution_time", execution_time)
 
                 # Log exception information
-                exception_raised = self._safe_get(node, "exception_was_raised", False)
+                exception_raised = self._safe_get(node, ["exception_was_raised"], False)
                 if exception_raised:
-                    exception_obj = self._safe_get(node, "exception")
+                    exception_obj = self._safe_get(node, ["exception"])
                     exception_type = type(exception_obj).__name__ if exception_obj else "unknown"
 
                     mlflow.set_tags({"exception_raised": "true", "exception_type": exception_type})
@@ -341,7 +344,7 @@ class MLFlowCallback(Callback):
                         )
 
                 # Log model artifacts
-                artifacts = self._safe_get(node, "model_artifacts", [])
+                artifacts = self._safe_get(node, ["model_artifacts"], [])
                 for artifact in artifacts:
                     if Path(artifact).exists():
                         try:
@@ -351,9 +354,9 @@ class MLFlowCallback(Callback):
 
             # Determine run status
             status = "FINISHED"
-            performance = self._safe_get(node, "performance")
+            performance = self._safe_get(node, ["performance"])
             if (
-                self._safe_get(node, "exception_was_raised", False)
+                self._safe_get(node, ["exception_was_raised"], False)
                 or performance is None
                 or (hasattr(performance, "is_worst") and performance.is_worst)
             ):
@@ -382,7 +385,7 @@ class MLFlowCallback(Callback):
                 return
 
             # Log EDA reports
-            node_metadata = self._safe_get(info.node, "metadata", {})
+            node_metadata = self._safe_get(info.node, ["metadata"], {})
             if node_metadata and "eda_markdown_reports" in node_metadata:
                 for dataset_name, report_markdown in node_metadata["eda_markdown_reports"].items():
                     self._safe_log_artifact(content=report_markdown, filename=f"eda_report_{dataset_name}.md")
@@ -391,7 +394,7 @@ class MLFlowCallback(Callback):
             model = info.model
             if model:
                 # Log best model metric
-                metric = self._safe_get(model, "metric")
+                metric = self._safe_get(model, ["metric"])
                 if metric and hasattr(metric, "name") and hasattr(metric, "value"):
                     mlflow.log_metric(f"best_{metric.name}", float(metric.value))
 
@@ -399,22 +402,22 @@ class MLFlowCallback(Callback):
                 mlflow.set_tag("best_iteration", str(info.iteration))
 
                 # Log artifact names
-                artifacts = self._safe_get(model, "artifacts", [])
+                artifacts = self._safe_get(model, ["artifacts"], [])
                 if artifacts:
                     artifact_names = [a.name for a in artifacts]
                     mlflow.set_tag("model_artifacts", ", ".join(artifact_names))
 
                 # Log model state
-                state = self._safe_get(model, "state")
+                state = self._safe_get(model, ["state"])
                 if state:
                     mlflow.set_tag("final_model_state", str(state))
 
                 # Log final model code
-                trainer_source = self._safe_get(model, "trainer_source")
+                trainer_source = self._safe_get(model, ["trainer_source"])
                 if trainer_source:
                     self._safe_log_artifact(content=trainer_source, filename="final_trainer.py")
 
-                predictor_source = self._safe_get(model, "predictor_source")
+                predictor_source = self._safe_get(model, ["predictor_source"])
                 if predictor_source:
                     self._safe_log_artifact(content=predictor_source, filename="final_predictor.py")
 
