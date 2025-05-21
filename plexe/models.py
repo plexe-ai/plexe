@@ -258,23 +258,6 @@ class Model:
                     logger.warning(f"Error in callback {callback.__class__.__name__}.on_build_start: {str(e)[:50]}")
 
             # Step 4: generate model
-            # Start the model generation run
-            # Get schema reasoning if available
-            schema_reasoning = self.object_registry.get(str, "schema_reasoning")
-
-            # Get EDA report names to provide context to the agents
-            eda_report_names = []
-            try:
-                # Look for EDA reports in the object registry
-                eda_report_names = [
-                    name.split("://")[1]
-                    for name in self.object_registry.list()
-                    if str(dict) in name and "eda_report_" in name
-                ]
-                logger.debug(f"Found EDA reports: {eda_report_names}")
-            except (IndexError, KeyError) as e:
-                logger.warning(f"Unable to extract EDA report names: {str(e)}")
-
             agent_prompt = prompt_templates.agent_builder_prompt(
                 intent=self.intent,
                 input_schema=json.dumps(format_schema(self.input_schema), indent=4),
@@ -282,7 +265,6 @@ class Model:
                 datasets=list(self.training_data.keys()),
                 working_dir=self.working_dir,
                 max_iterations=max_iterations,
-                schema_reasoning=schema_reasoning,
             )
 
             # Add resumption context if we're resuming from a checkpoint
