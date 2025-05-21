@@ -52,7 +52,10 @@ class EdaAgent:
             name="DatasetAnalyser",
             description=(
                 "Expert data analyst that performs exploratory data analysis on datasets "
-                "to generate insights and recommendations for ML modeling."
+                "to generate insights and recommendations for ML modeling.\n"
+                "To work effectively, as part of the 'task' prompt the agent STRICTLY requires:\n"
+                "- the ML task definition (i.e. 'intent')\n"
+                "- the name of the dataset to use for training"
             ),
             model=LiteLLMModel(model_id=self.model_id),
             tools=[drop_null_columns, register_eda_report, get_raw_dataset_schema],

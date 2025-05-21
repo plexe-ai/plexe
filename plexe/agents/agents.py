@@ -9,10 +9,12 @@ from typing import List, Dict, Optional, Callable
 
 from smolagents import CodeAgent, LiteLLMModel
 
+from plexe.agents.dataset_analyser import EdaAgent
 from plexe.agents.dataset_splitter import DatasetSplitterAgent
 from plexe.agents.model_packager import ModelPackagerAgent
 from plexe.agents.model_planner import ModelPlannerAgent
 from plexe.agents.model_trainer import ModelTrainerAgent
+from plexe.agents.schema_resolver import SchemaResolverAgent
 from plexe.config import config
 from plexe.internal.common.registries.objects import ObjectRegistry
 from plexe.internal.common.utils.agents import get_prompt_templates
@@ -99,6 +101,20 @@ class PlexeAgent:
             chain_of_thought_callable=chain_of_thought_callable,
         ).agent
 
+        # Create and run the schema resolver agent
+        self.schema_resolver_agent = SchemaResolverAgent(
+            model_id=orchestrator_model_id,
+            verbose=verbose,
+            chain_of_thought_callable=chain_of_thought_callable,
+        ).agent
+
+        # Create the EDA agent to analyze the dataset
+        self.eda_agent = EdaAgent(
+            model_id=orchestrator_model_id,
+            verbose=verbose,
+            chain_of_thought_callable=chain_of_thought_callable,
+        ).agent
+
         # Create dataset splitter agent - intelligently splits datasets
         self.dataset_splitter_agent = DatasetSplitterAgent(
             model_id=self.orchestrator_model_id,
@@ -133,7 +149,13 @@ class PlexeAgent:
                 create_input_sample,
                 format_final_orchestrator_agent_response,
             ],
-            managed_agents=[self.ml_research_agent, self.dataset_splitter_agent, self.mle_agent, self.mlops_engineer],
+            managed_agents=[
+                self.schema_resolver_agent,
+                self.ml_research_agent,
+                self.dataset_splitter_agent,
+                self.mle_agent,
+                self.mlops_engineer,
+            ],
             add_base_tools=False,
             verbosity_level=self.orchestrator_verbosity,
             additional_authorized_imports=config.code_generation.authorized_agent_imports,

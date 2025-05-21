@@ -561,7 +561,7 @@ class CustomModelValidator(Validator):
 
 ## References
 
-- [PlexeAgent Class Definition](/plexe/internal/agents.py)
+- [PlexeAgent Class Definition](/plexe/agents/agents.py)
 - [Model Class Definition](/plexe/models.py)
 - [EdaAgent Definition](/plexe/agents/dataset_analyser.py)
 - [SchemaResolverAgent Definition](/plexe/agents/schema_resolver.py)

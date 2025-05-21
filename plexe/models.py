@@ -47,9 +47,7 @@ from plexe.config import prompt_templates
 from plexe.datasets import DatasetGenerator
 from plexe.callbacks import Callback, BuildStateInfo, ChainOfThoughtModelCallback, ModelCheckpointCallback
 from plexe.internal.common.utils.chain_of_thought.emitters import ConsoleEmitter
-from plexe.agents.schema_resolver import SchemaResolverAgent
-from plexe.agents.dataset_analyser import EdaAgent
-from plexe.internal.agents import PlexeAgent
+from plexe.agents.agents import PlexeAgent
 from plexe.internal.common.datasets.interface import Dataset, TabularConvertible
 from plexe.internal.common.datasets.adapter import DatasetAdapter
 from plexe.internal.common.provider import ProviderConfig
@@ -222,41 +220,11 @@ class Model:
             }
             self.object_registry.register_multiple(TabularConvertible, self.training_data)
 
-            # Step 2: run the EDA agent to analyze datasets
-            eda_agent = EdaAgent(
-                model_id=provider_config.orchestrator_provider,
-                verbose=verbose,
-                chain_of_thought_callable=cot_callable,
-            )
-            eda_agent.run(
-                intent=self.intent,
-                dataset_names=list(self.training_data.keys()),
-            )
-
-            # Step 3: define model schemas using the SchemaResolverAgent (only if schemas are not provided)
+            # Step 2: register input schemas into object registry, if they are provided
             if self.input_schema is not None:
                 self.object_registry.register(dict, "input_schema", format_schema(self.input_schema))
             if self.output_schema is not None:
                 self.object_registry.register(dict, "output_schema", format_schema(self.output_schema))
-
-            # Create and run the schema resolver agent
-            schema_resolver_agent = SchemaResolverAgent(
-                model_id=provider_config.orchestrator_provider,
-                verbose=verbose,
-                chain_of_thought_callable=cot_callable,
-            )
-            schema_result = schema_resolver_agent.run(
-                intent=self.intent,
-                dataset_names=list(self.training_data.keys()),
-                user_input_schema=format_schema(self.input_schema) if self.input_schema else None,
-                user_output_schema=format_schema(self.output_schema) if self.output_schema else None,
-            )
-
-            # Convert the returned schemas to Pydantic models and update
-            if self.input_schema is None:
-                self.input_schema = map_to_basemodel("InputSchema", schema_result["input_schema"])
-            if self.output_schema is None:
-                self.output_schema = map_to_basemodel("OutputSchema", schema_result["output_schema"])
 
             # Run callbacks for build start
             for callback in self.object_registry.get_all(Callback).values():
