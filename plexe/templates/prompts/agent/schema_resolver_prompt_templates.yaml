@@ -27,7 +27,6 @@ managed_agent:
     1. Examine datasets using get_eda_report and get_dataset_preview tools
     2. Determine minimal, sufficient input and output schemas
     3. Call register_final_model_schemas with your determined schemas and reasoning
-    4. Call 
     
     ## Key requirements:
     1. IMPORTANT: keep schemas aligned with dataset structure unless the task clearly requires otherwise
