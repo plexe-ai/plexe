@@ -41,16 +41,16 @@ graph TD
     User([User]) --> |"Intent & Datasets"| Model["Model Class"]
     
     subgraph "Multi-Agent System"
-        Model --> |"Data Registration"| EDA["EDA Agent"]
-        EDA --> |"Analysis & Reports"| SchemaResolver
-        Model --> |"Schema Resolution"| SchemaResolver["Schema Resolver"]
-        SchemaResolver --> |"Schemas"| Orchestrator
         Model --> |build| Orchestrator["Manager Agent"]
+        Orchestrator --> |"Schema Task"| SchemaResolver["Schema Resolver"]
+        Orchestrator --> |"EDA Task"| EDA["EDA Agent"]
         Orchestrator --> |"Plan Task"| MLS["ML Researcher"]
         Orchestrator --> |"Split Task"| DS["Dataset Splitter"]
         Orchestrator --> |"Implement Task"| MLE["ML Engineer"]
         Orchestrator --> |"Inference Task"| MLOPS["ML Operations"]
         
+        SchemaResolver --> |"Schemas"| Orchestrator
+        EDA --> |"Analysis & Reports"| Orchestrator
         MLS --> |"Solution Plans"| Orchestrator
         DS --> |"Split Datasets"| Orchestrator
         MLE --> |"Training Code"| Orchestrator
@@ -104,11 +104,11 @@ graph TD
 The EDA Agent performs exploratory data analysis on datasets early in the workflow:
 
 ```python
-eda_agent = EdaAgent(
-    model_id=provider_config.research_provider,
+self.eda_agent = EdaAgent(
+    model_id=orchestrator_model_id,
     verbose=verbose,
-    chain_of_thought_callable=cot_callable,
-)
+    chain_of_thought_callable=chain_of_thought_callable,
+).agent
 ```
 
 **Responsibilities**:
@@ -126,11 +126,11 @@ eda_agent = EdaAgent(
 The Schema Resolver Agent infers input and output schemas from intent and dataset samples:
 
 ```python
-schema_resolver = SchemaResolverAgent(
-    model_id=provider_config.orchestrator_provider,
+self.schema_resolver_agent = SchemaResolverAgent(
+    model_id=orchestrator_model_id,
     verbose=verbose,
-    chain_of_thought_callable=cot_callable,
-)
+    chain_of_thought_callable=chain_of_thought_callable,
+).agent
 ```
 
 **Responsibilities**:
@@ -147,11 +147,11 @@ schema_resolver = SchemaResolverAgent(
 The Dataset Splitter Agent handles the intelligent partitioning of datasets:
 
 ```python
-dataset_splitter_agent = DatasetSplitterAgent(
-    model_id=orchestrator_model_id,
+self.dataset_splitter_agent = DatasetSplitterAgent(
+    model_id=self.orchestrator_model_id,
     verbose=verbose,
-    chain_of_thought_callable=chain_of_thought_callable,
-)
+    chain_of_thought_callable=self.chain_of_thought_callable,
+).agent
 ```
 
 **Responsibilities**:
@@ -177,7 +177,13 @@ self.manager_agent = CodeAgent(
         create_input_sample,
         format_final_orchestrator_agent_response,
     ],
-    managed_agents=[self.ml_research_agent, self.dataset_splitter_agent, self.mle_agent, self.mlops_engineer],
+    managed_agents=[
+        self.schema_resolver_agent,
+        self.ml_research_agent,
+        self.dataset_splitter_agent,
+        self.mle_agent,
+        self.mlops_engineer,
+    ],
     add_base_tools=False,
     verbosity_level=self.orchestrator_verbosity,
     additional_authorized_imports=config.code_generation.authorized_agent_imports,
@@ -191,36 +197,23 @@ self.manager_agent = CodeAgent(
 **Responsibilities**:
 - Initializing the problem based on user intent
 - Selecting appropriate metrics
-- Coordinating specialist agents
+- Coordinating specialist agents including schema resolver and EDA agents
 - Making decisions about which solution approach to pursue
 - Collecting and integrating the final model artifacts
 
 ### ML Research Scientist Agent
 
-**Class**: `PlexeAgent.ml_research_agent`  
+**Class**: `ModelPlannerAgent`  
 **Type**: `ToolCallingAgent`
 
 This agent specializes in solution planning and strategy:
 
 ```python
-self.ml_research_agent = ToolCallingAgent(
-    name="MLResearchScientist",
-    description=(
-        "Expert ML researcher that develops detailed solution ideas and plans for ML use cases. "
-        "To work effectively, as part of the 'task' prompt the agent STRICTLY requires:"
-        "- the ML task definition (i.e. 'intent')"
-        "- input schema for the model"
-        "- output schema for the model"
-        "- the name and comparison method of the metric to optimise"
-        "- the name of the dataset to use for training"
-    ),
-    model=LiteLLMModel(model_id=self.ml_researcher_model_id),
-    tools=[get_dataset_preview, get_eda_report],
-    add_base_tools=False,
-    verbosity_level=self.specialist_verbosity,
-    prompt_templates=get_prompt_templates("toolcalling_agent.yaml", "mls_prompt_templates.yaml"),
-    step_callbacks=[self.chain_of_thought_callable],
-)
+self.ml_research_agent = ModelPlannerAgent(
+    model_id=ml_researcher_model_id,
+    verbose=verbose,
+    chain_of_thought_callable=chain_of_thought_callable,
+).agent
 ```
 
 **Responsibilities**:
@@ -255,34 +248,18 @@ self.mle_agent = ModelTrainerAgent(
 
 ### ML Operations Engineer Agent
 
-**Class**: `PlexeAgent.mlops_engineer`  
+**Class**: `ModelPackagerAgent`  
 **Type**: `CodeAgent`
 
 This agent focuses on productionizing the model through inference code:
 
 ```python
-self.mlops_engineer = CodeAgent(
-    name="MLOperationsEngineer",
-    description=(
-        "Expert ML operations engineer that analyzes training code and creates high-quality production-ready "
-        "inference code for ML models. To work effectively, as part of the 'task' prompt the agent STRICTLY requires:"
-        "- input schema for the model"
-        "- output schema for the model"
-        "- the 'training code id' of the training code produced by the MLEngineer agent"
-    ),
-    model=LiteLLMModel(model_id=self.ml_ops_engineer_model_id),
-    tools=[
-        get_inference_context_tool(self.tool_model_id),
-        validate_inference_code,
-        format_final_mlops_agent_response,
-    ],
-    add_base_tools=False,
-    verbosity_level=self.specialist_verbosity,
-    additional_authorized_imports=config.code_generation.authorized_agent_imports + ["plexe", "plexe.*"],
-    prompt_templates=get_prompt_templates("code_agent.yaml", "mlops_prompt_templates.yaml"),
-    planning_interval=8,
-    step_callbacks=[self.chain_of_thought_callable],
-)
+self.mlops_engineer = ModelPackagerAgent(
+    model_id=self.ml_ops_engineer_model_id,
+    tool_model_id=self.tool_model_id,
+    verbose=verbose,
+    chain_of_thought_callable=self.chain_of_thought_callable,
+).agent
 ```
 
 **Responsibilities**:
@@ -377,19 +354,19 @@ The multi-agent workflow follows these key steps:
    - User creates a `Model` instance with intent and datasets
    - User calls `model.build()` to start the process
 
-2. **Exploratory Data Analysis**:
-   - EdaAgent analyzes datasets to understand structure and characteristics
-   - Generates insights about data patterns, quality issues, and modeling considerations
-   - EDA reports are registered in the Object Registry for use by other agents
+2. **Orchestration**:
+   - Manager Agent initializes and coordinates the entire process
+   - Manager Agent tasks the Schema Resolver and EDA Agents
 
 3. **Schema Resolution**:
    - If schemas aren't provided, SchemaResolverAgent infers them
    - The agent can leverage EDA findings to determine appropriate schemas
    - Schemas are registered in the Object Registry
 
-4. **Orchestration**:
-   - Manager Agent selects metrics and coordinates the process
-   - Manager Agent initializes the solution planning phase
+4. **Exploratory Data Analysis**:
+   - EdaAgent analyzes datasets to understand structure and characteristics
+   - Generates insights about data patterns, quality issues, and modeling considerations
+   - EDA reports are registered in the Object Registry for use by other agents
 
 5. **Dataset Splitting**:
    - Dataset Splitter Agent analyzes data characteristics
@@ -421,7 +398,7 @@ The multi-agent workflow follows these key steps:
 The system uses a hierarchical communication pattern:
 
 ```
-User → Model → EDA Agent → Schema Resolver → Manager Agent → Specialist Agents → Manager Agent → Model → User
+User → Model → Manager Agent → Specialist Agents → Manager Agent → Model → User
 ```
 
 Each agent communicates through structured task descriptions and responses:
@@ -567,6 +544,8 @@ class CustomModelValidator(Validator):
 - [SchemaResolverAgent Definition](/plexe/agents/schema_resolver.py)
 - [DatasetSplitterAgent Definition](/plexe/agents/dataset_splitter.py)
 - [ModelTrainerAgent Definition](/plexe/agents/model_trainer.py)
+- [ModelPackagerAgent Definition](/plexe/agents/model_packager.py)
+- [ModelPlannerAgent Definition](/plexe/agents/model_planner.py)
 - [Tool Definitions](/plexe/tools/)
 - [Dataset Tools](/plexe/tools/datasets.py)
 - [Executor Implementation](/plexe/internal/models/execution/)
