@@ -150,6 +150,7 @@ class PlexeAgent:
                 format_final_orchestrator_agent_response,
             ],
             managed_agents=[
+                self.eda_agent,
                 self.schema_resolver_agent,
                 self.ml_research_agent,
                 self.dataset_splitter_agent,
