@@ -186,6 +186,8 @@ class PlexeAgent:
         object_registry = ObjectRegistry()
         result = self.manager_agent.run(task=task, additional_args=additional_args)
 
+        print(f"Registry contents: {str(object_registry.list())}")
+
         try:
             # Only log the full result when in verbose mode
             if logger.isEnabledFor(logging.DEBUG):

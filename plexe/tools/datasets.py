@@ -24,85 +24,67 @@ logger = logging.getLogger(__name__)
 
 @tool
 def register_split_datasets(
-    dataset_names: List[str],
-    train_datasets: List[pd.DataFrame],
-    validation_datasets: List[pd.DataFrame],
-    test_datasets: List[pd.DataFrame],
-) -> Dict[str, List[str]]:
+    dataset_name: str,
+    train_dataset: pd.DataFrame,
+    validation_dataset: pd.DataFrame,
+    test_dataset: pd.DataFrame,
+) -> Dict[str, str]:
     """
     Register train, validation, and test datasets in the object registry after custom splitting.
-
     This tool allows the agent to register datasets after performing custom splitting logic.
 
     Args:
-        dataset_names: Original dataset names that were split
-        train_datasets: List of pandas DataFrames containing training data
-        validation_datasets: List of pandas DataFrames containing validation data
-        test_datasets: List of pandas DataFrames containing test data
+        dataset_name: Original name of the dataset that was split
+        train_dataset: pandas DataFrame containing training data
+        validation_dataset: pandas DataFrame containing validation data
+        test_dataset: pandas DataFrame containing test data
 
     Returns:
         Dictionary containing lists of registered dataset names:
         {
-            "train_datasets": List of training dataset names,
-            "validation_datasets": List of validation dataset names,
-            "test_datasets": List of test dataset names,
-            "dataset_sizes": Dictionary with sizes of each dataset type
+            "train_dataset": name of the training dataset,
+            "validation_dataset": name of the validation dataset,
+            "test_dataset": name of the test dataset,
+            "dataset_size": Dictionary with sizes of each dataset
         }
     """
-    if (
-        len(dataset_names) != len(train_datasets)
-        or len(dataset_names) != len(validation_datasets)
-        or len(dataset_names) != len(test_datasets)
-    ):
-        raise ValueError("The number of dataset names must match the number of train, validation, and test datasets")
 
     # Initialize the dataset registry
     object_registry = ObjectRegistry()
-
-    # Initialize dataset name lists
-    train_dataset_names = []
-    validation_dataset_names = []
-    test_dataset_names = []
 
     # Initialize the dataset sizes dictionary
     dataset_sizes = {"train": [], "validation": [], "test": []}
 
     # Register each split dataset
-    for i, name in enumerate(dataset_names):
-        # Convert pandas DataFrames to TabularDataset objects
-        train_ds = DatasetAdapter.coerce(train_datasets[i])
-        val_ds = DatasetAdapter.coerce(validation_datasets[i])
-        test_ds = DatasetAdapter.coerce(test_datasets[i])
+    # Convert pandas DataFrames to TabularDataset objects
+    train_ds = DatasetAdapter.coerce(train_dataset)
+    val_ds = DatasetAdapter.coerce(validation_dataset)
+    test_ds = DatasetAdapter.coerce(test_dataset)
 
-        # Register split datasets in the registry
-        train_name = f"{name}_train"
-        val_name = f"{name}_val"
-        test_name = f"{name}_test"
+    # Register split datasets in the registry
+    train_name = f"{dataset_name}_train"
+    val_name = f"{dataset_name}_val"
+    test_name = f"{dataset_name}_test"
 
-        object_registry.register(TabularConvertible, train_name, train_ds, overwrite=True)
-        object_registry.register(TabularConvertible, val_name, val_ds, overwrite=True)
-        object_registry.register(TabularConvertible, test_name, test_ds, overwrite=True)
+    object_registry.register(TabularConvertible, train_name, train_ds, overwrite=True)
+    object_registry.register(TabularConvertible, val_name, val_ds, overwrite=True)
+    object_registry.register(TabularConvertible, test_name, test_ds, overwrite=True)
 
-        # Store dataset names
-        train_dataset_names.append(train_name)
-        validation_dataset_names.append(val_name)
-        test_dataset_names.append(test_name)
+    # Store dataset sizes
+    dataset_sizes["train"].append(len(train_ds))
+    dataset_sizes["validation"].append(len(val_ds))
+    dataset_sizes["test"].append(len(test_ds))
 
-        # Store dataset sizes
-        dataset_sizes["train"].append(len(train_ds))
-        dataset_sizes["validation"].append(len(val_ds))
-        dataset_sizes["test"].append(len(test_ds))
-
-        logger.debug(
-            f"✅ Registered custom split of dataset {name} into train/validation/test with sizes "
-            f"{len(train_ds)}/{len(val_ds)}/{len(test_ds)}"
-        )
+    logger.debug(
+        f"✅ Registered custom split of dataset {dataset_name} into train/validation/test with sizes "
+        f"{len(train_ds)}/{len(val_ds)}/{len(test_ds)}"
+    )
 
     return {
-        "train_datasets": train_dataset_names,
-        "validation_datasets": validation_dataset_names,
-        "test_datasets": test_dataset_names,
-        "dataset_sizes": dataset_sizes,
+        "training_dataset": train_name,
+        "validation_dataset": val_name,
+        "test_dataset": test_name,
+        "dataset_size": dataset_sizes,
     }
 
 
@@ -337,7 +319,7 @@ def register_eda_report(
 
         # TODO: separate EDA reports for raw and transformed data
         # Register in registry
-        object_registry.register(dict, f"eda_report_{dataset_name}", eda_report)
+        object_registry.register(dict, f"eda_report_{dataset_name}", eda_report, overwrite=True)
         logger.debug(f"✅ Registered EDA report for dataset '{dataset_name}'")
         return f"Successfully registered EDA report for dataset '{dataset_name}'"
 

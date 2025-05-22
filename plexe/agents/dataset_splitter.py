@@ -52,7 +52,7 @@ class DatasetSplitterAgent:
                 "Expert data engineer that intelligently splits datasets for machine learning tasks. "
                 "To work effectively, as part of the 'task' prompt the agent STRICTLY requires:"
                 "- the ML task definition (i.e. 'intent')"
-                "- the registered names of datasets to split"
+                "- the registered NAME of the dataset to split"
                 "- the split ratios (train_ratio, val_ratio, test_ratio)"
                 "- any helpful information or specific requirements for the split"
             ),

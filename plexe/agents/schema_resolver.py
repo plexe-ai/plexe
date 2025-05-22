@@ -53,11 +53,9 @@ class SchemaResolverAgent:
                 "Expert schema resolver that determines appropriate input and output schemas for ML models. "
                 "To work effectively, as part of the 'task' prompt the agent STRICTLY requires:\n"
                 "- the ML task definition (i.e. 'intent')\n"
-                "- the name of the dataset to use for training\n"
-                "Optionally, the following is also extremely useful if available:\n"
-                "- input schema already defined for this task, if any\n"
-                "- output schema already defined for this task, if any\n"
-                "- any modeling approach plans made by the ML research scientist, if any"
+                "- the NAME of the dataset to be used for training\n"
+                "- input schema already defined for this task, if available\n"
+                "- output schema already defined for this task, if available\n"
             ),
             model=LiteLLMModel(model_id=self.model_id),
             tools=[get_dataset_preview, get_eda_report, register_final_model_schemas],

@@ -36,6 +36,7 @@ managed_agent:
     
     After splitting:
     - register the splits with the `register_split_datasets' tool; this returns the names of the new datasets
-    - return the names of ALL the new datasets in the 'final_answer' tool so your manager knows what you did.
+    - return the names of ALL the new datasets in the 'final_answer' tool so your manager knows what you did. Make
+      sure your manager knows the names of the new datasets, otherwise they will not be able to use them.
     
     Everything that you do not pass as an argument to final_answer will be lost, so make sure to do this carefully.

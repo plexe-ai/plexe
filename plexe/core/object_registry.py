@@ -2,12 +2,14 @@
 This module provides a generic Registry pattern implementation for storing and retrieving objects by name or prefix.
 """
 
+import logging
 import dataclasses
 import copy
 from typing import Dict, List, Type, TypeVar, Any
 
 
 T = TypeVar("T")
+logger = logging.getLogger(__name__)
 
 
 @dataclasses.dataclass
@@ -52,6 +54,7 @@ class ObjectRegistry:
         if not overwrite and uri in self._items:
             raise ValueError(f"Item '{uri}' already registered, use a different name")
         self._items[uri] = Item(item, immutable=immutable)
+        logger.info(f"Registered item '{uri}'")
 
     def register_multiple(
         self, t: Type[T], items: Dict[str, T], overwrite: bool = False, immutable: bool = False
@@ -99,7 +102,7 @@ class ObjectRegistry:
         :param t: type prefix for the items
         :return: Dictionary mapping item names to items
         """
-        return {name: item for name, item in self._items.items() if name.startswith(str(t))}
+        return {name: item.item for name, item in self._items.items() if name.startswith(str(t))}
 
     def delete(self, t: Type[T], name: str) -> None:
         """
