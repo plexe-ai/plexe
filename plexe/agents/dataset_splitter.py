@@ -30,7 +30,7 @@ class DatasetSplitterAgent:
 
     def __init__(
         self,
-        model_id: str = "openai/gpt-4o",
+        model_id: str,
         verbose: bool = False,
         chain_of_thought_callable: Optional[Callable] = None,
     ):

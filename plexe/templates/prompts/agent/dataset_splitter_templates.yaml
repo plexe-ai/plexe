@@ -15,7 +15,7 @@ managed_agent:
     To access datasets, YOU MUST USE the following pattern:
     
     ```python
-    from plexe.internal.common.registries.objects import ObjectRegistry
+    from plexe.core.object_registry import ObjectRegistry
     from plexe.internal.common.datasets.interface import TabularConvertible
     
     # Get dataset from registry
