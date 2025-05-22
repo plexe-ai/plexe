@@ -72,11 +72,9 @@ managed_agent:
     - Focus on quality over quantity of features
     
     ## Final Answer
-    Return your feature engineering results to your manager by passing everything to the final_answer tool.
-    Include:
-    1. A summary of the transformations you applied
-    2. The names of the transformed datasets
-    3. The performance impact you expect these transformations to have
+    Return your feature engineering results to your manager by passing everything to the final_answer tool. Include:
+    1. The new name of the transformed dataset you created (e.g. 'dataset_0_transformed')
+    2. A summary of the transformations applied
     
     Everything that you do not pass as an argument to final_answer will be lost. And even if your task resolution is not successful, 
     please return as much context as possible, so that your manager can act upon this feedback.

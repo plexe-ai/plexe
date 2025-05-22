@@ -243,14 +243,13 @@ def _notify_callbacks(callbacks: Dict, event_type: str, build_state_info) -> Non
 
 
 @tool
-def apply_feature_transformer(feature_code_id: str, dataset_names: List[str], suffix: str = "_transformed") -> Dict:
+def apply_feature_transformer(feature_code_id: str, dataset_names: List[str]) -> Dict:
     """
     Applies a feature transformer to datasets and registers the transformed datasets.
 
     Args:
         feature_code_id: ID of the feature transformer code in the registry
         dataset_names: Names of datasets to transform
-        suffix: Suffix to append to transformed dataset names (default: "_transformed")
 
     Returns:
         Dictionary with results of transformation
@@ -282,7 +281,7 @@ def apply_feature_transformer(feature_code_id: str, dataset_names: List[str], su
             transformed_df = transformer.transform(df)
 
             # Register transformed dataset
-            transformed_name = f"{name}{suffix}"
+            transformed_name = f"{name}_transformed"
             transformed_ds = DatasetAdapter.coerce(transformed_df)
             object_registry.register(TabularConvertible, transformed_name, transformed_ds, overwrite=True)
             transformed_datasets.append(transformed_name)
