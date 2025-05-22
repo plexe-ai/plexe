@@ -125,6 +125,7 @@ class Model:
         self.trainer_source: str | None = None
         self.predictor_source: str | None = None
         self.feature_transformer_source: str | None = None
+        self.dataset_splitter_source: str | None = None
         self.artifacts: List[Artifact] = []
         self.metric: Metric | None = None
         self.metadata: Dict[str, Any] = dict()  # todo: initialise metadata, etc
@@ -320,6 +321,7 @@ class Model:
             self.trainer_source = generated.training_source_code
             self.predictor_source = generated.inference_source_code
             self.feature_transformer_source = generated.feature_transformer_source_code
+            self.dataset_splitter_source = generated.dataset_split_code
             self.predictor = generated.predictor
             self.artifacts = generated.model_artifacts
 

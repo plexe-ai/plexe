@@ -18,6 +18,7 @@ from smolagents import tool
 from plexe.internal.common.datasets.adapter import DatasetAdapter
 from plexe.internal.common.datasets.interface import TabularConvertible
 from plexe.core.object_registry import ObjectRegistry
+from plexe.internal.models.entities.code import Code
 
 logger = logging.getLogger(__name__)
 
@@ -28,6 +29,7 @@ def register_split_datasets(
     train_dataset: pd.DataFrame,
     validation_dataset: pd.DataFrame,
     test_dataset: pd.DataFrame,
+    splitting_code: str,
 ) -> Dict[str, str]:
     """
     Register train, validation, and test datasets in the object registry after custom splitting.
@@ -38,6 +40,7 @@ def register_split_datasets(
         train_dataset: pandas DataFrame containing training data
         validation_dataset: pandas DataFrame containing validation data
         test_dataset: pandas DataFrame containing test data
+        splitting_code: the code that was used to split the dataset
 
     Returns:
         Dictionary containing lists of registered dataset names:
@@ -69,6 +72,7 @@ def register_split_datasets(
     object_registry.register(TabularConvertible, train_name, train_ds, overwrite=True)
     object_registry.register(TabularConvertible, val_name, val_ds, overwrite=True)
     object_registry.register(TabularConvertible, test_name, test_ds, overwrite=True)
+    object_registry.register(Code, "dataset_splitting_code", splitting_code, overwrite=True)
 
     # Store dataset sizes
     dataset_sizes["train"].append(len(train_ds))

@@ -41,6 +41,7 @@ class ModelGenerationResult:
     training_source_code: str
     inference_source_code: str
     feature_transformer_source_code: str
+    dataset_split_code: str
     predictor: Predictor
     model_artifacts: List[Artifact]
     performance: Metric  # Validation performance
@@ -248,10 +249,21 @@ class PlexeAgent:
                 # No feature transformations code found, that's ok
                 pass
 
+            # Get dataset split code if available
+            dataset_split_code = None
+            try:
+                dataset_split_code = object_registry.get(Code, "dataset_splitting_code")
+                if dataset_split_code:
+                    dataset_split_code = dataset_split_code.code
+            except KeyError:
+                # No dataset split code found, that's ok
+                pass
+
             return ModelGenerationResult(
                 training_source_code=training_code,
                 inference_source_code=inference_code,
                 feature_transformer_source_code=feature_transformer_code,
+                dataset_split_code=dataset_split_code,
                 predictor=predictor,
                 model_artifacts=list(object_registry.get_multiple(Artifact, artifact_names).values()),
                 performance=performance,

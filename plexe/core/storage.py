@@ -103,6 +103,13 @@ def _save_model_to_tar(model: Any, path: str | Path) -> str:
                 info.size = len(content)
                 tar.addfile(info, io.BytesIO(content))
 
+            # Save dataset splitter source if available
+            if hasattr(model, "dataset_splitter_source") and model.dataset_splitter_source:
+                info = tarfile.TarInfo("code/dataset_splitter.py")
+                content = model.dataset_splitter_source.encode("utf-8")
+                info.size = len(content)
+                tar.addfile(info, io.BytesIO(content))
+
             # Save artifacts
             if hasattr(model, "artifacts"):
                 for artifact in model.artifacts:

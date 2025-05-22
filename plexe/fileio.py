@@ -80,7 +80,9 @@ def load_model(path: str | Path):
         model.identifier = model_data["identifier"]
         model.trainer_source = model_data["trainer_source"]
         model.predictor_source = model_data["predictor_source"]
-        model.feature_transformer_source = model_data.get("feature_transformer_source")
+        # Set additional properties if available; these are optional for backward compatibility
+        model.feature_transformer_source = model_data.get("feature_transformer_source", None)
+        model.dataset_splitter_source = model_data.get("dataset_splitter_source", None)
 
         # Process metrics data if available
         metrics_data = model_data["metrics_data"]
