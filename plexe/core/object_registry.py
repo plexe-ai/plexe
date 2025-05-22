@@ -2,10 +2,18 @@
 This module provides a generic Registry pattern implementation for storing and retrieving objects by name or prefix.
 """
 
+import dataclasses
+import copy
 from typing import Dict, List, Type, TypeVar, Any
 
 
 T = TypeVar("T")
+
+
+@dataclasses.dataclass
+class Item:
+    item: T
+    immutable: bool = False
 
 
 class ObjectRegistry:
@@ -18,19 +26,19 @@ class ObjectRegistry:
     """
 
     _instance = None
-    _items = {}
+    _items: Dict[str, Item] = dict()
 
     def __new__(cls):
         if cls._instance is None:
             cls._instance = super(ObjectRegistry, cls).__new__(cls)
-            cls._items = {}
+            cls._items = dict()
         return cls._instance
 
     @staticmethod
     def _get_uri(t: Type[T], name: str) -> str:
         return f"{str(t)}://{name}"
 
-    def register(self, t: Type[T], name: str, item: T, overwrite: bool = False) -> None:
+    def register(self, t: Type[T], name: str, item: T, overwrite: bool = False, immutable: bool = False) -> None:
         """
         Register an item with a given name.
 
@@ -38,21 +46,26 @@ class ObjectRegistry:
         :param name: identifier for the item - must be unique within the prefix
         :param item: the item to register
         :param overwrite: whether to overwrite an existing item with the same name
+        :param immutable: whether the item should be treated as immutable (not modifiable)
         """
         uri = self._get_uri(t, name)
         if not overwrite and uri in self._items:
             raise ValueError(f"Item '{uri}' already registered, use a different name")
-        self._items[uri] = item
+        self._items[uri] = Item(item, immutable=immutable)
 
-    def register_multiple(self, t: Type[T], items: Dict[str, T]) -> None:
+    def register_multiple(
+        self, t: Type[T], items: Dict[str, T], overwrite: bool = False, immutable: bool = False
+    ) -> None:
         """
         Register multiple items with a given prefix.
 
         :param t: type prefix for the items
+        :param overwrite: whether to overwrite existing items with the same names
+        :param immutable: whether the items should be treated as immutable (not modifiable)
         :param items: dictionary of item names and their corresponding objects
         """
         for name, item in items.items():
-            self.register(t, name, item)
+            self.register(t, name, item, overwrite=overwrite, immutable=immutable)
 
     def get(self, t: Type[T], name: str) -> T:
         """
@@ -66,7 +79,7 @@ class ObjectRegistry:
         uri = self._get_uri(t, name)
         if uri not in self._items:
             raise KeyError(f"Item '{uri}' not found in registry")
-        return self._items[uri]
+        return self._items[uri].item if not self._items[uri].immutable else copy.deepcopy(self._items[uri].item)
 
     def get_multiple(self, t: Type[T], names: List[str]) -> Dict[str, T]:
         """

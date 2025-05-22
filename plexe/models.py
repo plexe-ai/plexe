@@ -206,13 +206,13 @@ class Model:
                 f"dataset_{i}": DatasetAdapter.coerce((data.data if isinstance(data, DatasetGenerator) else data))
                 for i, data in enumerate(datasets)
             }
-            self.object_registry.register_multiple(TabularConvertible, self.training_data)
+            self.object_registry.register_multiple(TabularConvertible, self.training_data, immutable=True)
 
             # Step 2: register input schemas into object registry, if they are provided
             if self.input_schema is not None:
-                self.object_registry.register(dict, "input_schema", format_schema(self.input_schema))
+                self.object_registry.register(dict, "input_schema", format_schema(self.input_schema), immutable=True)
             if self.output_schema is not None:
-                self.object_registry.register(dict, "output_schema", format_schema(self.output_schema))
+                self.object_registry.register(dict, "output_schema", format_schema(self.output_schema), immutable=True)
 
             # Run callbacks for build start
             for callback in self.object_registry.get_all(Callback).values():
