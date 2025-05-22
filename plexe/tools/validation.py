@@ -9,6 +9,7 @@ from typing import Dict, List
 
 from smolagents import tool
 
+from plexe.config import code_templates
 from plexe.internal.models.entities.artifact import Artifact
 from plexe.internal.models.entities.code import Code
 from plexe.internal.models.validation.composites import (
@@ -182,7 +183,15 @@ def validate_feature_transformations(transformation_code: str) -> Dict:
                     "FeatureTransformerImplementation must be a subclass of FeatureTransformer",
                 )
     except Exception as e:
-        return _error_response("validation", type(e).__name__, str(e))
+        return _error_response(
+            "validation",
+            type(e).__name__,
+            str(e),
+            message=f"The feature transformer must be a subclass of the following interface:\n\n"
+            f"```python\n"
+            f"{code_templates.feature_transformer_interface}"
+            f"```",
+        )
 
     # Register the transformation code with a fixed ID
     object_registry = ObjectRegistry()

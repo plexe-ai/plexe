@@ -345,9 +345,19 @@ def get_eda_report(dataset_name: str) -> Dict[str, Any]:
     object_registry = ObjectRegistry()
 
     try:
-        # If name ends in _train, _val, or _test, strip it to get the original dataset name
-        if dataset_name.endswith(("_train", "_val", "_test", "_transformed")):
-            dataset_name = dataset_name.rsplit("_", 1)[0]
+        suffixes_to_remove = [
+            "_train",
+            "_val",
+            "_test",
+            "_transformed",
+            "_transformed_train",
+            "_transformed_val",
+            "_transformed_test",
+        ]
+        for suffix in suffixes_to_remove:
+            if dataset_name.endswith(suffix):
+                dataset_name = dataset_name.removesuffix(suffix)
+                break
 
         # Check if EDA report exists
         report_key = f"eda_report_{dataset_name}"

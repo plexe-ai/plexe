@@ -53,7 +53,7 @@ class FeatureEngineeringAgent:
                 "Expert data scientist that transforms raw datasets into optimized features for ML models. "
                 "To work effectively, as part of the 'task' prompt the agent STRICTLY requires:"
                 "- the ML task definition (i.e. 'intent')"
-                "- the names of the datasets to transform"
+                "- the name of the dataset to transform"
             ),
             model=LiteLLMModel(model_id=model_id),
             tools=[

@@ -243,23 +243,25 @@ def _notify_callbacks(callbacks: Dict, event_type: str, build_state_info) -> Non
 
 
 @tool
-def apply_feature_transformer(feature_code_id: str, dataset_names: List[str]) -> Dict:
+def apply_feature_transformer(dataset_name: str) -> Dict:
     """
-    Applies a feature transformer to datasets and registers the transformed datasets.
+    Applies a feature transformer to datasets and registers the transformed datasets. The name of the
+    new transformed dataset is returned in the response.
 
     Args:
-        feature_code_id: ID of the feature transformer code in the registry
-        dataset_names: Names of datasets to transform
+        dataset_name: Name of datasets to transform
 
     Returns:
-        Dictionary with results of transformation
+        Dictionary with results of transformation:
+        - success: Boolean indicating success or failure
+        - original_dataset_name: Name of the original dataset
+        - new_dataset_name: Name of the transformed dataset
     """
     object_registry = ObjectRegistry()
-    transformed_datasets = []
 
     try:
         # Get feature transformer code from registry
-        code_obj = object_registry.get(Code, feature_code_id)
+        code_obj = object_registry.get(Code, "feature_transformations")
         transformer_code = code_obj.code
 
         # Load code as module
@@ -271,24 +273,21 @@ def apply_feature_transformer(feature_code_id: str, dataset_names: List[str]) ->
         # Instantiate transformer
         transformer = module.FeatureTransformerImplementation()
 
-        # Apply transformer to each dataset
-        for name in dataset_names:
-            # Get dataset
-            dataset = object_registry.get(TabularConvertible, name)
-            df = dataset.to_pandas()
+        # Get dataset
+        dataset = object_registry.get(TabularConvertible, dataset_name)
+        df = dataset.to_pandas()
 
-            # Apply transformation
-            transformed_df = transformer.transform(df)
+        # Apply transformation
+        transformed_df = transformer.transform(df)
 
-            # Register transformed dataset
-            transformed_name = f"{name}_transformed"
-            transformed_ds = DatasetAdapter.coerce(transformed_df)
-            object_registry.register(TabularConvertible, transformed_name, transformed_ds, overwrite=True)
-            transformed_datasets.append(transformed_name)
+        # Register transformed dataset
+        transformed_name = f"{dataset_name}_transformed"
+        transformed_ds = DatasetAdapter.coerce(transformed_df)
+        object_registry.register(TabularConvertible, transformed_name, transformed_ds, overwrite=True)
 
-            logger.debug(f"✅ Applied feature transformer to {name} → {transformed_name}")
+        logger.debug(f"✅ Applied feature transformer to {dataset_name} → {transformed_name}")
 
-        return {"success": True, "transformed_datasets": transformed_datasets}
+        return {"success": True, "original_dataset_name": dataset_name, "new_dataset_name": transformed_name}
     except Exception as e:
         import traceback
 

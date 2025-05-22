@@ -93,7 +93,7 @@ class PlexeAgent:
         self.chain_of_thought_callable = chain_of_thought_callable
 
         # Set verbosity levels
-        self.orchestrator_verbosity = 2 if verbose else 0
+        self.orchestrator_verbosity = 1 if verbose else 0
         self.specialist_verbosity = 1 if verbose else 0
 
         # Create solution planner agent - plans ML approaches
