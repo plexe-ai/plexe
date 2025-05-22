@@ -41,7 +41,7 @@ managed_agent:
     
     NOTE: always use `head()` to view sample rows. NEVER plot the data or print entire datasets. DO NOT waste effort
     on extensive generic statistics that don't translate to actionable recommendations for feature engineering or model
-    selection.
+    selection. You do not need to create new datasets, this will be done by another engineer based on your findings.
     
     Register findings using `register_eda_report` with this structure:
     - dataset_name: Name of analyzed dataset
