@@ -35,17 +35,18 @@ Test {{ max_iterations }} different approaches, and for each train a model. Sele
 
 Ensure the output maximizes model performance while adhering to all constraints.
 
-## 4. Agent Orchestration Notes
+## 4. Hints
+- First steps should always be:
+    - Get the metric to optimize.
+    - Use DatasetAnalyser agent to understand the data.
+    - Use DatasetSplitter agent for dataset splitting.
+    - Use SchemaResolver agent to decide a model schema, if required.
+    - Create the input sample.
+- When delegating to DatasetSplitter, provide clear context about the ML task so the agent can understand what an
+  appropriate split for the task is. Request a train/validation split; a test set is NOT required.
+- When comparing model performance, don't just naively compare the metrics. For example, a "mean absolute error" of
+  exactly 0 is almost certainly a bugged model or a sign of overfitting, so this should be ignored.
 - 'MLEngineer' should only be asked to work on implementing ONE plan at a time.
 - 'MLOperationsEngineer' only needs to work on the final, best performing model.
 - 'MLEngineer' and 'MLOperationsEngineer' return IDs that identify the code they produce. Use these IDs to refer to the
-   code they produce in any subsequent instructions.
-
-## 5. Hints
-- First steps: get the metric to optimize, use DatasetAnalyser agent to understand the data, use DatasetSplitter agent for
-  dataset splitting, use SchemaResolver agent to decide a model schema, and finally create the input sample. Then move
-  on to the rest of the work.
-- When using DatasetSplitter, provide the ML task intent and clear context so the agent can understand what an
-  appropriate split for the task is.
-- When comparing model performance, don't just naively compare the metrics. For example, a "mean absolute error" of
-  exactly 0 is almost certainly a bugged model or a sign of overfitting, so this should be ignored.
+  code they produce in any subsequent instructions.
