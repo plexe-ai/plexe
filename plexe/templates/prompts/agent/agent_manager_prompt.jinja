@@ -33,14 +33,22 @@ to the ML problem, run model training experiments, and finally deliver the best 
 of the model training code (as an ID), inference code (as an ID), model artifacts, and other deliverables.
 Test {{ max_iterations }} different approaches, and for each train a model. Select the best performing model.
 
+{% if resume %}
+Note that a model for this task was already built, and you are continuing from where the work was previously left off.
+Schemas, training code, prediction code etc were already produced. Use the previous work as a starting point, and
+improve upon it.
+{% endif %}
+
 Ensure the output maximizes model performance while adhering to all constraints.
 
 ## 4. Hints
 - First steps should always be:
+    {% if not resume %}
     - Get the metric to optimize.
     - Use DatasetAnalyser agent to understand the data.
     - Use DatasetSplitter agent for dataset splitting.
     - Use SchemaResolver agent to decide a model schema, if required.
+    {% endif %}
     - Create the input sample.
 - When delegating to DatasetSplitter, provide clear context about the ML task so the agent can understand what an
   appropriate split for the task is. Request a train/validation split; a test set is NOT required.

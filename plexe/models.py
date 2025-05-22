@@ -164,17 +164,6 @@ class Model:
         :param enable_checkpointing: whether to enable automatic checkpointing (default: True)
         :return:
         """
-        # Check if we should resume from a checkpoint
-        start_iteration = 0
-        resuming_from_checkpoint = False
-        previous_solutions = []
-
-        if resume and hasattr(self, "_checkpoint_data") and self._checkpoint_data:
-            resuming_from_checkpoint = True
-            start_iteration = self._checkpoint_data.get("iteration", 0) + 1
-            previous_solutions = self._checkpoint_data.get("solutions", [])
-            logger.info(f"Resuming build from checkpoint (iteration {start_iteration})")
-
         # Ensure the object registry is cleared before building
         self.object_registry.clear()
 
@@ -189,7 +178,7 @@ class Model:
         cot_model_callback = ChainOfThoughtModelCallback(emitter=ConsoleEmitter())
         callbacks.append(cot_model_callback)
 
-        # Get the underlying callback for use with agents
+        # Get the underlying callable for use with agents
         cot_callable = cot_model_callback.get_chain_of_thought_callable()
 
         # Register all callbacks in the object registry
@@ -263,15 +252,8 @@ class Model:
                 datasets=list(self.training_data.keys()),
                 working_dir=self.working_dir,
                 max_iterations=max_iterations,
+                resume=resume,
             )
-
-            # Add resumption context if we're resuming from a checkpoint
-            if resuming_from_checkpoint:
-                agent_prompt += (
-                    f"\n\nRESUMING FROM CHECKPOINT: Starting at iteration {start_iteration}. "
-                    f"Previous solutions attempted: {len(previous_solutions)}. "
-                    f"Please continue from where we left off, incorporating lessons learned from prior attempts."
-                )
 
             agent = PlexeAgent(
                 orchestrator_model_id=provider_config.orchestrator_provider,
@@ -295,10 +277,6 @@ class Model:
                 "timeout": timeout,
                 "run_timeout": run_timeout,
             }
-
-            # Add checkpoint information if resuming
-            if resuming_from_checkpoint:
-                additional_args.update({"start_iteration": start_iteration, "previous_solutions": previous_solutions})
 
             generated = agent.run(agent_prompt, additional_args=additional_args)
 
