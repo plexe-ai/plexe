@@ -96,6 +96,13 @@ def _save_model_to_tar(model: Any, path: str | Path) -> str:
                 info.size = len(content)
                 tar.addfile(info, io.BytesIO(content))
 
+            # Save feature transformer source if available
+            if hasattr(model, "feature_transformer_source") and model.feature_transformer_source:
+                info = tarfile.TarInfo("code/feature_transformer.py")
+                content = model.feature_transformer_source.encode("utf-8")
+                info.size = len(content)
+                tar.addfile(info, io.BytesIO(content))
+
             # Save artifacts
             if hasattr(model, "artifacts"):
                 for artifact in model.artifacts:
@@ -174,6 +181,10 @@ def _load_model_data_from_tar(path: str | Path) -> Dict[str, Any]:
             if "code/predictor.py" in [m.name for m in tar.getmembers()]:
                 predictor_source = tar.extractfile("code/predictor.py").read().decode("utf-8")
 
+            feature_transformer_source = None
+            if "code/feature_transformer.py" in [m.name for m in tar.getmembers()]:
+                feature_transformer_source = tar.extractfile("code/feature_transformer.py").read().decode("utf-8")
+
             # Load EDA markdown reports if available
             eda_markdown_reports = {}
             for member in tar.getmembers():
@@ -198,6 +209,7 @@ def _load_model_data_from_tar(path: str | Path) -> Dict[str, Any]:
                 "identifier": identifier,
                 "trainer_source": trainer_source,
                 "predictor_source": predictor_source,
+                "feature_transformer_source": feature_transformer_source,
                 "artifact_data": artifact_data,
                 "input_schema_dict": input_schema_dict,
                 "output_schema_dict": output_schema_dict,

@@ -170,10 +170,16 @@ class _Config:
 @dataclass(frozen=True)
 class _CodeTemplates:
     predictor_interface: str = field(
-        default=Path(importlib.import_module("plexe.internal.models.interfaces.predictor").__file__).read_text()
+        default=Path(importlib.import_module("plexe.core.interfaces.predictor").__file__).read_text()
     )
     predictor_template: str = field(
         default=files(template_module).joinpath("models").joinpath("predictor.tmpl.py").read_text()
+    )
+    feature_transformer_interface: str = field(
+        default=Path(importlib.import_module("plexe.core.interfaces.feature_transformer").__file__).read_text()
+    )
+    feature_transformer_template: str = field(
+        default=files(template_module).joinpath("models").joinpath("feature_transformer.tmpl.py").read_text()
     )
 
 

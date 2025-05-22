@@ -4,7 +4,7 @@ Tools for dataset manipulation, splitting, and registration.
 These tools help with dataset operations within the model generation pipeline, including
 splitting datasets into training, validation, and test sets, registering datasets with
 the dataset registry, creating sample data for validation, previewing dataset content,
-and registering exploratory data analysis (EDA) reports.
+registering exploratory data analysis (EDA) reports, and registering feature engineering results.
 """
 
 import logging

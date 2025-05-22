@@ -4,6 +4,7 @@ Tools related to code validation, including syntax and security checks.
 
 import logging
 import uuid
+import ast
 from typing import Dict, List
 
 from smolagents import tool
@@ -132,3 +133,60 @@ def _success_response(message, inference_code_id=None):
     if inference_code_id is not None:
         response["inference_code_id"] = inference_code_id
     return response
+
+
+@tool
+def validate_feature_transformations(transformation_code: str) -> Dict:
+    """
+    Validates feature transformation code for syntax correctness and implementation
+    of the FeatureTransformer interface.
+
+    Args:
+        transformation_code: Python code for transforming datasets
+
+    Returns:
+        Dictionary with validation results
+    """
+    import types
+    import warnings
+    from plexe.core.object_registry import ObjectRegistry
+    from plexe.core.interfaces.feature_transformer import FeatureTransformer
+
+    # Check for syntax errors
+    try:
+        ast.parse(transformation_code)
+    except SyntaxError as e:
+        return _error_response("syntax", "SyntaxError", str(e))
+
+    # Load the code as a module to check for proper FeatureTransformer implementation
+    try:
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore")
+            module = types.ModuleType("test_feature_transformer")
+            exec(transformation_code, module.__dict__)
+
+            # Check if the module contains the FeatureTransformerImplementation class
+            if not hasattr(module, "FeatureTransformerImplementation"):
+                return _error_response(
+                    "class_definition",
+                    "MissingClass",
+                    "Code must define a class named 'FeatureTransformerImplementation'",
+                )
+
+            # Check if the class is a subclass of FeatureTransformer
+            transformer_class = getattr(module, "FeatureTransformerImplementation")
+            if not issubclass(transformer_class, FeatureTransformer):
+                return _error_response(
+                    "class_definition",
+                    "InvalidClass",
+                    "FeatureTransformerImplementation must be a subclass of FeatureTransformer",
+                )
+    except Exception as e:
+        return _error_response("validation", type(e).__name__, str(e))
+
+    # Register the transformation code with a fixed ID
+    object_registry = ObjectRegistry()
+    code_id = "feature_transformations"
+    object_registry.register(Code, code_id, Code(transformation_code), overwrite=True)
+
+    return {"passed": True, "message": "Feature transformation code validated successfully", "code_id": code_id}

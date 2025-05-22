@@ -12,6 +12,7 @@
 - [Key Components](#key-components)
   - [EDA Agent](#eda-agent)
   - [Schema Resolver Agent](#schema-resolver-agent)
+  - [Feature Engineering Agent](#feature-engineering-agent)
   - [Dataset Splitter Agent](#dataset-splitter-agent)
   - [Manager Agent (Orchestrator)](#manager-agent-orchestrator)
   - [ML Research Scientist Agent](#ml-research-scientist-agent)
@@ -44,6 +45,7 @@ graph TD
         Model --> |build| Orchestrator["Manager Agent"]
         Orchestrator --> |"Schema Task"| SchemaResolver["Schema Resolver"]
         Orchestrator --> |"EDA Task"| EDA["EDA Agent"]
+        Orchestrator --> |"Feature Task"| FE["Feature Engineer"]
         Orchestrator --> |"Plan Task"| MLS["ML Researcher"]
         Orchestrator --> |"Split Task"| DS["Dataset Splitter"]
         Orchestrator --> |"Implement Task"| MLE["ML Engineer"]
@@ -51,6 +53,7 @@ graph TD
         
         SchemaResolver --> |"Schemas"| Orchestrator
         EDA --> |"Analysis & Reports"| Orchestrator
+        FE --> |"Transformed Datasets"| Orchestrator
         MLS --> |"Solution Plans"| Orchestrator
         DS --> |"Split Datasets"| Orchestrator
         MLE --> |"Training Code"| Orchestrator
@@ -138,6 +141,31 @@ self.schema_resolver_agent = SchemaResolverAgent(
 - Inferring appropriate input and output schemas
 - Registering schemas with the Object Registry
 - Providing automatic schema resolution when schemas aren't specified
+
+### Feature Engineering Agent
+
+**Class**: `FeatureEngineeringAgent`
+**Type**: `CodeAgent`
+
+The Feature Engineering Agent transforms raw datasets into optimized features for model training:
+
+```python
+self.feature_engineering_agent = FeatureEngineeringAgent(
+    model_id=ml_engineer_model_id,
+    tool_model_id=tool_model_id,
+    distributed=distributed,
+    verbose=verbose,
+    chain_of_thought_callable=chain_of_thought_callable,
+).agent
+```
+
+**Responsibilities**:
+- Analyzing datasets based on EDA insights
+- Creating feature transformations to improve model performance
+- Handling data cleaning, encoding, and feature creation
+- Preserving data integrity during transformations
+- Registering transformed datasets in the Object Registry
+- Storing transformation code for inclusion in the final model
 
 ### Dataset Splitter Agent
 
@@ -368,25 +396,31 @@ The multi-agent workflow follows these key steps:
    - Generates insights about data patterns, quality issues, and modeling considerations
    - EDA reports are registered in the Object Registry for use by other agents
 
-5. **Dataset Splitting**:
+5. **Feature Engineering**:
+   - Feature Engineering Agent transforms raw datasets based on EDA insights
+   - Creates new features, handles encoding, and cleans data
+   - Registers transformed datasets in the Object Registry
+   - Stores transformation code for inclusion in the final model
+
+6. **Dataset Splitting**:
    - Dataset Splitter Agent analyzes data characteristics
    - Creates appropriate train/validation/test splits
    - Registers split datasets in the Object Registry
 
-6. **Solution Planning**:
+7. **Solution Planning**:
    - ML Research Scientist proposes solution approaches
    - Manager Agent evaluates and selects approaches
 
-7. **Model Implementation**:
+8. **Model Implementation**:
    - ML Engineer generates and executes training code
    - Model artifacts are registered in the Object Registry
    - Process may iterate through multiple approaches
 
-8. **Inference Code Generation**:
+9. **Inference Code Generation**:
    - ML Operations Engineer generates compatible inference code
    - Code is validated with sample inputs
 
-9. **Finalization**:
+10. **Finalization**:
    - Manager Agent reviews and finalizes the model
    - All artifacts and code are collected
    - Completed model is returned to the user
@@ -542,11 +576,13 @@ class CustomModelValidator(Validator):
 - [Model Class Definition](/plexe/models.py)
 - [EdaAgent Definition](/plexe/agents/dataset_analyser.py)
 - [SchemaResolverAgent Definition](/plexe/agents/schema_resolver.py)
+- [FeatureEngineeringAgent Definition](/plexe/agents/feature_engineer.py)
 - [DatasetSplitterAgent Definition](/plexe/agents/dataset_splitter.py)
 - [ModelTrainerAgent Definition](/plexe/agents/model_trainer.py)
 - [ModelPackagerAgent Definition](/plexe/agents/model_packager.py)
 - [ModelPlannerAgent Definition](/plexe/agents/model_planner.py)
 - [Tool Definitions](/plexe/tools/)
 - [Dataset Tools](/plexe/tools/datasets.py)
+- [Validation Tools](/plexe/tools/validation.py)
 - [Executor Implementation](/plexe/internal/models/execution/)
 - [Object Registry](/plexe/core/object_registry.py)

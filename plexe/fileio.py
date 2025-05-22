@@ -80,6 +80,7 @@ def load_model(path: str | Path):
         model.identifier = model_data["identifier"]
         model.trainer_source = model_data["trainer_source"]
         model.predictor_source = model_data["predictor_source"]
+        model.feature_transformer_source = model_data.get("feature_transformer_source")
 
         # Process metrics data if available
         metrics_data = model_data["metrics_data"]

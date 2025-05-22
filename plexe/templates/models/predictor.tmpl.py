@@ -3,7 +3,7 @@ from typing import List
 # TODO: add any additional required imports here
 
 from plexe.internal.models.entities.artifact import Artifact
-from plexe.internal.models.interfaces.predictor import Predictor
+from plexe.core.interfaces.predictor import Predictor
 
 
 class PredictorImplementation(Predictor):

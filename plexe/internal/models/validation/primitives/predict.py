@@ -12,7 +12,7 @@ from typing import Type, List, Dict, Any
 from pydantic import BaseModel
 
 from plexe.internal.models.validation.validator import Validator, ValidationResult
-from plexe.internal.models.interfaces.predictor import Predictor
+from plexe.core.interfaces.predictor import Predictor
 
 
 class PredictorValidator(Validator):

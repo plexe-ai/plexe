@@ -11,6 +11,7 @@ from smolagents import CodeAgent, LiteLLMModel
 
 from plexe.agents.dataset_analyser import EdaAgent
 from plexe.agents.dataset_splitter import DatasetSplitterAgent
+from plexe.agents.feature_engineer import FeatureEngineeringAgent
 from plexe.agents.model_packager import ModelPackagerAgent
 from plexe.agents.model_planner import ModelPlannerAgent
 from plexe.agents.model_trainer import ModelTrainerAgent
@@ -22,7 +23,7 @@ from plexe.internal.models.entities.artifact import Artifact
 from plexe.internal.models.entities.code import Code
 from plexe.internal.models.entities.metric import Metric
 from plexe.internal.models.entities.metric import MetricComparator, ComparisonMethod
-from plexe.internal.models.interfaces.predictor import Predictor
+from plexe.core.interfaces.predictor import Predictor
 from plexe.tools.datasets import (
     create_input_sample,
 )
@@ -39,6 +40,7 @@ logger = logging.getLogger(__name__)
 class ModelGenerationResult:
     training_source_code: str
     inference_source_code: str
+    feature_transformer_source_code: str
     predictor: Predictor
     model_artifacts: List[Artifact]
     performance: Metric  # Validation performance
@@ -115,6 +117,13 @@ class PlexeAgent:
             chain_of_thought_callable=chain_of_thought_callable,
         ).agent
 
+        # Create feature engineering agent - transforms raw datasets for better model performance
+        self.feature_engineering_agent = FeatureEngineeringAgent(
+            model_id=self.ml_researcher_model_id,
+            verbose=verbose,
+            chain_of_thought_callable=self.chain_of_thought_callable,
+        ).agent
+
         # Create dataset splitter agent - intelligently splits datasets
         self.dataset_splitter_agent = DatasetSplitterAgent(
             model_id=self.orchestrator_model_id,
@@ -152,6 +161,7 @@ class PlexeAgent:
             managed_agents=[
                 self.eda_agent,
                 self.schema_resolver_agent,
+                self.feature_engineering_agent,
                 self.ml_research_agent,
                 self.dataset_splitter_agent,
                 self.mle_agent,
@@ -226,9 +236,20 @@ class PlexeAgent:
             predictor_class = getattr(inference_module, "PredictorImplementation")
             predictor = predictor_class(object_registry.get_all(Artifact).values())
 
+            # Get feature transformer code if available
+            feature_transformer_code = None
+            try:
+                feature_code = object_registry.get(Code, "feature_transformations")
+                if feature_code:
+                    feature_transformer_code = feature_code.code
+            except KeyError:
+                # No feature transformations code found, that's ok
+                pass
+
             return ModelGenerationResult(
                 training_source_code=training_code,
                 inference_source_code=inference_code,
+                feature_transformer_source_code=feature_transformer_code,
                 predictor=predictor,
                 model_artifacts=list(object_registry.get_multiple(Artifact, artifact_names).values()),
                 performance=performance,

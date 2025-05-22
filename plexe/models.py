@@ -65,7 +65,7 @@ from plexe.internal.models.entities.description import (
     CodeInfo,
 )
 from plexe.internal.models.entities.metric import Metric
-from plexe.internal.models.interfaces.predictor import Predictor
+from plexe.core.interfaces.predictor import Predictor
 
 logger = logging.getLogger(__name__)
 
@@ -124,6 +124,7 @@ class Model:
         self.predictor: Predictor | None = None
         self.trainer_source: str | None = None
         self.predictor_source: str | None = None
+        self.feature_transformer_source: str | None = None
         self.artifacts: List[Artifact] = []
         self.metric: Metric | None = None
         self.metadata: Dict[str, Any] = dict()  # todo: initialise metadata, etc
@@ -318,6 +319,7 @@ class Model:
             # Step 4: update model state and attributes
             self.trainer_source = generated.training_source_code
             self.predictor_source = generated.inference_source_code
+            self.feature_transformer_source = generated.feature_transformer_source_code
             self.predictor = generated.predictor
             self.artifacts = generated.model_artifacts
 
@@ -447,7 +449,9 @@ class Model:
 
         # Create code info
         code = CodeInfo(
-            training=format_code_snippet(self.trainer_source), prediction=format_code_snippet(self.predictor_source)
+            training=format_code_snippet(self.trainer_source),
+            prediction=format_code_snippet(self.predictor_source),
+            feature_transformations=format_code_snippet(self.feature_transformer_source),
         )
 
         # Assemble and return the complete model description
