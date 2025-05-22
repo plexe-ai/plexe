@@ -42,14 +42,12 @@ improve upon it.
 Ensure the output maximizes model performance while adhering to all constraints.
 
 ## 4. Hints
-- First steps should always be:
-    {% if not resume %}
+- First steps should always be:{% if not resume %}
     - Get the metric to optimize.
     - Use DatasetAnalyser agent to understand the data.
     - Use FeatureEngineer agent to transform raw datasets for better model performance.
     - Use DatasetSplitter agent for dataset splitting.
-    - Use SchemaResolver agent to decide a model schema, if required. DO NOT DO THIS if schemas were provided by the user.
-    {% endif %}
+    - Use SchemaResolver agent to decide a model schema, if required. DO NOT DO THIS if schemas were provided by the user.{% endif %}
     - Create the input sample.
 - When delegating to DatasetSplitter, provide clear context about the ML task so the agent can understand what an
   appropriate split for the task is. Request a train/validation split; a test set is NOT required.

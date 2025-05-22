@@ -157,7 +157,7 @@ def create_input_sample(input_schema: Dict[str, str], n_samples: int = 5) -> boo
 
 
 @tool
-def drop_null_columns(dataset_name: str) -> Dict[str, str]:
+def drop_null_columns(dataset_name: str) -> str:
     """
     Drop all columns from the dataset that are completely null and register the modified dataset.
 
@@ -217,21 +217,12 @@ def drop_null_columns(dataset_name: str) -> Dict[str, str]:
         object_registry.delete(TabularConvertible, dataset_name)
 
         # Register the modified dataset
-        object_registry.register(TabularConvertible, dataset_name, DatasetAdapter.coerce(df))
+        object_registry.register(TabularConvertible, dataset_name, DatasetAdapter.coerce(df), immutable=True)
 
-        logger.debug(f"✅ Dropped {n_dropped} null columns from dataset '{dataset_name}'")
-        return {
-            "dataset_name": dataset_name,
-            "n_dropped": n_dropped,
-        }
+        return f"Successfully dropped {n_dropped} null columns from dataset '{dataset_name}'"
 
     except Exception as e:
-        logger.warning(f"⚠️ Error dropping null columns: {str(e)}")
-        return {
-            "error": f"Failed to drop null columns from dataset '{dataset_name}': {str(e)}",
-            "dataset_name": dataset_name,
-            "n_dropped": 0,
-        }
+        raise RuntimeError(f"Failed to drop null columns from dataset '{dataset_name}': {str(e)}")
 
 
 @tool
@@ -307,7 +298,7 @@ def register_eda_report(
     feature_importance: Dict[str, Any],
     insights: List[str],
     recommendations: List[str],
-) -> bool:
+) -> str:
     """
     Register an exploratory data analysis (EDA) report for a dataset in the Object Registry.
 
@@ -344,14 +335,15 @@ def register_eda_report(
             "recommendations": recommendations,
         }
 
+        # TODO: separate EDA reports for raw and transformed data
         # Register in registry
         object_registry.register(dict, f"eda_report_{dataset_name}", eda_report)
         logger.debug(f"✅ Registered EDA report for dataset '{dataset_name}'")
-        return True
+        return f"Successfully registered EDA report for dataset '{dataset_name}'"
 
     except Exception as e:
         logger.warning(f"⚠️ Error registering EDA report: {str(e)}")
-        return False
+        raise RuntimeError(f"Failed to register EDA report for dataset '{dataset_name}': {str(e)}")
 
 
 @tool
@@ -372,7 +364,7 @@ def get_eda_report(dataset_name: str) -> Dict[str, Any]:
 
     try:
         # If name ends in _train, _val, or _test, strip it to get the original dataset name
-        if dataset_name.endswith(("_train", "_val", "_test")):
+        if dataset_name.endswith(("_train", "_val", "_test", "_transformed")):
             dataset_name = dataset_name.rsplit("_", 1)[0]
 
         # Check if EDA report exists

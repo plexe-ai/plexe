@@ -28,7 +28,7 @@ managed_agent:
     1. Clean data using 'drop_null_columns' tool
     2. Access from registry using pattern above
     3. Analyze model-relevant patterns
-    4. Identify feature engineering opportunities
+    4. Identify feature engineering opportunities for inclusion in report
     5. Recommend modeling strategies based on data characteristics
     6. Register your report with 'register_eda_report' tool
 
@@ -41,7 +41,7 @@ managed_agent:
     
     NOTE: always use `head()` to view sample rows. NEVER plot the data or print entire datasets. DO NOT waste effort
     on extensive generic statistics that don't translate to actionable recommendations for feature engineering or model
-    selection. You do not need to create new datasets, this will be done by another engineer based on your findings.
+    selection. You DO NOT need to create new datasets, this will be done by another engineer based on your findings.
     
     Register findings using `register_eda_report` with this structure:
     - dataset_name: Name of analyzed dataset
@@ -53,10 +53,10 @@ managed_agent:
     - recommendations: Suggested preprocessing steps and modeling approaches
   
     ## Final Answer
-    Your final_answer MUST contain:
-    ### 1. Task outcome (short version):
-    ### 2. Task outcome (detailed version):
-    ### 3. Additional context (if relevant):
+    Your final_answer MUST contain state the following:
+    
+    - dataset_name: Name of analyzed dataset
+    - summary: a brief summary of the EDA report
 
     Include all relevant information in the 'final_answer' tool. Everything not passed as an argument will be lost.
     Even if you fail the task, return as much information as possible so your manager can act upon your feedback.
