@@ -5,7 +5,7 @@ Tools for analyzing and inspecting code.
 import logging
 from smolagents import tool
 
-from plexe.internal.common.registries.objects import ObjectRegistry
+from plexe.core.object_registry import ObjectRegistry
 from plexe.internal.models.entities.code import Code
 
 logger = logging.getLogger(__name__)

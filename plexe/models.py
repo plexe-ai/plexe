@@ -51,7 +51,7 @@ from plexe.agents.agents import PlexeAgent
 from plexe.internal.common.datasets.interface import Dataset, TabularConvertible
 from plexe.internal.common.datasets.adapter import DatasetAdapter
 from plexe.internal.common.provider import ProviderConfig
-from plexe.internal.common.registries.objects import ObjectRegistry
+from plexe.core.object_registry import ObjectRegistry
 from plexe.internal.common.utils.model_utils import calculate_model_size, format_code_snippet
 from plexe.internal.common.utils.pydantic_utils import map_to_basemodel, format_schema
 from plexe.core.state import ModelState  # Import from core package

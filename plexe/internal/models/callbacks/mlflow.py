@@ -234,7 +234,7 @@ class MLFlowCallback(Callback):
             self.experiment_id = self._get_or_create_experiment()
 
             # Get model info and timestamp
-            model_id = self._safe_get(info.model, ["identifier"], "unknown")
+            model_id = self._safe_get(info.model, ["identifier"], "unknown")[0:12] + "..."
             timestamp = self._timestamp()
 
             # End any active run before starting parent
@@ -246,7 +246,7 @@ class MLFlowCallback(Callback):
 
             # Start parent run
             parent_run = mlflow.start_run(
-                run_name=f"model-{model_id}-{timestamp}",
+                run_name=f"{model_id}-{timestamp}",
                 experiment_id=self.experiment_id,
                 description=f"Model building: {info.intent[:100]}...",
             )

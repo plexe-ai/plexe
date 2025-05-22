@@ -549,4 +549,4 @@ class CustomModelValidator(Validator):
 - [Tool Definitions](/plexe/tools/)
 - [Dataset Tools](/plexe/tools/datasets.py)
 - [Executor Implementation](/plexe/internal/models/execution/)
-- [Object Registry](/plexe/internal/common/registries/objects.py)
+- [Object Registry](/plexe/core/object_registry.py)

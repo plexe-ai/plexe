@@ -16,7 +16,7 @@ from plexe.agents.model_planner import ModelPlannerAgent
 from plexe.agents.model_trainer import ModelTrainerAgent
 from plexe.agents.schema_resolver import SchemaResolverAgent
 from plexe.config import config
-from plexe.internal.common.registries.objects import ObjectRegistry
+from plexe.core.object_registry import ObjectRegistry
 from plexe.internal.common.utils.agents import get_prompt_templates
 from plexe.internal.models.entities.artifact import Artifact
 from plexe.internal.models.entities.code import Code

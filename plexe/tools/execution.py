@@ -13,7 +13,7 @@ from smolagents import tool
 
 from plexe.callbacks import Callback
 from plexe.internal.common.datasets.interface import TabularConvertible
-from plexe.internal.common.registries.objects import ObjectRegistry
+from plexe.core.object_registry import ObjectRegistry
 from plexe.internal.models.entities.code import Code
 from plexe.internal.models.entities.artifact import Artifact
 from plexe.internal.models.entities.metric import Metric, MetricComparator, ComparisonMethod

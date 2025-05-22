@@ -17,7 +17,7 @@ from smolagents import tool
 
 from plexe.internal.common.datasets.adapter import DatasetAdapter
 from plexe.internal.common.datasets.interface import TabularConvertible
-from plexe.internal.common.registries.objects import ObjectRegistry
+from plexe.core.object_registry import ObjectRegistry
 
 logger = logging.getLogger(__name__)
 

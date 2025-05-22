@@ -11,7 +11,7 @@ from plexe.callbacks import Callback, BuildStateInfo
 from plexe.models import Model
 from plexe.internal.common.utils.model_state import ModelState
 from plexe.internal.models.entities.node import Node
-from plexe.internal.common.registries.objects import ObjectRegistry
+from plexe.core.object_registry import ObjectRegistry
 
 # Mock patches for all agent run methods to prevent test hanging
 AGENT_PATCHES = [

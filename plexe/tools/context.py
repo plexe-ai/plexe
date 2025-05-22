@@ -11,7 +11,7 @@ from smolagents import tool
 
 from plexe.config import code_templates
 from plexe.internal.common.provider import Provider
-from plexe.internal.common.registries.objects import ObjectRegistry
+from plexe.core.object_registry import ObjectRegistry
 from plexe.internal.models.entities.code import Code
 
 logger = logging.getLogger(__name__)

@@ -9,7 +9,7 @@ import pandas as pd
 from smolagents import tool
 
 from plexe.internal.common.datasets.interface import TabularConvertible
-from plexe.internal.common.registries.objects import ObjectRegistry
+from plexe.core.object_registry import ObjectRegistry
 from plexe.internal.common.utils.pydantic_utils import map_to_basemodel
 
 logger = logging.getLogger(__name__)

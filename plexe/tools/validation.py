@@ -55,7 +55,7 @@ def validate_inference_code(
         Dict with validation results and error details if validation fails
     """
     from plexe.internal.common.utils.pydantic_utils import map_to_basemodel
-    from plexe.internal.common.registries.objects import ObjectRegistry
+    from plexe.core.object_registry import ObjectRegistry
 
     object_registry = ObjectRegistry()
 

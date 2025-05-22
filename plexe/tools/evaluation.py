@@ -41,7 +41,7 @@ def get_review_finalised_model(llm_to_use: str) -> Callable:
         Returns:
             A dictionary containing a summary and review of the model
         """
-        from plexe.internal.common.registries.objects import ObjectRegistry
+        from plexe.core.object_registry import ObjectRegistry
 
         object_registry = ObjectRegistry()
 
