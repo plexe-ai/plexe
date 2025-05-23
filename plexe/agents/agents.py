@@ -99,28 +99,28 @@ class PlexeAgent:
 
         # Create solution planner agent - plans ML approaches
         self.ml_research_agent = ModelPlannerAgent(
-            model_id=ml_researcher_model_id,
+            model_id=self.ml_researcher_model_id,
             verbose=verbose,
             chain_of_thought_callable=chain_of_thought_callable,
         ).agent
 
         # Create and run the schema resolver agent
         self.schema_resolver_agent = SchemaResolverAgent(
-            model_id=orchestrator_model_id,
+            model_id=self.orchestrator_model_id,
             verbose=verbose,
             chain_of_thought_callable=chain_of_thought_callable,
         ).agent
 
         # Create the EDA agent to analyze the dataset
         self.eda_agent = EdaAgent(
-            model_id=orchestrator_model_id,
+            model_id=self.orchestrator_model_id,
             verbose=verbose,
             chain_of_thought_callable=chain_of_thought_callable,
         ).agent
 
         # Create feature engineering agent - transforms raw datasets for better model performance
         self.feature_engineering_agent = FeatureEngineeringAgent(
-            model_id=self.ml_researcher_model_id,
+            model_id=self.ml_engineer_model_id,
             verbose=verbose,
             chain_of_thought_callable=self.chain_of_thought_callable,
         ).agent
