@@ -349,26 +349,32 @@ def get_eda_report(dataset_name: str) -> Dict[str, Any]:
     object_registry = ObjectRegistry()
 
     try:
-        suffixes_to_remove = [
-            "_train",
-            "_val",
-            "_test",
-            "_transformed",
+        # Define suffixes in order of longest to shortest to ensure we match the longest applicable suffix
+        suffixes = [
             "_transformed_train",
             "_transformed_val",
             "_transformed_test",
+            "_transformed",
+            "_train",
+            "_val",
+            "_test",
         ]
-        for suffix in suffixes_to_remove:
-            if dataset_name.endswith(suffix):
-                dataset_name = dataset_name.removesuffix(suffix)
-                break
+
+        # Sort suffixes by length (longest first) to ensure we remove the most specific match
+        suffixes.sort(key=len, reverse=True)
+
+        cleaned_dataset_name = dataset_name
+        for suffix in suffixes:
+            if cleaned_dataset_name.endswith(suffix):
+                cleaned_dataset_name = cleaned_dataset_name[: -len(suffix)]
+                break  # Stop after removing the first matching suffix
 
         # Check if EDA report exists
-        report_key = f"eda_report_{dataset_name}"
+        report_key = f"eda_report_{cleaned_dataset_name}"
 
         # Get the report from registry
         eda_report = object_registry.get(dict, report_key)
-        logger.debug(f"✅ Retrieved EDA report for dataset '{dataset_name}'")
+        logger.debug(f"✅ Retrieved EDA report for dataset '{cleaned_dataset_name}'")
         return eda_report
 
     except KeyError:
