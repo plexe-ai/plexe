@@ -79,6 +79,8 @@ class FeatureEngineeringAgent:
                 "sklearn.*",
                 "scipy",
                 "scipy.*",
+                "statsmodels",
+                "statsmodels.*",
             ],
             verbosity_level=self.verbosity,
             prompt_templates=get_prompt_templates(

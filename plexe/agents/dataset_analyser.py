@@ -75,6 +75,8 @@ class EdaAgent:
                 "scipy.*",
                 "sklearn",
                 "sklearn.*",
+                "statsmodels",
+                "statsmodels.*",
             ]
             + config.code_generation.authorized_agent_imports,
             prompt_templates=get_prompt_templates("code_agent.yaml", "eda_prompt_templates.yaml"),
