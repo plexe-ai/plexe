@@ -31,7 +31,8 @@ names. If you create new datasets, you will also need to name them, and refer to
 ## 3. Instructions
 Carefully analyse the tools and managed agents available to you, and plan how to effectively plan possible approaches
 to the ML problem, run model training experiments, and finally deliver the best performing model as a bundle consisting
-of the model training code (as an ID), inference code (as an ID), model artifacts, and other deliverables.
+of the model training code (as an ID), inference code (as an ID), model artifacts, a performance evaluation of the
+complete model, and other deliverables.
 Test {{ max_iterations }} different approaches, and for each train a model. Select the best performing model.
 
 {% if resume %}
@@ -51,10 +52,11 @@ Ensure the output maximizes model performance while adhering to all constraints.
     - Use SchemaResolver agent to decide a model schema, if required. DO NOT DO THIS if schemas were provided by the user.{% endif %}
     - Create the input sample.
 - When delegating to DatasetSplitter, provide clear context about the ML task so the agent can understand what an
-  appropriate split for the task is. Request a train/validation split; a test set is NOT required.
+  appropriate split for the task is.
 - When comparing model performance, don't just naively compare the metrics. For example, a "mean absolute error" of
   exactly 0 is almost certainly a bugged model or a sign of overfitting, so this should be ignored.
 - 'MLEngineer' should only be asked to work on implementing ONE plan at a time.
 - 'MLOperationsEngineer' only needs to work on the final, best performing model.
 - 'MLEngineer' and 'MLOperationsEngineer' return IDs that identify the code they produce. Use these IDs to refer to the
   code they produce in any subsequent instructions.
+- 'ModelTester' should only be called once the model has been completed and is ready for testing.

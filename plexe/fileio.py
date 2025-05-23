@@ -83,6 +83,8 @@ def load_model(path: str | Path):
         # Set additional properties if available; these are optional for backward compatibility
         model.feature_transformer_source = model_data.get("feature_transformer_source", None)
         model.dataset_splitter_source = model_data.get("dataset_splitter_source", None)
+        model.testing_source = model_data.get("testing_source", None)
+        model.evaluation_report = model_data.get("evaluation_report", None)
 
         # Process metrics data if available
         metrics_data = model_data["metrics_data"]

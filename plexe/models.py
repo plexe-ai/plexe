@@ -126,6 +126,8 @@ class Model:
         self.predictor_source: str | None = None
         self.feature_transformer_source: str | None = None
         self.dataset_splitter_source: str | None = None
+        self.testing_source: str | None = None
+        self.evaluation_report: Dict | None = None
         self.artifacts: List[Artifact] = []
         self.metric: Metric | None = None
         self.metadata: Dict[str, Any] = dict()  # todo: initialise metadata, etc
@@ -322,6 +324,8 @@ class Model:
             self.predictor_source = generated.inference_source_code
             self.feature_transformer_source = generated.feature_transformer_source_code
             self.dataset_splitter_source = generated.dataset_split_code
+            self.testing_source = generated.testing_source_code
+            self.evaluation_report = generated.evaluation_report
             self.predictor = generated.predictor
             self.artifacts = generated.model_artifacts
 

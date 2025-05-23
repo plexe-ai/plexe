@@ -14,6 +14,7 @@ from plexe.agents.dataset_splitter import DatasetSplitterAgent
 from plexe.agents.feature_engineer import FeatureEngineeringAgent
 from plexe.agents.model_packager import ModelPackagerAgent
 from plexe.agents.model_planner import ModelPlannerAgent
+from plexe.agents.model_tester import ModelTesterAgent
 from plexe.agents.model_trainer import ModelTrainerAgent
 from plexe.agents.schema_resolver import SchemaResolverAgent
 from plexe.config import config
@@ -46,6 +47,8 @@ class ModelGenerationResult:
     model_artifacts: List[Artifact]
     performance: Metric  # Validation performance
     test_performance: Metric = None  # Test set performance
+    testing_source_code: str = None  # Testing code from model tester agent
+    evaluation_report: Dict = None  # Evaluation report from model tester agent
     metadata: Dict[str, str] = field(default_factory=dict)  # Model metadata
 
 
@@ -149,6 +152,13 @@ class PlexeAgent:
             chain_of_thought_callable=self.chain_of_thought_callable,
         ).agent
 
+        # Create model tester agent - tests and evaluates the finalized model
+        self.model_tester_agent = ModelTesterAgent(
+            model_id=self.ml_engineer_model_id,
+            verbose=verbose,
+            chain_of_thought_callable=self.chain_of_thought_callable,
+        ).agent
+
         # Create orchestrator agent - coordinates the workflow
         self.manager_agent = CodeAgent(
             name="Orchestrator",
@@ -167,6 +177,7 @@ class PlexeAgent:
                 self.dataset_splitter_agent,
                 self.mle_agent,
                 self.mlops_engineer,
+                self.model_tester_agent,
             ],
             add_base_tools=False,
             verbosity_level=self.orchestrator_verbosity,
@@ -259,6 +270,24 @@ class PlexeAgent:
                 # No dataset split code found, that's ok
                 pass
 
+            # Get testing code if available
+            testing_code = None
+            try:
+                testing_code_obj = object_registry.get(Code, "model_testing_code")
+                if testing_code_obj:
+                    testing_code = testing_code_obj.code
+            except KeyError:
+                # No testing code found, that's ok
+                pass
+
+            # Get evaluation report if available
+            evaluation_report = None
+            try:
+                evaluation_report = object_registry.get(dict, "model_evaluation_report")
+            except KeyError:
+                # No evaluation report found, that's ok
+                pass
+
             return ModelGenerationResult(
                 training_source_code=training_code,
                 inference_source_code=inference_code,
@@ -268,6 +297,8 @@ class PlexeAgent:
                 model_artifacts=list(object_registry.get_multiple(Artifact, artifact_names).values()),
                 performance=performance,
                 test_performance=performance,  # Using the same performance for now
+                testing_source_code=testing_code,
+                evaluation_report=evaluation_report,
                 metadata=metadata,
             )
         except Exception as e:

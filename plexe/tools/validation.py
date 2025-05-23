@@ -105,6 +105,26 @@ def validate_inference_code(
     if validation.passed:
         inference_code_id = uuid.uuid4().hex
         object_registry.register(Code, inference_code_id, Code(inference_code))
+
+        # Also instantiate and register the predictor for the model tester agent
+        try:
+            import types
+
+            predictor_module = types.ModuleType("predictor")
+            exec(inference_code, predictor_module.__dict__)
+            predictor_class = getattr(predictor_module, "PredictorImplementation")
+            predictor = predictor_class(artifact_objects)
+
+            # Register the instantiated predictor
+            from plexe.core.interfaces.predictor import Predictor
+
+            object_registry.register(Predictor, "trained_predictor", predictor, overwrite=True)
+            logger.debug("✅ Registered instantiated predictor for testing")
+
+        except Exception as e:
+            logger.warning(f"⚠️ Failed to register instantiated predictor: {str(e)}")
+            # Don't fail validation if predictor registration fails
+
         return _success_response(validation.message, inference_code_id)
 
     # Extract error details from validation result

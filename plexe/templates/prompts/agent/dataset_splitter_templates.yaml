@@ -30,7 +30,7 @@ managed_agent:
 
     1. **Time Series**: For temporal data, split chronologically to avoid leakage.
     2. **Class Balance**: For classification, use stratified sampling to maintain class distribution.
-    3. **Small Datasets**: Use a larger training set or cross-validation if data is limited.
+    3. **Small Datasets**: Use a larger training set than usual if data is limited.
     4. **Group Preservation**: Keep related groups (e.g., by user or transaction) in the same split.
     5. **Task Fit**: Match the splitting strategy to the ML task type.
     
