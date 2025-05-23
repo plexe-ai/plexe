@@ -110,6 +110,20 @@ def _save_model_to_tar(model: Any, path: str | Path) -> str:
                 info.size = len(content)
                 tar.addfile(info, io.BytesIO(content))
 
+            # Save testing source if available
+            if hasattr(model, "testing_source") and model.testing_source:
+                info = tarfile.TarInfo("code/testing.py")
+                content = model.testing_source.encode("utf-8")
+                info.size = len(content)
+                tar.addfile(info, io.BytesIO(content))
+
+            # Save evaluation report if available
+            if hasattr(model, "evaluation_report") and model.evaluation_report:
+                info = tarfile.TarInfo("metadata/evaluation_report.json")
+                content = json.dumps(model.evaluation_report, indent=2, default=str).encode("utf-8")
+                info.size = len(content)
+                tar.addfile(info, io.BytesIO(content))
+
             # Save artifacts
             if hasattr(model, "artifacts"):
                 for artifact in model.artifacts:
@@ -192,6 +206,20 @@ def _load_model_data_from_tar(path: str | Path) -> Dict[str, Any]:
             if "code/feature_transformer.py" in [m.name for m in tar.getmembers()]:
                 feature_transformer_source = tar.extractfile("code/feature_transformer.py").read().decode("utf-8")
 
+            dataset_splitter_source = None
+            if "code/dataset_splitter.py" in [m.name for m in tar.getmembers()]:
+                dataset_splitter_source = tar.extractfile("code/dataset_splitter.py").read().decode("utf-8")
+
+            testing_source = None
+            if "code/testing.py" in [m.name for m in tar.getmembers()]:
+                testing_source = tar.extractfile("code/testing.py").read().decode("utf-8")
+
+            evaluation_report = None
+            if "metadata/evaluation_report.json" in [m.name for m in tar.getmembers()]:
+                evaluation_report = json.loads(
+                    tar.extractfile("metadata/evaluation_report.json").read().decode("utf-8")
+                )
+
             # Load EDA markdown reports if available
             eda_markdown_reports = {}
             for member in tar.getmembers():
@@ -217,6 +245,9 @@ def _load_model_data_from_tar(path: str | Path) -> Dict[str, Any]:
                 "trainer_source": trainer_source,
                 "predictor_source": predictor_source,
                 "feature_transformer_source": feature_transformer_source,
+                "dataset_splitter_source": dataset_splitter_source,
+                "testing_source": testing_source,
+                "evaluation_report": evaluation_report,
                 "artifact_data": artifact_data,
                 "input_schema_dict": input_schema_dict,
                 "output_schema_dict": output_schema_dict,

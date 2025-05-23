@@ -69,9 +69,9 @@ def register_split_datasets(
     val_name = f"{dataset_name}_val"
     test_name = f"{dataset_name}_test"
 
-    object_registry.register(TabularConvertible, train_name, train_ds, overwrite=True)
-    object_registry.register(TabularConvertible, val_name, val_ds, overwrite=True)
-    object_registry.register(TabularConvertible, test_name, test_ds, overwrite=True)
+    object_registry.register(TabularConvertible, train_name, train_ds, overwrite=True, immutable=True)
+    object_registry.register(TabularConvertible, val_name, val_ds, overwrite=True, immutable=True)
+    object_registry.register(TabularConvertible, test_name, test_ds, overwrite=True, immutable=True)
     object_registry.register(Code, "dataset_splitting_code", Code(splitting_code), overwrite=True)
 
     # Store dataset sizes
