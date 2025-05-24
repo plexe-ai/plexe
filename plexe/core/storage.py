@@ -8,6 +8,7 @@ fileio module, breaking the circular dependency between models.py and fileio.py.
 
 import io
 import json
+import yaml
 import logging
 import tarfile
 import datetime
@@ -22,6 +23,19 @@ logger = logging.getLogger(__name__)
 
 # Type variable for generic model type
 M = TypeVar("M")
+
+
+def _load_yaml_or_json_from_tar(tar, yaml_path: str, json_path: str):
+    """Load from YAML if available, fallback to JSON for backward compatibility."""
+    members = [m.name for m in tar.getmembers()]
+    if yaml_path in members:
+        content = tar.extractfile(yaml_path).read().decode("utf-8")
+        return yaml.safe_load(content)
+    elif json_path in members:
+        content = tar.extractfile(json_path).read().decode("utf-8")
+        return json.loads(content)
+    else:
+        raise FileNotFoundError(f"Neither {yaml_path} nor {json_path} found in archive")
 
 
 def _save_model_to_tar(model: Any, path: str | Path) -> str:
@@ -66,8 +80,8 @@ def _save_model_to_tar(model: Any, path: str | Path) -> str:
             # Save each metadata item separately
             for key, value in metadata.items():
                 if key in ["metrics", "metadata"]:
-                    info = tarfile.TarInfo(f"metadata/{key}.json")
-                    content = json.dumps(value, indent=2, default=str).encode("utf-8")
+                    info = tarfile.TarInfo(f"metadata/{key}.yaml")
+                    content = yaml.dump(value, default_flow_style=False).encode("utf-8")
                 else:
                     info = tarfile.TarInfo(f"metadata/{key}.txt")
                     content = str(value).encode("utf-8")
@@ -77,8 +91,8 @@ def _save_model_to_tar(model: Any, path: str | Path) -> str:
             # Save schemas
             for name, schema in [("input_schema", model.input_schema), ("output_schema", model.output_schema)]:
                 schema_dict = {name: field.annotation.__name__ for name, field in schema.model_fields.items()}
-                info = tarfile.TarInfo(f"schemas/{name}.json")
-                content = json.dumps(schema_dict, default=str).encode("utf-8")
+                info = tarfile.TarInfo(f"schemas/{name}.yaml")
+                content = yaml.dump(schema_dict, default_flow_style=False).encode("utf-8")
                 info.size = len(content)
                 tar.addfile(info, io.BytesIO(content))
 
@@ -119,8 +133,8 @@ def _save_model_to_tar(model: Any, path: str | Path) -> str:
 
             # Save evaluation report if available
             if hasattr(model, "evaluation_report") and model.evaluation_report:
-                info = tarfile.TarInfo("metadata/evaluation_report.json")
-                content = json.dumps(model.evaluation_report, indent=2, default=str).encode("utf-8")
+                info = tarfile.TarInfo("metadata/evaluation_report.yaml")
+                content = yaml.dump(model.evaluation_report, default_flow_style=False).encode("utf-8")
                 info.size = len(content)
                 tar.addfile(info, io.BytesIO(content))
 
@@ -181,13 +195,17 @@ def _load_model_data_from_tar(path: str | Path) -> Dict[str, Any]:
             # Extract metadata
             intent = tar.extractfile("metadata/intent.txt").read().decode("utf-8")
             state = ModelState(tar.extractfile("metadata/state.txt").read().decode("utf-8"))
-            metrics_data = json.loads(tar.extractfile("metadata/metrics.json").read().decode("utf-8"))
-            metadata = json.loads(tar.extractfile("metadata/metadata.json").read().decode("utf-8"))
+            metrics_data = _load_yaml_or_json_from_tar(tar, "metadata/metrics.yaml", "metadata/metrics.json")
+            metadata = _load_yaml_or_json_from_tar(tar, "metadata/metadata.yaml", "metadata/metadata.json")
             identifier = tar.extractfile("metadata/identifier.txt").read().decode("utf-8")
 
             # Extract schema information
-            input_schema_dict = json.loads(tar.extractfile("schemas/input_schema.json").read().decode("utf-8"))
-            output_schema_dict = json.loads(tar.extractfile("schemas/output_schema.json").read().decode("utf-8"))
+            input_schema_dict = _load_yaml_or_json_from_tar(
+                tar, "schemas/input_schema.yaml", "schemas/input_schema.json"
+            )
+            output_schema_dict = _load_yaml_or_json_from_tar(
+                tar, "schemas/output_schema.yaml", "schemas/output_schema.json"
+            )
 
             # Process schemas into Pydantic models
             input_schema = _process_schema_dict(input_schema_dict)
@@ -215,10 +233,12 @@ def _load_model_data_from_tar(path: str | Path) -> Dict[str, Any]:
                 testing_source = tar.extractfile("code/testing.py").read().decode("utf-8")
 
             evaluation_report = None
-            if "metadata/evaluation_report.json" in [m.name for m in tar.getmembers()]:
-                evaluation_report = json.loads(
-                    tar.extractfile("metadata/evaluation_report.json").read().decode("utf-8")
+            try:
+                evaluation_report = _load_yaml_or_json_from_tar(
+                    tar, "metadata/evaluation_report.yaml", "metadata/evaluation_report.json"
                 )
+            except FileNotFoundError:
+                pass
 
             # Load EDA markdown reports if available
             eda_markdown_reports = {}
@@ -319,8 +339,8 @@ def _save_checkpoint_to_tar(model: Any, iteration: int, path: Optional[str | Pat
             # Save each metadata item separately
             for key, value in metadata.items():
                 if key in ["metadata"]:
-                    info = tarfile.TarInfo(f"metadata/{key}.json")
-                    content = json.dumps(value, indent=2, default=str).encode("utf-8")
+                    info = tarfile.TarInfo(f"metadata/{key}.yaml")
+                    content = yaml.dump(value, default_flow_style=False).encode("utf-8")
                 else:
                     info = tarfile.TarInfo(f"metadata/{key}.txt")
                     content = str(value).encode("utf-8")
@@ -330,8 +350,8 @@ def _save_checkpoint_to_tar(model: Any, iteration: int, path: Optional[str | Pat
             # Save schemas
             for name, schema in [("input_schema", model.input_schema), ("output_schema", model.output_schema)]:
                 schema_dict = {name: field.annotation.__name__ for name, field in schema.model_fields.items()}
-                info = tarfile.TarInfo(f"schemas/{name}.json")
-                content = json.dumps(schema_dict, default=str).encode("utf-8")
+                info = tarfile.TarInfo(f"schemas/{name}.yaml")
+                content = yaml.dump(schema_dict, default_flow_style=False).encode("utf-8")
                 info.size = len(content)
                 tar.addfile(info, io.BytesIO(content))
 
@@ -378,13 +398,17 @@ def _load_checkpoint_data_from_tar(path: str | Path) -> Dict[str, Any]:
             # Extract metadata
             intent = tar.extractfile("metadata/intent.txt").read().decode("utf-8")
             state = ModelState(tar.extractfile("metadata/state.txt").read().decode("utf-8"))
-            metadata = json.loads(tar.extractfile("metadata/metadata.json").read().decode("utf-8"))
+            metadata = _load_yaml_or_json_from_tar(tar, "metadata/metadata.yaml", "metadata/metadata.json")
             identifier = tar.extractfile("metadata/identifier.txt").read().decode("utf-8")
             iteration = int(tar.extractfile("metadata/iteration.txt").read().decode("utf-8"))
 
             # Extract schema information
-            input_schema_dict = json.loads(tar.extractfile("schemas/input_schema.json").read().decode("utf-8"))
-            output_schema_dict = json.loads(tar.extractfile("schemas/output_schema.json").read().decode("utf-8"))
+            input_schema_dict = _load_yaml_or_json_from_tar(
+                tar, "schemas/input_schema.yaml", "schemas/input_schema.json"
+            )
+            output_schema_dict = _load_yaml_or_json_from_tar(
+                tar, "schemas/output_schema.yaml", "schemas/output_schema.json"
+            )
 
             # Process schemas into Pydantic models
             input_schema = _process_schema_dict(input_schema_dict)
