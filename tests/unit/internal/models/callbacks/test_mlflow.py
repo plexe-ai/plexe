@@ -82,16 +82,19 @@ def test_callback_initialization():
     """Test that the MLFlowCallback can be initialized properly."""
     with patch("mlflow.set_tracking_uri") as mock_set_tracking_uri:
         with patch("mlflow.active_run", return_value=None):  # No active run
-            with patch("mlflow.create_experiment", return_value="test-experiment-id"):
-                with patch("mlflow.set_experiment"):
-                    callback = MLFlowCallback(tracking_uri="http://localhost:5000", experiment_name="test-experiment")
+            with patch("mlflow.get_experiment_by_name", return_value=None):  # Experiment doesn't exist
+                with patch("mlflow.create_experiment", return_value="test-experiment-id"):
+                    with patch("mlflow.set_experiment"):
+                        callback = MLFlowCallback(
+                            tracking_uri="http://localhost:5000", experiment_name="test-experiment"
+                        )
 
-                    # Verify tracking URI was set
-                    mock_set_tracking_uri.assert_called_once_with("http://localhost:5000")
+                        # Verify tracking URI was set
+                        mock_set_tracking_uri.assert_called_once_with("http://localhost:5000")
 
-                    # Verify default values
-                    assert callback.experiment_name == "test-experiment"
-                    assert callback.experiment_id == "test-experiment-id"
+                        # Verify default values
+                        assert callback.experiment_name == "test-experiment"
+                        assert callback.experiment_id == "test-experiment-id"
 
 
 @patch("mlflow.set_tracking_uri")
@@ -99,7 +102,7 @@ def test_callback_initialization():
 @patch("mlflow.create_experiment", return_value="initial-experiment-id")
 def test_build_start(mock_create_experiment, mock_get_experiment, _, setup_env):
     """Test on_build_start callback."""
-    # Set up mocks
+    # Set up mocks - during initialization, experiment should be found
     mock_experiment = MagicMock()
     mock_experiment.experiment_id = "test-experiment-id"
     mock_get_experiment.return_value = mock_experiment
@@ -109,21 +112,32 @@ def test_build_start(mock_create_experiment, mock_get_experiment, _, setup_env):
         with patch("mlflow.set_experiment"):
             callback = MLFlowCallback(tracking_uri="http://localhost:5000", experiment_name="test-experiment")
 
-    # During initialization, create_experiment was called once
-    mock_create_experiment.assert_called_once_with("test-experiment")
-    # Reset the mock for the next phase
-    mock_create_experiment.reset_mock()
-
-    # Call on_build_start
-    callback.on_build_start(setup_env["build_info"])
-
-    # Verify experiment was retrieved
+    # During initialization, get_experiment_by_name was called once (experiment exists, so no create_experiment)
     mock_get_experiment.assert_called_once_with("test-experiment")
-
-    # Since experiment exists (mock_get_experiment returns a mock), we should not create a new one
     mock_create_experiment.assert_not_called()
 
-    # Experiment ID should be updated from the existing experiment
+    # Reset mocks for on_build_start testing
+    mock_get_experiment.reset_mock()
+    mock_create_experiment.reset_mock()
+
+    # Mock mlflow methods for on_build_start
+    with patch("mlflow.active_run", return_value=None):
+        with patch("mlflow.set_experiment"):
+            with patch("mlflow.start_run") as mock_start_run:
+                with patch("mlflow.log_params"):
+                    with patch("mlflow.set_tags"):
+                        mock_run = MagicMock()
+                        mock_run.info.run_id = "parent-run-id"
+                        mock_start_run.return_value = mock_run
+
+                        # Call on_build_start
+                        callback.on_build_start(setup_env["build_info"])
+
+    # Since experiment_id is already set, _get_or_create_experiment should not call get_experiment_by_name again
+    mock_get_experiment.assert_not_called()
+    mock_create_experiment.assert_not_called()
+
+    # Experiment ID should remain the same from initialization
     assert callback.experiment_id == "test-experiment-id"
 
 
@@ -136,64 +150,88 @@ def test_build_start_new_experiment(
     mock_active_run, mock_set_experiment, mock_create_experiment, mock_get_experiment, mock_set_tracking_uri, setup_env
 ):
     """Test on_build_start with a new experiment."""
-    # Set up mocks for a new experiment
+    # Set up mocks for a new experiment - experiment doesn't exist during initialization
     mock_get_experiment.return_value = None
-    # Mock the create_experiment return values for both initialization and on_build_start
-    mock_create_experiment.side_effect = ["init-experiment-id", "new-experiment-id"]
+    mock_create_experiment.return_value = "init-experiment-id"
 
     # Initialize callback
     callback = MLFlowCallback(tracking_uri="http://localhost:5000", experiment_name="new-experiment")
 
-    # The first call to create_experiment happens during initialization
-    assert mock_create_experiment.call_count == 1
-    # Reset mock for clarity
+    # During initialization: get_experiment_by_name was called, then create_experiment
+    mock_get_experiment.assert_called_once_with("new-experiment")
+    mock_create_experiment.assert_called_once_with("new-experiment")
+    assert callback.experiment_id == "init-experiment-id"
+
+    # Reset mocks for on_build_start testing
+    mock_get_experiment.reset_mock()
     mock_create_experiment.reset_mock()
     mock_set_experiment.reset_mock()
-    mock_get_experiment.reset_mock()
 
-    # Now ensure get_experiment_by_name returns None to simulate experiment not found
-    mock_get_experiment.return_value = None
+    # Mock mlflow methods for on_build_start
+    with patch("mlflow.start_run") as mock_start_run:
+        with patch("mlflow.log_params"):
+            with patch("mlflow.set_tags"):
+                mock_run = MagicMock()
+                mock_run.info.run_id = "parent-run-id"
+                mock_start_run.return_value = mock_run
 
-    # Call on_build_start which should create a new experiment since mock_get_experiment returns None
-    callback.on_build_start(setup_env["build_info"])
+                # Call on_build_start
+                callback.on_build_start(setup_env["build_info"])
 
-    # Verify experiment was retrieved
-    mock_get_experiment.assert_called_once_with("new-experiment")
+    # Since experiment_id is already set, _get_or_create_experiment should not call these again
+    mock_get_experiment.assert_not_called()
+    mock_create_experiment.assert_not_called()
 
-    # Since get_experiment returns None, create_experiment should be called again
-    mock_create_experiment.assert_called_once_with("new-experiment")
-    mock_set_experiment.assert_called_once()
-
-    # Experiment ID should be set to the new ID from the second call to create_experiment
-    assert callback.experiment_id == "new-experiment-id"
+    # Experiment ID should remain the same from initialization
+    assert callback.experiment_id == "init-experiment-id"
 
 
 def test_build_end(setup_env):
     """Test on_build_end callback."""
     # Initialize callback with all necessary patches
     with patch("mlflow.active_run", return_value=None):
-        with patch("mlflow.create_experiment", return_value="test-experiment-id"):
-            with patch("mlflow.set_experiment"):
-                callback = MLFlowCallback(tracking_uri="http://localhost:5000", experiment_name="test-experiment")
+        with patch("mlflow.get_experiment_by_name") as mock_get_exp:
+            with patch("mlflow.create_experiment", return_value="test-experiment-id"):
+                with patch("mlflow.set_experiment"):
+                    # Mock experiment exists during initialization
+                    mock_experiment = MagicMock()
+                    mock_experiment.experiment_id = "test-experiment-id"
+                    mock_get_exp.return_value = mock_experiment
 
-    # Now patch all the necessary methods for the EDA report handling
-    with patch("mlflow.active_run", return_value=MagicMock()):
-        with patch("mlflow.log_artifact"):
-            with patch("mlflow.end_run") as mock_end_run:
-                # Call on_build_end
-                callback.on_build_end(setup_env["build_info"])
+                    callback = MLFlowCallback(tracking_uri="http://localhost:5000", experiment_name="test-experiment")
+                    callback.parent_run_id = "parent-run-id"  # Set parent run ID for testing
 
-                # Verify end_run was called once
-                mock_end_run.assert_called_once()
+    # Mock all MLflow methods for on_build_end
+    mock_run = MagicMock()
+    mock_run.info.run_id = "parent-run-id"
+
+    with patch("mlflow.active_run", return_value=mock_run):
+        with patch("mlflow.set_experiment"):
+            with patch("mlflow.start_run", return_value=mock_run):
+                with patch("mlflow.log_artifact"):
+                    with patch("mlflow.log_metric"):
+                        with patch("mlflow.set_tag"):
+                            with patch("mlflow.end_run") as mock_end_run:
+                                # Call on_build_end
+                                callback.on_build_end(setup_env["build_info"])
+
+                                # Verify end_run was called once
+                                mock_end_run.assert_called_once()
 
 
 def test_log_metric(setup_env):
     """Test _log_metric helper method."""
     # Initialize callback with all necessary patches
     with patch("mlflow.active_run", return_value=None):
-        with patch("mlflow.create_experiment", return_value="test-experiment-id"):
-            with patch("mlflow.set_experiment"):
-                callback = MLFlowCallback(tracking_uri="http://localhost:5000", experiment_name="test-experiment")
+        with patch("mlflow.get_experiment_by_name") as mock_get_exp:
+            with patch("mlflow.create_experiment", return_value="test-experiment-id"):
+                with patch("mlflow.set_experiment"):
+                    # Mock experiment exists during initialization
+                    mock_experiment = MagicMock()
+                    mock_experiment.experiment_id = "test-experiment-id"
+                    mock_get_exp.return_value = mock_experiment
+
+                    callback = MLFlowCallback(tracking_uri="http://localhost:5000", experiment_name="test-experiment")
 
     # Mock active_run to True when _log_metric is called
     with patch("mlflow.active_run", return_value=MagicMock()):
