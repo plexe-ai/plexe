@@ -150,7 +150,7 @@ class Model:
         run_timeout: int = 1800,
         callbacks: List[Callback] = None,
         verbose: bool = False,
-        resume: bool = False,
+        # resume: bool = False,
         enable_checkpointing: bool = False,
     ) -> None:
         """
@@ -164,7 +164,6 @@ class Model:
         :param run_timeout: maximum time in seconds for each individual model training run
         :param callbacks: list of callbacks to notify during the model building process
         :param verbose: whether to display detailed agent logs during model building (default: False)
-        :param resume: whether to resume from the checkpoint if the model was loaded from one (default: False)
         :param enable_checkpointing: whether to enable automatic checkpointing (default: True)
         :return:
         """
@@ -256,7 +255,7 @@ class Model:
                 datasets=list(self.training_data.keys()),
                 working_dir=self.working_dir,
                 max_iterations=max_iterations,
-                resume=resume,
+                resume=False,
             )
 
             agent = PlexeAgent(
