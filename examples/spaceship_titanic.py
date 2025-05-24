@@ -54,12 +54,12 @@ model.build(
         default_provider="openai/gpt-4o",
         orchestrator_provider="anthropic/claude-3-7-sonnet-20250219",
         research_provider="openai/gpt-4o",
-        engineer_provider="anthropic/claude-3-7-sonnet-20250219",
-        ops_provider="anthropic/claude-3-7-sonnet-20250219",
+        engineer_provider="anthropic/claude-sonnet-4-20250514",
+        ops_provider="anthropic/claude-sonnet-4-20250514",
         tool_provider="openai/gpt-4o",
     ),
     max_iterations=1,
-    verbose=True,
+    verbose=False,
     callbacks=[
         MLFlowCallback(
             tracking_uri="http://127.0.0.1:8080",

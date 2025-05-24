@@ -20,6 +20,7 @@ import pandas as pd
 
 import plexe
 from plexe.internal.common.provider import ProviderConfig
+from plexe.callbacks import MLFlowCallback
 
 
 # Step 1: Define the model
@@ -36,18 +37,13 @@ model = plexe.Model(
 )
 
 # Step 2: Build the model using the training dataset
-# 2A [OPTIONAL]: Define MLFlow callback for tracking
-mlflow_callback = plexe.callbacks.MLFlowCallback(
-    tracking_uri="http://127.0.0.1:8080",
-    experiment_name=f"house-prices-{datetime.now().strftime('%Y%m%d-%H%M%S')  }",
-)
 # 2B: Build the model with the dataset
 # NOTE: In order to run this example, you will need to download the dataset from Kaggle
 model.build(
     datasets=[pd.read_csv("examples/datasets/house-prices-train.csv")],
     provider=ProviderConfig(
         default_provider="openai/gpt-4o",
-        orchestrator_provider="anthropic/claude-3-7-sonnet-20250219",
+        orchestrator_provider="anthropic/claude-sonnet-4-20250514",
         research_provider="openai/gpt-4o",
         engineer_provider="anthropic/claude-3-7-sonnet-20250219",
         ops_provider="anthropic/claude-3-7-sonnet-20250219",
@@ -57,8 +53,12 @@ model.build(
     timeout=1800,  # 30 minute timeout
     run_timeout=180,
     verbose=False,
-    callbacks=[mlflow_callback],
-    chain_of_thought=True,  # Enable chain of thought output
+    callbacks=[
+        MLFlowCallback(
+            tracking_uri="http://127.0.0.1:8080",
+            experiment_name=f"house-prices-{datetime.now().strftime('%Y%m%d-%H%M%S')  }",
+        )
+    ],
 )
 
 # Step 3: Save the model
