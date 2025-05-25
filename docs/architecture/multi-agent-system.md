@@ -40,10 +40,12 @@ This approach offers several advantages:
 
 ```mermaid
 graph TD
-    User([User]) --> |"Intent & Datasets"| Model["Model Class"]
+    User([User]) --> |"Intent & Datasets"| ModelBuilder["ModelBuilder"]
+    User --> |"Intent & Datasets"| Model["Model Class (deprecated)"]
     
     subgraph "Multi-Agent System"
-        Model --> |build| Orchestrator["Manager Agent"]
+        ModelBuilder --> |build| Orchestrator["Manager Agent"]
+        Model --> |build (deprecated)| ModelBuilder
         Orchestrator --> |"Schema Task"| SchemaResolver["Schema Resolver"]
         Orchestrator --> |"EDA Task"| EDA["EDA Agent"]
         Orchestrator --> |"Feature Task"| FE["Feature Engineer"]
@@ -191,7 +193,7 @@ self.dataset_splitter_agent = DatasetSplitterAgent(
 
 ### Manager Agent (Orchestrator)
 
-**Class**: `PlexeAgent.manager_agent`  
+**Class**: `CodeAgent`  
 **Type**: `CodeAgent`
 
 The Manager Agent serves as the central coordinator for the entire ML development process:
@@ -339,12 +341,11 @@ class ObjectRegistry:
     """
 
     _instance = None
-    _items: Dict[str, Item] = dict()
 
     def __new__(cls):
         if cls._instance is None:
             cls._instance = super(ObjectRegistry, cls).__new__(cls)
-            cls._items = dict()
+            cls._instance._items = {}
         return cls._instance
 ```
 
@@ -407,12 +408,12 @@ def get_executor_tool(distributed: bool) -> Callable:
 The multi-agent workflow follows these key steps:
 
 1. **Initialization**:
-   - User creates a `Model` instance with intent and datasets
-   - User calls `model.build()` to start the process
+   - User creates a `ModelBuilder` instance or `Model` instance with intent and datasets
+   - User calls `ModelBuilder.build()` or `model.build()` (deprecated) to start the process
 
 2. **Orchestration**:
-   - Manager Agent initializes and coordinates the entire process
-   - Manager Agent tasks specialist agents based on the workflow requirements
+   - `ModelBuilder` (preferred) or `Model.build()` (deprecated) initializes the process
+   - Manager Agent coordinates the entire process and tasks specialist agents based on workflow requirements
 
 3. **Schema Resolution**:
    - If schemas aren't provided, SchemaResolverAgent infers them
@@ -607,19 +608,20 @@ class CustomModelValidator(Validator):
 
 ## References
 
-- [PlexeAgent Class Definition](/plexe/agents/agents.py)
-- [Model Class Definition](/plexe/models.py)
-- [EdaAgent Definition](/plexe/agents/dataset_analyser.py)
-- [SchemaResolverAgent Definition](/plexe/agents/schema_resolver.py)
-- [FeatureEngineeringAgent Definition](/plexe/agents/feature_engineer.py)
-- [DatasetSplitterAgent Definition](/plexe/agents/dataset_splitter.py)
-- [ModelTrainerAgent Definition](/plexe/agents/model_trainer.py)
-- [ModelPackagerAgent Definition](/plexe/agents/model_packager.py)
-- [ModelPlannerAgent Definition](/plexe/agents/model_planner.py)
-- [ModelTesterAgent Definition](/plexe/agents/model_tester.py)
-- [Tool Definitions](/plexe/tools/)
-- [Dataset Tools](/plexe/tools/datasets.py)
-- [Validation Tools](/plexe/tools/validation.py)
-- [Testing Tools](/plexe/tools/testing.py)
-- [Executor Implementation](/plexe/internal/models/execution/)
-- [Object Registry](/plexe/core/object_registry.py)
+- [PlexeAgent Class Definition](plexe/agents/agents.py)
+- [Model Class Definition](plexe/models.py)
+- [ModelBuilder Class Definition](plexe/model_builder.py)
+- [EdaAgent Definition](plexe/agents/dataset_analyser.py)
+- [SchemaResolverAgent Definition](plexe/agents/schema_resolver.py)
+- [FeatureEngineeringAgent Definition](plexe/agents/feature_engineer.py)
+- [DatasetSplitterAgent Definition](plexe/agents/dataset_splitter.py)
+- [ModelTrainerAgent Definition](plexe/agents/model_trainer.py)
+- [ModelPackagerAgent Definition](plexe/agents/model_packager.py)
+- [ModelPlannerAgent Definition](plexe/agents/model_planner.py)
+- [ModelTesterAgent Definition](plexe/agents/model_tester.py)
+- [Tool Definitions](plexe/tools/)
+- [Dataset Tools](plexe/tools/datasets.py)
+- [Validation Tools](plexe/tools/validation.py)
+- [Testing Tools](plexe/tools/testing.py)
+- [Executor Implementation](plexe/internal/models/execution/)
+- [Object Registry](plexe/core/object_registry.py)
