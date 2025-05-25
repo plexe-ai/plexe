@@ -187,9 +187,8 @@ class MLFlowCallback(Callback):
             context["max_iterations"] = info.max_iterations
 
         # Add model ID if available
-        model_id = self._safe_get(info.model, ["identifier"])
-        if model_id:
-            context["model_id"] = model_id
+        if info.model_identifier:
+            context["model_id"] = info.model_identifier
 
         # Add basic schema and dataset info
         if info.input_schema:
@@ -234,7 +233,7 @@ class MLFlowCallback(Callback):
             self.experiment_id = self._get_or_create_experiment()
 
             # Get model info and timestamp
-            model_id = self._safe_get(info.model, ["identifier"], "unknown")[0:12] + "..."
+            model_id = (info.model_identifier or "unknown")[0:12] + "..."
             timestamp = self._timestamp()
 
             # End any active run before starting parent
@@ -385,35 +384,27 @@ class MLFlowCallback(Callback):
                     self._safe_log_artifact(content=report_markdown, filename=f"eda_report_{dataset_name}.md")
 
             # Log model information
-            model = info.model
-            if model:
-                # Log best model metric
-                metric = self._safe_get(model, ["metric"])
-                if metric and hasattr(metric, "name") and hasattr(metric, "value"):
-                    mlflow.log_metric(f"best_{metric.name}", float(metric.value))
+            if info.final_metric and hasattr(info.final_metric, "name") and hasattr(info.final_metric, "value"):
+                mlflow.log_metric(f"best_{info.final_metric.name}", float(info.final_metric.value))
 
-                # Log model artifacts and status
-                mlflow.set_tag("best_iteration", str(info.iteration))
+            # Log model artifacts and status
+            mlflow.set_tag("best_iteration", str(info.iteration))
 
-                # Log artifact names
-                artifacts = self._safe_get(model, ["artifacts"], [])
-                if artifacts:
-                    artifact_names = [a.name for a in artifacts]
-                    mlflow.set_tag("model_artifacts", ", ".join(artifact_names))
+            # Log artifact names
+            if info.final_artifacts:
+                artifact_names = [a.name for a in info.final_artifacts]
+                mlflow.set_tag("model_artifacts", ", ".join(artifact_names))
 
-                # Log model state
-                state = self._safe_get(model, ["state"])
-                if state:
-                    mlflow.set_tag("final_model_state", str(state))
+            # Log model state
+            if info.model_state:
+                mlflow.set_tag("final_model_state", str(info.model_state))
 
-                # Log final model code
-                trainer_source = self._safe_get(model, ["trainer_source"])
-                if trainer_source:
-                    self._safe_log_artifact(content=trainer_source, filename="final_trainer.py")
+            # Log final model code
+            if info.trainer_source:
+                self._safe_log_artifact(content=info.trainer_source, filename="final_trainer.py")
 
-                predictor_source = self._safe_get(model, ["predictor_source"])
-                if predictor_source:
-                    self._safe_log_artifact(content=predictor_source, filename="final_predictor.py")
+            if info.predictor_source:
+                self._safe_log_artifact(content=info.predictor_source, filename="final_predictor.py")
 
             # End the parent run
             mlflow.end_run()

@@ -62,9 +62,25 @@ class BuildStateInfo:
     node: Optional[Node] = None
     """The solution node being evaluated in the current iteration."""
 
-    # Reference to the model being built (for callbacks that need direct model access)
-    model: Any = None
-    """Reference to the model being built."""
+    # Model information fields (replacing direct model reference)
+    model_identifier: Optional[str] = None
+    """Model unique identifier."""
+
+    model_state: Optional[str] = None
+    """Current model state (BUILDING/READY/ERROR)."""
+
+    # Final model artifacts (only available at build end)
+    final_metric: Optional[Any] = None
+    """Final performance metric."""
+
+    final_artifacts: Optional[list] = None
+    """Model artifacts list."""
+
+    trainer_source: Optional[str] = None
+    """Training source code."""
+
+    predictor_source: Optional[str] = None
+    """Predictor source code."""
 
 
 class Callback(ABC):

@@ -205,6 +205,7 @@ class Model:
 
         # Copy all results back to self to maintain backwards compatibility
         for attr in [
+            "identifier",
             "input_schema",
             "output_schema",
             "predictor",

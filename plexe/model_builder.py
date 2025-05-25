@@ -131,8 +131,20 @@ class ModelBuilder:
             if output_schema:
                 object_registry.register(dict, "output_schema", format_schema(output_schema), immutable=True)
 
+            # Generate unique model identifier
+            model_identifier = f"model-{datetime.now().isoformat()}".replace(":", "-").replace(".", "-")
+
             # Notify callbacks of build start
-            self._notify_callbacks(callbacks, "build_start", intent, input_schema, output_schema, training_data)
+            self._notify_callbacks(
+                callbacks,
+                "build_start",
+                intent,
+                input_schema,
+                output_schema,
+                training_data,
+                model_identifier=model_identifier,
+                model_state="BUILDING",
+            )
 
             # Create and run agent
             agent = PlexeAgent(
@@ -203,6 +215,7 @@ class ModelBuilder:
 
             # Create model and populate it with results
             model = Model(intent=intent, input_schema=final_input_schema, output_schema=final_output_schema)
+            model.identifier = model_identifier
             model.predictor = generated.predictor
             model.trainer_source = generated.training_source_code
             model.predictor_source = generated.inference_source_code
@@ -218,7 +231,18 @@ class ModelBuilder:
 
             # Notify callbacks of build end
             self._notify_callbacks(
-                callbacks, "build_end", intent, final_input_schema, final_output_schema, training_data, model
+                callbacks,
+                "build_end",
+                intent,
+                final_input_schema,
+                final_output_schema,
+                training_data,
+                model_identifier=model_identifier,
+                model_state="READY",
+                final_metric=generated.test_performance,
+                final_artifacts=generated.model_artifacts,
+                trainer_source=generated.training_source_code,
+                predictor_source=generated.inference_source_code,
             )
 
             return model
@@ -227,7 +251,21 @@ class ModelBuilder:
             logger.error(f"Error during model building: {str(e)}")
             raise e
 
-    def _notify_callbacks(self, callbacks, event, intent, input_schema, output_schema, training_data, model=None):
+    def _notify_callbacks(
+        self,
+        callbacks,
+        event,
+        intent,
+        input_schema,
+        output_schema,
+        training_data,
+        model_identifier=None,
+        model_state=None,
+        final_metric=None,
+        final_artifacts=None,
+        trainer_source=None,
+        predictor_source=None,
+    ):
         """Helper to notify callbacks with consistent error handling."""
         for callback in callbacks:
             try:
@@ -240,7 +278,12 @@ class ModelBuilder:
                             output_schema=output_schema,
                             provider=self.provider_config.tool_provider,
                             datasets=training_data,
-                            model=model,
+                            model_identifier=model_identifier,
+                            model_state=model_state,
+                            final_metric=final_metric,
+                            final_artifacts=final_artifacts,
+                            trainer_source=trainer_source,
+                            predictor_source=predictor_source,
                         )
                     )
             except Exception as e:
