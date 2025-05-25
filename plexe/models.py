@@ -33,29 +33,26 @@ Example:
 >>>    print(prediction)
 """
 
-import os
-import json
 import logging
+import os
 import uuid
-from typing import Dict, List, Type, Any
+import warnings
 from datetime import datetime
+from typing import Dict, List, Type, Any
+from deprecated import deprecated
 
 import pandas as pd
 from pydantic import BaseModel
 
-from plexe.config import prompt_templates
-from plexe.datasets import DatasetGenerator
-from plexe.callbacks import Callback, BuildStateInfo, ChainOfThoughtModelCallback, ModelCheckpointCallback
-from plexe.internal.common.utils.chain_of_thought.emitters import ConsoleEmitter
-from plexe.agents.agents import PlexeAgent
-from plexe.internal.common.datasets.interface import Dataset, TabularConvertible
-from plexe.internal.common.datasets.adapter import DatasetAdapter
-from plexe.internal.common.provider import ProviderConfig
+from plexe.callbacks import Callback
+from plexe.core.interfaces.predictor import Predictor
 from plexe.core.object_registry import ObjectRegistry
+from plexe.core.state import ModelState  # Import from core package
+from plexe.datasets import DatasetGenerator
+from plexe.internal.common.datasets.interface import Dataset
+from plexe.internal.common.provider import ProviderConfig
 from plexe.internal.common.utils.model_utils import calculate_model_size, format_code_snippet
 from plexe.internal.common.utils.pydantic_utils import map_to_basemodel, format_schema
-from plexe.core.state import ModelState  # Import from core package
-from plexe.internal.common.utils.markdown_utils import format_eda_report_markdown
 from plexe.internal.models.entities.artifact import Artifact
 from plexe.internal.models.entities.description import (
     ModelDescription,
@@ -65,7 +62,6 @@ from plexe.internal.models.entities.description import (
     CodeInfo,
 )
 from plexe.internal.models.entities.metric import Metric
-from plexe.core.interfaces.predictor import Predictor
 
 logger = logging.getLogger(__name__)
 
@@ -141,6 +137,7 @@ class Model:
         self.working_dir = f"./workdir/{self.run_id}/"
         os.makedirs(self.working_dir, exist_ok=True)
 
+    @deprecated(reason="Use ModelBuilder.build() instead", version="0.23.0")
     def build(
         self,
         datasets: List[pd.DataFrame | DatasetGenerator],
@@ -156,6 +153,12 @@ class Model:
         """
         Build the model using the provided dataset and optional data generation configuration.
 
+        DEPRECATED: This interface is deprecated. Use ModelBuilder.build() instead:
+
+            from plexe import ModelBuilder
+            builder = ModelBuilder(provider=provider, verbose=verbose, distributed=distributed)
+            model = builder.build(intent=intent, datasets=datasets, ...)
+
         :param datasets: the datasets to use for training the model
         :param provider: the provider to use for model building, either a string or a ProviderConfig
                          for granular control of which models to use for different agent roles
@@ -167,210 +170,58 @@ class Model:
         :param enable_checkpointing: whether to enable automatic checkpointing (default: True)
         :return:
         """
-        # Ensure the object registry is cleared before building
-        self.object_registry.clear()
+        warnings.warn(
+            "Model.build() is deprecated. Use ModelBuilder.build() instead:\n\n"
+            "    from plexe import ModelBuilder\n"
+            "    builder = ModelBuilder(provider=provider, verbose=verbose, distributed=distributed)\n"
+            "    model = builder.build(intent=intent, datasets=datasets, ...)\n",
+            DeprecationWarning,
+            stacklevel=2,
+        )
 
-        # Initialize callbacks list if not provided
-        callbacks = callbacks or []
+        # Import here to avoid circular dependency
+        from plexe.model_builder import ModelBuilder
 
-        # Add automatic checkpointing callback if enabled
-        if enable_checkpointing and not any(isinstance(cb, ModelCheckpointCallback) for cb in callbacks):
-            callbacks.append(ModelCheckpointCallback())
+        # Create builder and delegate to it
+        builder = ModelBuilder(
+            provider=provider,
+            verbose=verbose,
+            distributed=self.distributed,
+            working_dir=self.working_dir,
+        )
 
-        # Add chain of thought callback
-        cot_model_callback = ChainOfThoughtModelCallback(emitter=ConsoleEmitter())
-        callbacks.append(cot_model_callback)
+        # Build the model using ModelBuilder
+        built_model = builder.build(
+            intent=self.intent,
+            datasets=datasets,
+            input_schema=self.input_schema,
+            output_schema=self.output_schema,
+            timeout=timeout,
+            max_iterations=max_iterations,
+            run_timeout=run_timeout,
+            callbacks=callbacks,
+            enable_checkpointing=enable_checkpointing,
+        )
 
-        # Get the underlying callable for use with agents
-        cot_callable = cot_model_callback.get_chain_of_thought_callable()
+        # Copy all results back to self to maintain backwards compatibility
+        for attr in [
+            "input_schema",
+            "output_schema",
+            "predictor",
+            "trainer_source",
+            "predictor_source",
+            "feature_transformer_source",
+            "dataset_splitter_source",
+            "testing_source",
+            "evaluation_report",
+            "artifacts",
+            "metric",
+            "training_data",
+        ]:
+            setattr(self, attr, getattr(built_model, attr))
 
-        # Register all callbacks in the object registry
-        self.object_registry.register_multiple(Callback, {f"{i}": c for i, c in enumerate(callbacks)})
-
-        # Ensure timeout, max_iterations, and run_timeout make sense
-        if timeout is None and max_iterations is None:
-            raise ValueError("At least one of 'timeout' or 'max_iterations' must be set")
-        if run_timeout is not None and timeout is not None and run_timeout > timeout:
-            raise ValueError(f"Run timeout ({run_timeout}s) cannot exceed total timeout ({timeout}s)")
-
-        try:
-            # Convert string provider to config if needed
-            if isinstance(provider, str):
-                provider_config = ProviderConfig(default_provider=provider)
-            else:
-                provider_config = provider
-
-            # We use the tool_provider for schema resolution and tool operations
-            self.state = ModelState.BUILDING
-
-            # Step 1: coerce datasets to supported formats and register them
-            self.training_data = {
-                f"dataset_{i}": DatasetAdapter.coerce((data.data if isinstance(data, DatasetGenerator) else data))
-                for i, data in enumerate(datasets)
-            }
-            self.object_registry.register_multiple(TabularConvertible, self.training_data, immutable=True)
-
-            # Step 2: register input schemas into object registry, if they are provided
-            if self.input_schema is not None:
-                self.object_registry.register(dict, "input_schema", format_schema(self.input_schema), immutable=True)
-            if self.output_schema is not None:
-                self.object_registry.register(dict, "output_schema", format_schema(self.output_schema), immutable=True)
-
-            # Run callbacks for build start
-            for callback in self.object_registry.get_all(Callback).values():
-                try:
-                    # Note: callbacks still receive the actual dataset objects for backward compatibility
-                    callback.on_build_start(
-                        BuildStateInfo(
-                            intent=self.intent,
-                            input_schema=self.input_schema,
-                            output_schema=self.output_schema,
-                            provider=provider_config.tool_provider,  # Use tool_provider for callbacks
-                            run_timeout=run_timeout,
-                            max_iterations=max_iterations,
-                            timeout=timeout,
-                            datasets={
-                                name: self.object_registry.get(TabularConvertible, name)
-                                for name in self.training_data.keys()
-                            },
-                            model=self,  # Include reference to model for checkpoint callback
-                        )
-                    )
-                except Exception as e:
-                    # Log full stack trace at debug level
-                    import traceback
-
-                    logger.debug(
-                        f"Error in callback {callback.__class__.__name__}.on_build_start: {e}\n{traceback.format_exc()}"
-                    )
-
-                    # Log a shorter message at warning level
-                    logger.warning(f"Error in callback {callback.__class__.__name__}.on_build_start: {str(e)[:50]}")
-
-            # Step 4: generate model
-            agent_prompt = prompt_templates.agent_builder_prompt(
-                intent=self.intent,
-                input_schema=json.dumps(format_schema(self.input_schema), indent=4),
-                output_schema=json.dumps(format_schema(self.output_schema), indent=4),
-                datasets=list(self.training_data.keys()),
-                working_dir=self.working_dir,
-                max_iterations=max_iterations,
-                resume=False,
-            )
-
-            agent = PlexeAgent(
-                orchestrator_model_id=provider_config.orchestrator_provider,
-                ml_researcher_model_id=provider_config.research_provider,
-                ml_engineer_model_id=provider_config.engineer_provider,
-                ml_ops_engineer_model_id=provider_config.ops_provider,
-                tool_model_id=provider_config.tool_provider,
-                verbose=verbose,
-                max_steps=30,
-                distributed=self.distributed,
-                chain_of_thought_callable=cot_callable,
-            )
-
-            # Prepare agent args
-            additional_args = {
-                "intent": self.intent,
-                "working_dir": self.working_dir,
-                "input_schema": format_schema(self.input_schema),
-                "output_schema": format_schema(self.output_schema),
-                "max_iterations": max_iterations,
-                "timeout": timeout,
-                "run_timeout": run_timeout,
-            }
-
-            generated = agent.run(agent_prompt, additional_args=additional_args)
-
-            # Capture inferred schemas
-            self.input_schema = map_to_basemodel("InputSchema", self.object_registry.get(dict, "input_schema"))
-            self.output_schema = map_to_basemodel("OutputSchema", self.object_registry.get(dict, "output_schema"))
-
-            # Run callbacks for build end
-            for callback in self.object_registry.get_all(Callback).values():
-                try:
-                    # Note: callbacks still receive the actual dataset objects for backward compatibility
-                    callback.on_build_end(
-                        BuildStateInfo(
-                            intent=self.intent,
-                            input_schema=self.input_schema,
-                            output_schema=self.output_schema,
-                            provider=provider,
-                            run_timeout=run_timeout,
-                            max_iterations=max_iterations,
-                            timeout=timeout,
-                            datasets={
-                                name: self.object_registry.get(TabularConvertible, name)
-                                for name in self.training_data.keys()
-                            },
-                            model=self,  # Include reference to model for checkpoint callback
-                        )
-                    )
-                except Exception as e:
-                    # Log full stack trace at debug level
-                    import traceback
-
-                    logger.debug(
-                        f"Error in callback {callback.__class__.__name__}.on_build_end: {e}\n{traceback.format_exc()}"
-                    )
-
-                    # Log a shorter message at warning level
-                    logger.warning(f"Error in callback {callback.__class__.__name__}.on_build_end: {str(e)[:50]}")
-
-            # Step 4: update model state and attributes
-            self.trainer_source = generated.training_source_code
-            self.predictor_source = generated.inference_source_code
-            self.feature_transformer_source = generated.feature_transformer_source_code
-            self.dataset_splitter_source = generated.dataset_split_code
-            self.testing_source = generated.testing_source_code
-            self.evaluation_report = generated.evaluation_report
-            self.predictor = generated.predictor
-            self.artifacts = generated.model_artifacts
-
-            # Convert Metric object to a dictionary with the entire metric object as the value
-            self.metric = generated.test_performance
-
-            # Store the model metadata from the generation process
-            self.metadata.update(generated.metadata)
-
-            # Store provider information in metadata
-            self.metadata["provider"] = str(provider_config.default_provider)
-            self.metadata["orchestrator_provider"] = str(provider_config.orchestrator_provider)
-            self.metadata["research_provider"] = str(provider_config.research_provider)
-            self.metadata["engineer_provider"] = str(provider_config.engineer_provider)
-            self.metadata["ops_provider"] = str(provider_config.ops_provider)
-            self.metadata["tool_provider"] = str(provider_config.tool_provider)
-
-            # Store EDA results in metadata
-            eda_reports = {}
-            eda_markdown_reports = {}
-            for name, dataset in self.training_data.items():
-                try:
-                    eda_report = self.object_registry.get(dict, f"eda_report_{name}")
-                    eda_reports[name] = eda_report
-                    # Generate markdown version of the report
-                    eda_markdown = format_eda_report_markdown(eda_report)
-                    eda_markdown_reports[name] = eda_markdown
-                except KeyError:
-                    logger.debug(f"No EDA report found for dataset '{name}'")
-
-            # Store both raw and markdown versions in metadata
-            self.metadata["eda_reports"] = eda_reports
-            self.metadata["eda_markdown_reports"] = eda_markdown_reports
-
-            self.state = ModelState.READY
-
-        except Exception as e:
-            self.state = ModelState.ERROR
-            # Log full stack trace at debug level
-            import traceback
-
-            logger.debug(f"Error during model building: {str(e)}\n{traceback.format_exc()}")
-
-            # Log a shorter message at error level
-            logger.error(f"Error during model building: {str(e)[:50]}")
-            raise e
+        self.metadata.update(built_model.metadata)
+        self.state = ModelState.READY
 
     def predict(self, x: Dict[str, Any], validate_input: bool = False, validate_output: bool = False) -> Dict[str, Any]:
         """

@@ -1,4 +1,5 @@
 from .models import Model as Model
+from .model_builder import ModelBuilder as ModelBuilder
 from .datasets import DatasetGenerator as DatasetGenerator
 from .fileio import (
     load_model as load_model,
