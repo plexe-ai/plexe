@@ -81,7 +81,7 @@ def _save_model_to_tar(model: Any, path: str | Path) -> str:
             for key, value in metadata.items():
                 if key in ["metrics", "metadata"]:
                     info = tarfile.TarInfo(f"metadata/{key}.yaml")
-                    content = yaml.dump(value, default_flow_style=False).encode("utf-8")
+                    content = yaml.safe_dump(value, default_flow_style=False).encode("utf-8")
                 else:
                     info = tarfile.TarInfo(f"metadata/{key}.txt")
                     content = str(value).encode("utf-8")
@@ -92,7 +92,7 @@ def _save_model_to_tar(model: Any, path: str | Path) -> str:
             for name, schema in [("input_schema", model.input_schema), ("output_schema", model.output_schema)]:
                 schema_dict = {name: field.annotation.__name__ for name, field in schema.model_fields.items()}
                 info = tarfile.TarInfo(f"schemas/{name}.yaml")
-                content = yaml.dump(schema_dict, default_flow_style=False).encode("utf-8")
+                content = yaml.safe_dump(schema_dict, default_flow_style=False).encode("utf-8")
                 info.size = len(content)
                 tar.addfile(info, io.BytesIO(content))
 
@@ -134,7 +134,7 @@ def _save_model_to_tar(model: Any, path: str | Path) -> str:
             # Save evaluation report if available
             if hasattr(model, "evaluation_report") and model.evaluation_report:
                 info = tarfile.TarInfo("metadata/evaluation_report.yaml")
-                content = yaml.dump(model.evaluation_report, default_flow_style=False).encode("utf-8")
+                content = yaml.safe_dump(model.evaluation_report, default_flow_style=False).encode("utf-8")
                 info.size = len(content)
                 tar.addfile(info, io.BytesIO(content))
 
@@ -340,7 +340,7 @@ def _save_checkpoint_to_tar(model: Any, iteration: int, path: Optional[str | Pat
             for key, value in metadata.items():
                 if key in ["metadata"]:
                     info = tarfile.TarInfo(f"metadata/{key}.yaml")
-                    content = yaml.dump(value, default_flow_style=False).encode("utf-8")
+                    content = yaml.safe_dump(value, default_flow_style=False).encode("utf-8")
                 else:
                     info = tarfile.TarInfo(f"metadata/{key}.txt")
                     content = str(value).encode("utf-8")
@@ -351,7 +351,7 @@ def _save_checkpoint_to_tar(model: Any, iteration: int, path: Optional[str | Pat
             for name, schema in [("input_schema", model.input_schema), ("output_schema", model.output_schema)]:
                 schema_dict = {name: field.annotation.__name__ for name, field in schema.model_fields.items()}
                 info = tarfile.TarInfo(f"schemas/{name}.yaml")
-                content = yaml.dump(schema_dict, default_flow_style=False).encode("utf-8")
+                content = yaml.safe_dump(schema_dict, default_flow_style=False).encode("utf-8")
                 info.size = len(content)
                 tar.addfile(info, io.BytesIO(content))
 
