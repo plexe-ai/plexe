@@ -34,8 +34,20 @@ class TestFileIO:
     """Test cases for fileio module functionality."""
 
     def test_load_model_backwards_compatibility_v0_18_3(self):
-        """Test loading a model bundle from v0.23.0 for backwards compatibility."""
+        """Test loading a model bundle from v0.18.3 for backwards compatibility."""
         fixture_path = Path(__file__).parent.parent / "fixtures/legacy_models/model_v0_18_3.tar.gz"
+
+        if not fixture_path.exists():
+            pytest.skip(f"Legacy model fixture not found: {fixture_path}")
+
+        # Load the legacy model
+        model = fileio.load_model(fixture_path)
+
+        _validate_model(model)
+
+    def test_load_model_backwards_compatibility_v0_23_2(self):
+        """Test loading a model bundle from v0.23.2 for backwards compatibility."""
+        fixture_path = Path(__file__).parent.parent / "fixtures/legacy_models/model_v0_23_2.tar.gz"
 
         if not fixture_path.exists():
             pytest.skip(f"Legacy model fixture not found: {fixture_path}")
