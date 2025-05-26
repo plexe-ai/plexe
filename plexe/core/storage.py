@@ -25,12 +25,23 @@ logger = logging.getLogger(__name__)
 M = TypeVar("M")
 
 
+class FallbackNoneLoader(yaml.SafeLoader):
+    pass
+
+
+def fallback_to_none(loader, tag_suffix, node):
+    return None
+
+
+FallbackNoneLoader.add_multi_constructor("", fallback_to_none)
+
+
 def _load_yaml_or_json_from_tar(tar, yaml_path: str, json_path: str):
     """Load from YAML if available, fallback to JSON for backward compatibility."""
     members = [m.name for m in tar.getmembers()]
     if yaml_path in members:
         content = tar.extractfile(yaml_path).read().decode("utf-8")
-        return yaml.safe_load(content)
+        return yaml.load(content, Loader=FallbackNoneLoader)
     elif json_path in members:
         content = tar.extractfile(json_path).read().decode("utf-8")
         return json.loads(content)
