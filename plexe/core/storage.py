@@ -230,6 +230,8 @@ def _load_model_data_from_tar(path: str | Path) -> Dict[str, Any]:
             predictor_source = None
             if "code/predictor.py" in [m.name for m in tar.getmembers()]:
                 predictor_source = tar.extractfile("code/predictor.py").read().decode("utf-8")
+                # FIXME: this is a hack required to ensure backwards compatibility with old models
+                predictor_source = predictor_source.replace("plexe.internal.models.interfaces", "plexe.core.interfaces")
 
             feature_transformer_source = None
             if "code/feature_transformer.py" in [m.name for m in tar.getmembers()]:
