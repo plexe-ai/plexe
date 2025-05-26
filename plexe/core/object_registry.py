@@ -28,12 +28,11 @@ class ObjectRegistry:
     """
 
     _instance = None
-    _items: Dict[str, Item] = dict()
 
     def __new__(cls):
         if cls._instance is None:
             cls._instance = super(ObjectRegistry, cls).__new__(cls)
-            cls._items = dict()
+            cls._instance._items = {}
         return cls._instance
 
     @staticmethod
@@ -51,10 +50,16 @@ class ObjectRegistry:
         :param immutable: whether the item should be treated as immutable (not modifiable)
         """
         uri = self._get_uri(t, name)
+        was_overwrite = overwrite and uri in self._items
+
         if not overwrite and uri in self._items:
             raise ValueError(f"Item '{uri}' already registered, use a different name")
+
         self._items[uri] = Item(item, immutable=immutable)
-        logger.info(f"Registered item '{uri}'")
+
+        # Enhanced logging with context
+        action = "overwrote" if was_overwrite else "registered"
+        logger.debug(f"Registry: {action} {uri} (immutable={immutable}, total: {len(self._items)} items)")
 
     def register_multiple(
         self, t: Type[T], items: Dict[str, T], overwrite: bool = False, immutable: bool = False
@@ -131,6 +136,17 @@ class ObjectRegistry:
         """
         return list(self._items.keys())
 
+    def list_by_type(self, t: Type[T]) -> List[str]:
+        """
+        List all registered names for a specific type.
+
+        :param t: type prefix for the items
+        :return: List of item names (without the type prefix) for the given type
+        """
+        prefix = str(t)
+        return [uri.split("://")[1] for uri in self._items.keys() if uri.startswith(prefix)]
+
+    # TODO: unclear if this is needed, consider deleting
     def get_all_solutions(self) -> List[Dict[str, Any]]:
         """
         Get all solutions tracked during model building.
