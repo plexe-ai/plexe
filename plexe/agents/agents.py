@@ -25,9 +25,7 @@ from plexe.internal.models.entities.code import Code
 from plexe.internal.models.entities.metric import Metric
 from plexe.internal.models.entities.metric import MetricComparator, ComparisonMethod
 from plexe.core.interfaces.predictor import Predictor
-from plexe.tools.datasets import (
-    create_input_sample,
-)
+from plexe.tools.datasets import create_input_sample, get_latest_datasets
 from plexe.tools.evaluation import get_review_finalised_model
 from plexe.tools.metrics import get_select_target_metric
 from plexe.tools.response_formatting import (
@@ -167,6 +165,7 @@ class PlexeAgent:
                 get_select_target_metric(self.tool_model_id),
                 get_review_finalised_model(self.tool_model_id),
                 create_input_sample,
+                get_latest_datasets,
                 format_final_orchestrator_agent_response,
             ],
             managed_agents=[
@@ -183,7 +182,9 @@ class PlexeAgent:
             verbosity_level=self.orchestrator_verbosity,
             additional_authorized_imports=config.code_generation.authorized_agent_imports,
             max_steps=self.max_steps,
-            prompt_templates=get_prompt_templates("code_agent.yaml", "manager_prompt_templates.yaml"),
+            prompt_templates=get_prompt_templates(
+                base_template_name="code_agent.yaml", override_template_name="manager_prompt_templates.yaml"
+            ),
             planning_interval=7,
             step_callbacks=[self.chain_of_thought_callable],
         )
