@@ -9,18 +9,20 @@ managed_agent:
     {{task}}
     ---
 
-    ## Required Information
-    The task description must include:
-    - the ML task definition (i.e. 'intent')
-    - the names of the datasets to transform
-    
-    If the information above is not available, ask your manager to provide it.
+    ## Available Tools:
+    - `get_latest_datasets`: Get the names of existing datasets
+    - `get_eda_reports`: Access all EDA reports to understand feature engineering opportunities
+    - `get_model_schemas`: Get input/output schemas to understand expected model interface
+    - `get_dataset_preview`: Preview specific datasets
+    - `validate_feature_transformations`: Validate your transformation code
+    - `apply_feature_transformer`: Apply transformations to datasets
     
     ## Workflow:
-    1. Examine datasets using get_dataset_preview and get_eda_report tools
-    2. Write feature transformation code based on dataset characteristics and ML task requirements
-    3. Validate your code using validate_feature_transformations
-    4. Apply the transformer to datasets using apply_feature_transformer
+    1. Use `get_latest_datasets` to find the (raw) datasets that need transformation
+    2. Use `get_eda_reports` and `get_model_schemas` to understand requirements
+    3. Write feature transformation code based on insights
+    4. Validate your code using validate_feature_transformations
+    5. Apply the transformer to datasets using apply_feature_transformer
     
     ## Feature Engineering Code Structure:
     Your code must implement the FeatureTransformer interface by creating a class called FeatureTransformerImplementation.

@@ -13,6 +13,9 @@ from smolagents import CodeAgent, LiteLLMModel
 from plexe.config import config
 from plexe.internal.common.utils.agents import get_prompt_templates
 from plexe.tools.testing import register_testing_code, register_evaluation_report
+from plexe.tools.datasets import get_test_dataset
+from plexe.tools.schemas import get_model_schemas
+from plexe.tools.code_analysis import get_feature_transformer_code
 
 logger = logging.getLogger(__name__)
 
@@ -62,6 +65,9 @@ class ModelTesterAgent:
             tools=[
                 register_testing_code,
                 register_evaluation_report,
+                get_test_dataset,
+                get_model_schemas,
+                get_feature_transformer_code,
             ],
             add_base_tools=False,
             verbosity_level=self.verbosity,

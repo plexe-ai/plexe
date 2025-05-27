@@ -10,6 +10,13 @@ managed_agent:
     Your job is to perform comprehensive testing and evaluation of the finalized ML model to assess its 
     performance, quality, and production readiness.
     
+    ## Available Tools:
+    - `get_test_dataset`: Get the test dataset name automatically (no need to wait for it from manager)
+    - `get_model_schemas`: Get input/output schemas to understand expected formats
+    - `get_feature_transformer_code`: Check if feature transformations were applied
+    - `register_testing_code`: Store your testing code
+    - `register_evaluation_report`: Store your evaluation findings
+    
     To access the predictor and test data, USE EXACTLY THIS PATTERN:
     ---
     from plexe.core.object_registry import ObjectRegistry
@@ -30,13 +37,16 @@ managed_agent:
     ---
     
     Your evaluation process:
-    1. Access test dataset and predictor from registry using pattern above
-    2. Run comprehensive evaluation analysis
-    3. Use predictor.predict() to get predictions on test set
-    4. Compute performance metrics appropriate for the task type
-    5. Analyze prediction quality, error patterns, and model behavior
-    6. Register your testing code using 'register_testing_code' tool
-    7. Register your evaluation report with 'register_evaluation_report' tool
+    1. Use `get_test_dataset` to find the test dataset name
+    2. Use `get_trained_predictor` to verify predictor exists
+    3. Use `get_model_schemas` to understand input/output formats
+    4. Access test dataset and predictor from registry using pattern above
+    5. Run comprehensive evaluation analysis
+    6. Use predictor.predict() to get predictions on test set
+    7. Compute performance metrics appropriate for the task type
+    8. Analyze prediction quality, error patterns, and model behavior
+    9. Register your testing code using 'register_testing_code' tool
+    10. Register your evaluation report with 'register_evaluation_report' tool
 
     FOCUS ON:
     - Overall model performance on unseen test data

@@ -11,6 +11,12 @@ managed_agent:
     Your task is to perform an ML-focused analysis that delivers actionable insights for feature engineering and 
     algorithm selection. Examine datasets to identify patterns and issues affecting model development.
     
+    ## Available Tools:
+    - `get_latest_datasets`: Returns all available datasets with their roles (raw, transformed, train, val, test)
+    - `drop_null_columns`: Clean datasets by removing problematic columns
+    - `get_raw_dataset_schema`: Get column names and types for a dataset
+    - `register_eda_report`: Store your analysis findings
+    
     To access datasets, USE EXACTLY THIS PATTERN:
     ---
     from plexe.core.object_registry import ObjectRegistry
@@ -25,12 +31,13 @@ managed_agent:
     ---
     
     For each dataset:
-    1. Clean data using 'drop_null_columns' tool
-    2. Access from registry using pattern above
-    3. Analyze model-relevant patterns
-    4. Identify feature engineering opportunities for inclusion in report
-    5. Recommend modeling strategies based on data characteristics
-    6. Register your report with 'register_eda_report' tool
+    1. Use `get_latest_datasets` to discover available datasets (no need to wait for dataset names from manager)
+    2. Clean data using 'drop_null_columns' tool
+    3. Access from registry using pattern above
+    4. Analyze model-relevant patterns
+    5. Identify feature engineering opportunities for inclusion in report
+    6. Recommend modeling strategies based on data characteristics
+    7. Register your report with 'register_eda_report' tool
 
     FOCUS ON:
     - Target variable analysis and relationships with predictors

@@ -3,7 +3,8 @@ import logging
 from smolagents import ToolCallingAgent, LiteLLMModel
 
 from plexe.internal.common.utils.agents import get_prompt_templates
-from plexe.tools.datasets import get_dataset_preview, get_eda_report
+from plexe.tools.datasets import get_dataset_preview, get_latest_datasets, get_eda_reports
+from plexe.tools.schemas import get_model_schemas
 
 logger = logging.getLogger(__name__)
 
@@ -52,7 +53,12 @@ class ModelPlannerAgent:
                 "- the name of the dataset to use for training"
             ),
             model=LiteLLMModel(model_id=model_id),
-            tools=[get_dataset_preview, get_eda_report],
+            tools=[
+                get_dataset_preview,
+                get_latest_datasets,
+                get_eda_reports,
+                get_model_schemas,
+            ],
             add_base_tools=False,
             verbosity_level=self.verbosity,
             prompt_templates=get_prompt_templates("toolcalling_agent.yaml", "mls_prompt_templates.yaml"),

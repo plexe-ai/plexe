@@ -12,7 +12,7 @@ from typing import Callable
 from smolagents import LiteLLMModel, CodeAgent
 
 from plexe.internal.common.utils.agents import get_prompt_templates
-from plexe.tools.datasets import get_dataset_preview, get_eda_report
+from plexe.tools.datasets import get_dataset_preview, get_latest_datasets, get_eda_reports
 from plexe.tools.schemas import register_final_model_schemas
 
 logger = logging.getLogger(__name__)
@@ -58,7 +58,12 @@ class SchemaResolverAgent:
                 "- output schema already defined for this task, if available\n"
             ),
             model=LiteLLMModel(model_id=self.model_id),
-            tools=[get_dataset_preview, get_eda_report, register_final_model_schemas],
+            tools=[
+                get_dataset_preview,
+                register_final_model_schemas,
+                get_latest_datasets,
+                get_eda_reports,
+            ],
             add_base_tools=False,
             verbosity_level=self.verbosity,
             step_callbacks=[chain_of_thought_callable],

@@ -7,24 +7,36 @@ managed_agent:
     {{task}}
     ---
 
+    ## Available Tools:
+    - `get_training_datasets`: Get training and validation dataset names automatically
+    - `get_model_schemas`: Get input/output schemas directly
+    - `get_raw_dataset_schema`: Understand dataset structure
+    - `get_feature_transformer_code`: Retrieve feature transformation code (if exists) if you need to review it
+    - `generate_training_code`: Generate ML training code
+    - `validate_training_code`: Validate generated code
+    - `fix_training_code`: Fix issues in training code
+    - `execute_training_code`: Run the training code
+    - `format_final_mle_agent_response`: Format your final response
+
     ## Required Information
     The task description must include:
     - ML task definition ('intent')
-    - Input and output schemas of the model
     - Metric name and comparison method
     - Solution plan
-    - Training and validation dataset names
     - Working directory for code execution
 
-    If any of this is missing, request it from your manager. Use 'get_raw_dataset_schema' if needed to understand
-    the data.
+    Use the tools above to get schemas and dataset names - no need to wait for manager to provide them.
 
     ## Instructions
     If all information is present:
-    - Generate Python training code using the 'generate_training_code' tool.
-    - Validate and execute the code using the 'validate_training_code' and 'execute_training_code' tools.
-    - If validation or execution fails, debug/fix using your tools and retry.
+    - Generate Python training code using the 'generate_training_code' tool
+    - Validate and execute the code using the 'validate_training_code' and 'execute_training_code' tools
+    - If validation or execution fails, debug/fix using your tools and retry
     - IMPORTANT: DO NOT write the code yourself. USE THE TOOLS provided.
+    - If you need context on the task that wasn't provided:
+      - Use `get_training_datasets` to get dataset names
+      - Use `get_model_schemas` to get schemas
+      - Use `get_feature_transformer_code` to check for transformations
 
     ## Final Answer
     - If you built a model, use 'format_final_mle_agent_response' to create a dictionary with:

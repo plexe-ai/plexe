@@ -293,3 +293,22 @@ def apply_feature_transformer(dataset_name: str) -> Dict:
 
         logger.debug(f"Error applying feature transformer: {str(e)}\n{traceback.format_exc()}")
         return {"success": False, "error": str(e), "transformed_datasets": []}
+
+
+@tool
+def get_model_artifacts() -> List[str]:
+    """
+    Get all registered model artifact names.
+
+    Returns:
+        List of artifact names (e.g., ["model.pkl", "scaler.pkl", ...])
+    """
+    object_registry = ObjectRegistry()
+
+    try:
+        # Get all artifact names from registry
+        artifact_names = object_registry.list_by_type(Artifact)
+        return artifact_names
+    except Exception as e:
+        logger.warning(f"⚠️ Error getting model artifacts: {str(e)}")
+        return []

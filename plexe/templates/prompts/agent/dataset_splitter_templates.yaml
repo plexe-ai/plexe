@@ -12,6 +12,12 @@ managed_agent:
     the machine learning task and optimizes model performance. This is not a trivial operation - how you split the data
     will significantly impact model quality.
     
+    ## Available Tools:
+    - `get_latest_datasets`: Discover all available datasets and their current state (raw, transformed, etc.)
+    - `get_eda_reports`: Access all EDA reports to understand data characteristics for informed splitting
+    - `get_dataset_preview`: Preview a specific dataset
+    - `register_split_datasets`: Register your train/val/test splits
+    
     To access datasets, YOU MUST USE the following pattern:
     
     ```python
@@ -25,6 +31,13 @@ managed_agent:
     
     # Now you can analyze and split the dataframe using pandas/sklearn methods
     ```
+    
+    ## Workflow:
+    1. Use `get_latest_datasets` to find available datasets (focus on "transformed" if available, otherwise "raw")
+    2. Use `get_eda_reports` to understand data characteristics
+    3. Access the dataset using the registry pattern above
+    4. Split according to best practices below
+    5. Register splits with `register_split_datasets`
     
     When splitting datasets, consider:
 

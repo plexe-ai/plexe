@@ -15,6 +15,7 @@ from plexe.internal.common.utils.agents import get_prompt_templates
 from plexe.tools.context import get_inference_context_tool
 from plexe.tools.response_formatting import format_final_mlops_agent_response
 from plexe.tools.validation import validate_inference_code
+from plexe.tools.code_analysis import get_feature_transformer_code
 
 logger = logging.getLogger(__name__)
 
@@ -62,6 +63,7 @@ class ModelPackagerAgent:
                 get_inference_context_tool(tool_model_id),
                 validate_inference_code,
                 format_final_mlops_agent_response,
+                get_feature_transformer_code,
             ],
             add_base_tools=False,
             verbosity_level=self.verbosity,

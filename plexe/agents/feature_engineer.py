@@ -12,9 +12,10 @@ from smolagents import CodeAgent, LiteLLMModel
 
 from plexe.config import config
 from plexe.internal.common.utils.agents import get_prompt_templates
-from plexe.tools.datasets import get_dataset_preview, get_eda_report
+from plexe.tools.datasets import get_dataset_preview, get_eda_reports, get_latest_datasets
 from plexe.tools.execution import apply_feature_transformer
 from plexe.tools.validation import validate_feature_transformations
+from plexe.tools.schemas import get_model_schemas
 
 logger = logging.getLogger(__name__)
 
@@ -58,9 +59,11 @@ class FeatureEngineeringAgent:
             model=LiteLLMModel(model_id=model_id),
             tools=[
                 get_dataset_preview,
-                get_eda_report,
                 validate_feature_transformations,
                 apply_feature_transformer,
+                get_latest_datasets,
+                get_eda_reports,
+                get_model_schemas,
             ],
             add_base_tools=False,
             additional_authorized_imports=config.code_generation.authorized_agent_imports

@@ -104,3 +104,40 @@ def get_raw_dataset_schema(dataset_name: str) -> Dict[str, Any]:
         schema[col] = py_type
 
     return {"dataset_name": dataset_name, "columns": schema}
+
+
+@tool
+def get_model_schemas() -> Dict[str, Dict[str, str]]:
+    """
+    Get input and output schemas if available.
+
+    Returns:
+        Dictionary with 'input' and 'output' schemas (if registered).
+        Each schema is a dict mapping field names to types.
+        Returns empty dict for missing schemas.
+    """
+    object_registry = ObjectRegistry()
+    result = {}
+
+    try:
+        # Try to get input schema
+        try:
+            input_schema = object_registry.get(dict, "input_schema")
+            if input_schema:
+                result["input"] = input_schema
+        except KeyError:
+            logger.debug("Input schema not found in registry")
+
+        # Try to get output schema
+        try:
+            output_schema = object_registry.get(dict, "output_schema")
+            if output_schema:
+                result["output"] = output_schema
+        except KeyError:
+            logger.debug("Output schema not found in registry")
+
+        return result
+
+    except Exception as e:
+        logger.warning(f"⚠️ Error getting model schemas: {str(e)}")
+        return {}
