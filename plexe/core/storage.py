@@ -14,6 +14,7 @@ import tarfile
 import datetime
 from pathlib import Path
 from typing import Any, Dict, List, Optional, TypeVar, Type
+import numpy as np
 
 from plexe.core.state import ModelState
 from plexe.config import config
@@ -34,6 +35,43 @@ def fallback_to_none(loader, tag_suffix, node):
 
 
 FallbackNoneLoader.add_multi_constructor("", fallback_to_none)
+
+
+def _convert_to_native_types(obj):
+    """Recursively convert numpy types and other non-native types to Python native types.
+
+    Falls back to string representation for any type that can't be converted.
+    """
+    try:
+        if isinstance(obj, np.generic):
+            # Convert numpy scalars to native Python types
+            return obj.item()
+        elif isinstance(obj, np.ndarray):
+            # Convert numpy arrays to lists
+            return obj.tolist()
+        elif isinstance(obj, dict):
+            # Recursively convert dictionary values
+            return {k: _convert_to_native_types(v) for k, v in obj.items()}
+        elif isinstance(obj, (list, tuple)):
+            # Recursively convert list/tuple elements
+            return type(obj)(_convert_to_native_types(item) for item in obj)
+        elif isinstance(obj, (str, int, float, bool, type(None))):
+            # Native types are already safe
+            return obj
+        elif hasattr(obj, "__dict__"):
+            # For custom objects, try to convert to dict
+            try:
+                return _convert_to_native_types(obj.__dict__)
+            except Exception:
+                # If that fails, convert to string representation
+                return str(obj)
+        else:
+            # For any other type, try to convert to string
+            return str(obj)
+    except Exception as e:
+        # Ultimate fallback - if anything goes wrong, return string representation
+        logger.warning(f"Failed to convert object of type {type(obj).__name__}: {e}. Using string representation.")
+        return str(obj)
 
 
 def _load_yaml_or_json_from_tar(tar, yaml_path: str, json_path: str):
@@ -74,9 +112,9 @@ def _save_model_to_tar(model: Any, path: str | Path) -> str:
             if hasattr(model, "metric") and model.metric:
                 metrics_data = {
                     "name": model.metric.name,
-                    "value": model.metric.value,
+                    "value": _convert_to_native_types(model.metric.value),
                     "comparison_method": model.metric.comparator.comparison_method.value,
-                    "target": model.metric.comparator.target,
+                    "target": _convert_to_native_types(model.metric.comparator.target),
                 }
 
             # Gather metadata
@@ -92,7 +130,9 @@ def _save_model_to_tar(model: Any, path: str | Path) -> str:
             for key, value in metadata.items():
                 if key in ["metrics", "metadata"]:
                     info = tarfile.TarInfo(f"metadata/{key}.yaml")
-                    content = yaml.safe_dump(value, default_flow_style=False).encode("utf-8")
+                    # Ensure all values are serializable
+                    safe_value = _convert_to_native_types(value)
+                    content = yaml.safe_dump(safe_value, default_flow_style=False).encode("utf-8")
                 else:
                     info = tarfile.TarInfo(f"metadata/{key}.txt")
                     content = str(value).encode("utf-8")
@@ -145,7 +185,9 @@ def _save_model_to_tar(model: Any, path: str | Path) -> str:
             # Save evaluation report if available
             if hasattr(model, "evaluation_report") and model.evaluation_report:
                 info = tarfile.TarInfo("metadata/evaluation_report.yaml")
-                content = yaml.safe_dump(model.evaluation_report, default_flow_style=False).encode("utf-8")
+                # Convert numpy types to native Python types before serialization
+                evaluation_report_native = _convert_to_native_types(model.evaluation_report)
+                content = yaml.safe_dump(evaluation_report_native, default_flow_style=False).encode("utf-8")
                 info.size = len(content)
                 tar.addfile(info, io.BytesIO(content))
 
