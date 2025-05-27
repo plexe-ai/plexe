@@ -55,7 +55,7 @@ class EdaAgent:
                 "and recommendations for ML modeling. Will analyse existing datasets, not create new ones.\n"
                 "To work effectively, as part of the 'task' prompt the agent STRICTLY requires:\n"
                 "- the ML task definition (i.e. 'intent')\n"
-                "- the name of the dataset to use for training"
+                "- the name of the dataset to be analysed"
             ),
             model=LiteLLMModel(model_id=self.model_id),
             tools=[drop_null_columns, register_eda_report, get_raw_dataset_schema, get_latest_datasets],

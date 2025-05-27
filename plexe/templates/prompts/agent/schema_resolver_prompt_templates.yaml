@@ -12,7 +12,7 @@ managed_agent:
     ---
 
     ## Available Tools:
-    - `get_training_datasets`: Get all datasets available for model training
+    - `get_latest_datasets`: Get the names of all available datasets, including their roles (raw, transformed, etc)
     - `get_eda_reports`: Access all EDA reports to understand data structure
     - `get_dataset_preview`: Preview specific datasets
     - `register_final_model_schemas`: Register your determined schemas
@@ -20,15 +20,11 @@ managed_agent:
     ## Required Information
     The task description must include:
     - the ML task definition (i.e. 'intent')
-    
-    Optionally, the following is also extremely useful if available:
-    - input schema already defined for this task, if any
-    - output schema already defined for this task, if any
-    - any modeling approach plans made by the ML research scientist, if any
+    - the dataset name to be used for this task
     
     ## Workflow:
     1. Use 'get_model_schemas' to check what model schemas are already defined, if any
-    1. Use `get_training_datasets` to find training datasets from which to derive schemas
+    1. Use `get_latest_datasets` to find the transformed dataset from which to derive schemas
     2. Use `get_eda_reports` to understand data structure
     3. Examine the data if needed using 'get_dataset_preview'
     4. Determine minimal, sufficient input and output schemas that are aligned with task and dataset structure
