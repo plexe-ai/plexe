@@ -12,8 +12,8 @@ from typing import Callable
 from smolagents import LiteLLMModel, CodeAgent
 
 from plexe.internal.common.utils.agents import get_prompt_templates
-from plexe.tools.datasets import get_dataset_preview, get_latest_datasets, get_eda_reports
-from plexe.tools.schemas import register_final_model_schemas
+from plexe.tools.datasets import get_dataset_preview, get_eda_reports, get_training_datasets
+from plexe.tools.schemas import register_final_model_schemas, get_model_schemas
 
 logger = logging.getLogger(__name__)
 
@@ -53,15 +53,13 @@ class SchemaResolverAgent:
                 "Expert schema resolver that determines appropriate input and output schemas for ML models. "
                 "To work effectively, as part of the 'task' prompt the agent STRICTLY requires:\n"
                 "- the ML task definition (i.e. 'intent')\n"
-                "- the NAME of the dataset to be used for training\n"
-                "- input schema already defined for this task, if available\n"
-                "- output schema already defined for this task, if available\n"
             ),
             model=LiteLLMModel(model_id=self.model_id),
             tools=[
                 get_dataset_preview,
+                get_model_schemas,
                 register_final_model_schemas,
-                get_latest_datasets,
+                get_training_datasets,
                 get_eda_reports,
             ],
             add_base_tools=False,
