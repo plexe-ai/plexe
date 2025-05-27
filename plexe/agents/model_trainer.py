@@ -12,7 +12,7 @@ from plexe.config import config
 from plexe.internal.common.utils.agents import get_prompt_templates
 from plexe.tools.execution import get_executor_tool
 from plexe.tools.response_formatting import format_final_mle_agent_response
-from plexe.tools.schemas import get_raw_dataset_schema, get_model_schemas
+from plexe.tools.schemas import get_dataset_schema, get_model_schemas
 from plexe.tools.training import get_training_code_generation_tool, get_training_code_fixing_tool
 from plexe.tools.validation import validate_training_code
 from plexe.tools.datasets import get_training_datasets
@@ -58,7 +58,7 @@ class ModelTrainerAgent:
             tools=[
                 get_training_code_generation_tool(tool_model_id),
                 validate_training_code,
-                get_raw_dataset_schema,
+                get_dataset_schema,
                 get_training_code_fixing_tool(tool_model_id),
                 get_executor_tool(distributed),
                 format_final_mle_agent_response,

@@ -2,12 +2,13 @@
 This module defines a multi-agent ML engineering system for building machine learning models.
 """
 
+import json
 import logging
 import types
 from dataclasses import dataclass, field
 from typing import List, Dict, Optional, Callable
 
-from smolagents import CodeAgent, LiteLLMModel
+from smolagents import CodeAgent, LiteLLMModel, AgentText
 
 from plexe.agents.dataset_analyser import EdaAgent
 from plexe.agents.dataset_splitter import DatasetSplitterAgent
@@ -205,6 +206,9 @@ class PlexeAgent:
             # Only log the full result when in verbose mode
             if logger.isEnabledFor(logging.DEBUG):
                 logger.debug("Agent result: %s", result)
+
+            if isinstance(result, AgentText):
+                result = json.loads(str(result))
 
             # Extract data from the agent result
             training_code_id = result.get("training_code_id", "")

@@ -74,9 +74,10 @@ def register_final_model_schemas(
 
 
 @tool
-def get_raw_dataset_schema(dataset_name: str) -> Dict[str, Any]:
+def get_dataset_schema(dataset_name: str) -> Dict[str, Any]:
     """
-    Extract the schema (column names and types) from a raw dataset.
+    Extract the schema (column names and types) from a dataset. This is useful for understanding the structure
+    of the dataset and how it can be used in model training.
 
     Args:
         dataset_name: Name of the dataset in the registry

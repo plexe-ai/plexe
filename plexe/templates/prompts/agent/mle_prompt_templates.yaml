@@ -10,7 +10,7 @@ managed_agent:
     ## Available Tools:
     - `get_training_datasets`: Get training and validation dataset names automatically
     - `get_model_schemas`: Get input/output schemas directly
-    - `get_raw_dataset_schema`: Understand dataset structure
+    - `get_dataset_schema`: Understand dataset structure
     - `get_feature_transformer_code`: Retrieve feature transformation code (if exists) if you need to review it
     - `generate_training_code`: Generate ML training code
     - `validate_training_code`: Validate generated code

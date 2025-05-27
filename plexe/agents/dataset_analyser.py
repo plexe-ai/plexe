@@ -13,7 +13,7 @@ from smolagents import LiteLLMModel, CodeAgent
 from plexe.config import config, prompt_templates
 from plexe.internal.common.utils.agents import get_prompt_templates
 from plexe.tools.datasets import register_eda_report, drop_null_columns, get_latest_datasets
-from plexe.tools.schemas import get_raw_dataset_schema
+from plexe.tools.schemas import get_dataset_schema
 
 logger = logging.getLogger(__name__)
 
@@ -58,7 +58,7 @@ class EdaAgent:
                 "- the name of the dataset to be analysed"
             ),
             model=LiteLLMModel(model_id=self.model_id),
-            tools=[drop_null_columns, register_eda_report, get_raw_dataset_schema, get_latest_datasets],
+            tools=[drop_null_columns, register_eda_report, get_dataset_schema, get_latest_datasets],
             add_base_tools=False,
             verbosity_level=self.verbosity,
             # planning_interval=3,
