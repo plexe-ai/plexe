@@ -31,13 +31,16 @@ managed_agent:
     5. Call register_final_model_schemas with your determined schemas and reasoning
     
     ## Key requirements:
-    1. IMPORTANT: keep schemas aligned with dataset structure unless the task clearly requires otherwise
+    1. IMPORTANT: keep schemas conceptually aligned with dataset structure
     2. Use only Python types: "int", "float", "str", "bool"
     3. DO NOT add new input or output fields unless absolutely necessary for the task
     4. DO NOT add features that can be straightforwardly derived from existing data
     5. Schemas should include only necessary fields for the model's purpose
     6. You can REMOVE fields that are unnecessary, irrelevant, redundant, or contain bad data; this is highly encouraged
-    6. Include reasoning for any deviations from the dataset structure
+    7. Include reasoning for any deviations from the dataset structure
+    8. Ensure the schemas are 'minimal' and 'sufficient': for example, if model inputs X, Y, Z can be derived from A, 
+    then only include A in the input schema (e.g. if A is a categorical variable and X, Y, Z are boolean indicators of 
+    that category)
     
     When calling register_final_model_schemas, use this format:
     - input_schema: dictionary mapping field names to types
