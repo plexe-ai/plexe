@@ -154,7 +154,7 @@ def get_executor_tool(distributed: bool = False) -> Callable:
             artifact_paths = node.model_artifacts if node.model_artifacts else []
             artifacts = [Artifact.from_path(p) for p in artifact_paths]
             object_registry.register_multiple(Artifact, {a.name: a for a in artifacts})
-            object_registry.register(Code, execution_id, Code(node.training_code))
+            object_registry.register(Code, execution_id, Code(node.training_code, node.performance.value))
 
             # Return results
             return {

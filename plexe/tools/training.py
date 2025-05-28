@@ -17,13 +17,13 @@ logger = logging.getLogger(__name__)
 
 
 @tool
-def register_best_training_code(best_training_code_identifier: str) -> str:
+def register_best_training_code(best_training_code_id: str) -> str:
     """
     Register the identifier returned by the MLEngineer for the solution with the best performance in the object
     registry. This step is required in order for the training code to be available for future use.
 
     Args:
-        best_training_code_identifier: Solution identifier of the best performing model (e.g. "linear_regression_2349384290348923")
+        best_training_code_id: 'training_code_id' of the best performing model
 
     Returns:
         Success message confirming registration
@@ -33,7 +33,7 @@ def register_best_training_code(best_training_code_identifier: str) -> str:
     try:
         # Register the testing code with a fixed ID
         code_id = "best_performing_training_code"
-        code = object_registry.get(Code, best_training_code_identifier).code
+        code = object_registry.get(Code, best_training_code_id).code
         object_registry.register(Code, code_id, Code(code), overwrite=True, immutable=True)
 
         logger.debug(f"✅ Registered model training code with ID '{code_id}'")

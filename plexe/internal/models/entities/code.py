@@ -10,3 +10,4 @@ class Code:
     """Represents a code object."""
 
     code: str = field()
+    performance: float = field(default=None)

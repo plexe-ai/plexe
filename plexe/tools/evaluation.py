@@ -61,3 +61,30 @@ def get_review_finalised_model(llm_to_use: str) -> Callable:
         )
 
     return review_finalised_model
+
+
+@tool
+def get_model_performances() -> Dict[str, float]:
+    """
+    Returns the performance of all successfully trained models so far. The performances are returned as a dictionary
+    mapping the 'model training ID' to the performance score. Use this function to remind yourself of the performance
+    of all models, so that you can do things such as select the best performing model for deployment.
+
+    Returns:
+        A dictionary mapping model IDs to their performance scores with structure:
+        {
+            "model_training_id_1": performance_score_1,
+            "model_training_id_2": performance_score_2,
+        }
+    """
+    from plexe.core.object_registry import ObjectRegistry
+
+    object_registry = ObjectRegistry()
+    performances = {}
+
+    for code_id in object_registry.list_by_type(Code):
+        code = object_registry.get(Code, code_id)
+        if code.performance is not None:
+            performances[code_id] = code.performance
+
+    return performances

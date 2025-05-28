@@ -27,7 +27,7 @@ from plexe.internal.models.entities.metric import Metric
 from plexe.internal.models.entities.metric import MetricComparator, ComparisonMethod
 from plexe.core.interfaces.predictor import Predictor
 from plexe.tools.datasets import create_input_sample, get_latest_datasets
-from plexe.tools.evaluation import get_review_finalised_model
+from plexe.tools.evaluation import get_review_finalised_model, get_model_performances
 from plexe.tools.metrics import get_select_target_metric
 from plexe.tools.response_formatting import (
     format_final_orchestrator_agent_response,
@@ -168,6 +168,7 @@ class PlexeAgent:
                 get_review_finalised_model(self.tool_model_id),
                 create_input_sample,
                 get_latest_datasets,
+                get_model_performances,
                 register_best_training_code,
                 format_final_orchestrator_agent_response,
             ],

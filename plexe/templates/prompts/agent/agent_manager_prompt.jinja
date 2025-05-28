@@ -59,6 +59,8 @@ Ensure the output maximizes model performance while adhering to all constraints.
   exactly 0 is almost certainly a bugged model or a sign of overfitting, so this should be ignored.
 - 'MLEngineer' should only be asked to work on implementing ONE plan at a time.
 - 'MLOperationsEngineer' only needs to work on the final, best performing model.
+- Use the 'get_model_performances' tool to remind yourself of the performance of the models
+  produced by 'MLEngineer' before deciding which one is the best.
 - Use the 'register_best_training_code' tool to make the training code of the best performing model available for
   subsequent instructions.
 - 'MLEngineer' and 'MLOperationsEngineer' return IDs that identify the code they produce. Use these IDs to refer to the
