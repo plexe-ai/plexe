@@ -283,7 +283,7 @@ def apply_feature_transformer(dataset_name: str) -> Dict:
         # Register transformed dataset
         transformed_name = f"{dataset_name}_transformed"
         transformed_ds = DatasetAdapter.coerce(transformed_df)
-        object_registry.register(TabularConvertible, transformed_name, transformed_ds, overwrite=True)
+        object_registry.register(TabularConvertible, transformed_name, transformed_ds, overwrite=True, immutable=True)
 
         logger.debug(f"✅ Applied feature transformer to {dataset_name} → {transformed_name}")
 
