@@ -53,10 +53,8 @@ class ModelPackagerAgent:
             name="MLOperationsEngineer",
             description=(
                 "Expert ML operations engineer that analyzes training code and creates high-quality production-ready "
-                "inference code for ML models. To work effectively, as part of the 'task' prompt the agent STRICTLY requires:"
-                "- input schema for the model"
-                "- output schema for the model"
-                "- the 'training code id' of the training code produced by the MLEngineer agent"
+                "inference code for ML models. This agent STRICTLY requires the training code of the best model to have "
+                "been registered in the object registry."
             ),
             model=LiteLLMModel(model_id=model_id),
             tools=[

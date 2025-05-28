@@ -8,10 +8,40 @@ from typing import List, Callable
 
 from smolagents import tool
 
+from plexe.core.object_registry import ObjectRegistry
 from plexe.internal.common.provider import Provider
+from plexe.internal.models.entities.code import Code
 from plexe.internal.models.generation.training import TrainingCodeGenerator
 
 logger = logging.getLogger(__name__)
+
+
+@tool
+def register_best_training_code(best_training_code_identifier: str) -> str:
+    """
+    Register the identifier returned by the MLEngineer for the solution with the best performance in the object
+    registry. This step is required in order for the training code to be available for future use.
+
+    Args:
+        best_training_code_identifier: Solution identifier of the best performing model (e.g. "linear_regression_2349384290348923")
+
+    Returns:
+        Success message confirming registration
+    """
+    object_registry = ObjectRegistry()
+
+    try:
+        # Register the testing code with a fixed ID
+        code_id = "best_performing_training_code"
+        code = object_registry.get(Code, best_training_code_identifier).code
+        object_registry.register(Code, code_id, Code(code), overwrite=True, immutable=True)
+
+        logger.debug(f"✅ Registered model training code with ID '{code_id}'")
+        return f"Successfully registered model training code with ID '{code_id}' for the best performing model."
+
+    except Exception as e:
+        logger.warning(f"⚠️ Error registering training code: {str(e)}")
+        raise RuntimeError(f"Failed to register training code: {str(e)}")
 
 
 def get_training_code_generation_tool(llm_to_use: str) -> Callable:

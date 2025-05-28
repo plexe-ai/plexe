@@ -21,14 +21,11 @@ def get_inference_context_tool(llm_to_use: str) -> Callable:
     """Returns a tool function to get inference context with the model ID pre-filled."""
 
     @tool
-    def get_inference_context(training_code_id: str) -> Dict[str, Any]:
+    def get_inference_context() -> Dict[str, Any]:
         """
         Provides comprehensive context needed for generating inference code. Use this tool to retrieve
         a summary of the training code, schemas, expected inputs for the purpose of planning the inference
         code.
-
-        Args:
-            training_code_id: The ID of the code that was used to train the model
 
         Returns:
             A dictionary containing all context needed for inference code generation
@@ -37,9 +34,9 @@ def get_inference_context_tool(llm_to_use: str) -> Callable:
 
         # Retrieve training code
         try:
-            training_code = object_registry.get(Code, training_code_id).code
+            training_code = object_registry.get(Code, "best_performing_training_code").code
         except Exception as e:
-            raise ValueError(f"Training code with ID {training_code_id} not found: {str(e)}")
+            raise ValueError(f"Training code with ID 'best_performing_training_code' not found: {str(e)}")
 
         # Retrieve schemas
         try:

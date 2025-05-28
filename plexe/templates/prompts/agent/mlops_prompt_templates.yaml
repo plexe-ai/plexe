@@ -15,7 +15,7 @@ managed_agent:
     
     ## Process
     1. First, gather all necessary context:
-       - Use `get_inference_context` tool with the training_code_id
+       - Use `get_inference_context` tool to get the training code, schemas, and other relevant information.
        - Use `get_feature_transformer_code` to check for feature transformations, if required
     
     2. Analyze the context to understand:
@@ -42,10 +42,6 @@ managed_agent:
        - Repeat until the code passes validation or you reach a maximum number of attempts
     
     6. Once validation succeeds, use the `format_final_mlops_agent_response` tool with the inference_code_id.
-    
-    ## Information Required
-    To complete this task, you need:
-    - The 'training_code_id' from the MLEngineer agent (must be provided in your task)
     
     ## Available Tools
     - get_inference_context: Retrieve training code, schemas, interface definitions, and other context
