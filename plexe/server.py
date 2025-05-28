@@ -56,14 +56,14 @@ async def websocket_endpoint(websocket: WebSocket):
 
                 # Process the message with the agent
                 logger.debug(f"Processing message: {user_message[:100]}...")
-                response = agent.agent.run(user_message)
+                response = agent.agent.run(user_message, reset=False)
 
                 # Send response back to client
                 await websocket.send_json({"role": "assistant", "content": response, "id": str(uuid.uuid4())})
 
             except json.JSONDecodeError:
                 # Handle plain text messages for compatibility
-                response = agent.agent.run(data)
+                response = agent.agent.run(data, reset=False)
                 await websocket.send_json({"role": "assistant", "content": response, "id": str(uuid.uuid4())})
 
             except Exception as e:
