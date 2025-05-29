@@ -67,4 +67,5 @@ class Solution:
 
     # Evaluations and analyses
     analysis: str = field(default=None, kw_only=True)
+    review: Dict[str, str] = field(default=None, kw_only=True)
     model_evaluation_report: Dict[str, any] = field(default_factory=dict, kw_only=True)

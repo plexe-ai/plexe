@@ -162,7 +162,7 @@ class ObjectRegistry:
 
         # Extract training code and their results
         from plexe.internal.models.entities.code import Code
-        from plexe.internal.models.entities.solution import Solution
+        from plexe.core.entities.solution import Solution
 
         # Get all code objects
         code_items = self.get_all(Code)

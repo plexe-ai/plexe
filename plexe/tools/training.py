@@ -10,38 +10,40 @@ from smolagents import tool
 
 from plexe.core.object_registry import ObjectRegistry
 from plexe.internal.common.provider import Provider
-from plexe.internal.models.entities.code import Code
 from plexe.internal.models.generation.training import TrainingCodeGenerator
 
 logger = logging.getLogger(__name__)
 
 
 @tool
-def register_best_training_code(best_training_code_id: str) -> str:
+def register_best_solution(best_solution_id: str) -> str:
     """
-    Register the identifier returned by the MLEngineer for the solution with the best performance in the object
-    registry. This step is required in order for the training code to be available for future use.
+    Register the solution with the best performance as the final selected solution in the object
+    registry. This step is required in order for the solution to be available for final model building.
 
     Args:
-        best_training_code_id: 'training_code_id' of the best performing model
+        best_solution_id: 'solution_id' of the best performing solution
 
     Returns:
         Success message confirming registration
     """
+    from plexe.core.entities.solution import Solution
+
     object_registry = ObjectRegistry()
 
     try:
-        # Register the testing code with a fixed ID
-        code_id = "best_performing_training_code"
-        code = object_registry.get(Code, best_training_code_id).code
-        object_registry.register(Code, code_id, Code(code), overwrite=True, immutable=True)
+        # Get the best solution
+        best_solution = object_registry.get(Solution, best_solution_id)
 
-        logger.debug(f"✅ Registered model training code with ID '{code_id}'")
-        return f"Successfully registered model training code with ID '{code_id}' for the best performing model."
+        # Register the solution with a fixed ID for easy retrieval
+        object_registry.register(Solution, "best_performing_solution", best_solution, overwrite=True)
+
+        logger.debug(f"✅ Registered best performing solution with ID '{best_solution_id}'")
+        return f"Successfully registered solution with ID '{best_solution_id}' as the best performing solution."
 
     except Exception as e:
-        logger.warning(f"⚠️ Error registering training code: {str(e)}")
-        raise RuntimeError(f"Failed to register training code: {str(e)}")
+        logger.warning(f"⚠️ Error registering best solution: {str(e)}")
+        raise RuntimeError(f"Failed to register best solution: {str(e)}")
 
 
 def get_training_code_generation_tool(llm_to_use: str) -> Callable:

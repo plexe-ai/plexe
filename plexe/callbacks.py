@@ -14,7 +14,7 @@ from typing import Optional, Type, Dict, Any
 from pydantic import BaseModel
 
 from plexe.internal.common.datasets.interface import TabularConvertible
-from plexe.internal.models.entities.solution import Solution
+from plexe.core.entities.solution import Solution
 
 logger = logging.getLogger(__name__)
 
