@@ -62,27 +62,28 @@ def get_review_finalised_model(llm_to_use: str) -> Callable:
 
 
 @tool
-def get_model_performances() -> Dict[str, float]:
+def get_solution_performances() -> Dict[str, float]:
     """
-    Returns the performance of all successfully trained models so far. The performances are returned as a dictionary
-    mapping the 'model training ID' to the performance score. Use this function to remind yourself of the performance
-    of all models, so that you can do things such as select the best performing model for deployment.
+    Returns the performance of all successfully trained solutions so far. The performances are returned as a dictionary
+    mapping the 'solution ID' to the performance score. Use this function to remind yourself of the performance
+    of all solutions, so that you can do things such as select the best performing solution for deployment.
 
     Returns:
-        A dictionary mapping model IDs to their performance scores with structure:
+        A dictionary mapping solution IDs to their performance scores with structure:
         {
-            "model_training_id_1": performance_score_1,
-            "model_training_id_2": performance_score_2,
+            "solution_id_1": performance_score_1,
+            "solution_id_2": performance_score_2,
         }
     """
     from plexe.core.object_registry import ObjectRegistry
+    from plexe.core.entities.solution import Solution
 
     object_registry = ObjectRegistry()
     performances = {}
 
-    for code_id in object_registry.list_by_type(Code):
-        code = object_registry.get(Code, code_id)
-        if code.performance is not None:
-            performances[code_id] = code.performance
+    for solution_id in object_registry.list_by_type(Solution):
+        solution = object_registry.get(Solution, solution_id)
+        if solution.performance is not None and solution.performance.value is not None:
+            performances[solution_id] = solution.performance.value
 
     return performances

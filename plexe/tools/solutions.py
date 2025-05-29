@@ -6,7 +6,7 @@ that represent complete ML approaches from planning through execution.
 """
 
 import logging
-from typing import Dict
+from typing import Dict, List
 
 from smolagents import tool
 
@@ -55,3 +55,47 @@ def create_solution(plan: str) -> Dict[str, str]:
     except Exception as e:
         logger.warning(f"⚠️ Error creating solution: {str(e)}")
         raise RuntimeError(f"Failed to create solution: {str(e)}")
+
+
+@tool
+def get_solution_plan_by_id(solution_id: str) -> str:
+    """
+    Retrieves a model solution plan by its ID.
+
+    Args:
+        solution_id: ID of the Solution
+
+    Returns:
+        The plan string of the Solution
+    """
+    object_registry = ObjectRegistry()
+
+    try:
+        solution = object_registry.get(Solution, solution_id)
+        return solution.plan if solution.plan else "No plan available for this solution"
+
+    except Exception as e:
+        logger.warning(f"⚠️ Error retrieving solution plan: {str(e)}")
+        raise RuntimeError(f"Failed to retrieve solution plan: {str(e)}")
+
+
+@tool
+def list_solutions() -> List[str]:
+    """
+    Lists all Solution IDs currently available. Use this tool to see all available solutions if you run into
+    issues with retrieving a specific solution.
+
+    Returns:
+        List of solution IDs currently available
+    """
+    object_registry = ObjectRegistry()
+
+    try:
+        solution_ids = object_registry.list_by_type(Solution)
+
+        logger.debug(f"✅ Available solutions: {solution_ids}")
+        return solution_ids
+
+    except Exception as e:
+        logger.warning(f"⚠️ Error listing solutions: {str(e)}")
+        raise RuntimeError(f"Failed to list solutions: {str(e)}")

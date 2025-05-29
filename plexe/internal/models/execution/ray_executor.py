@@ -159,13 +159,13 @@ class RayExecutor(Executor):
                     term_out=[result["stdout"]],
                     exec_time=result["exec_time"],
                     exception=RuntimeError(result["stderr"]),
-                    model_artifacts=result["model_artifacts"],
+                    model_artifact_paths=result["model_artifacts"],
                 )
 
             return ExecutionResult(
                 term_out=[result["stdout"]],
                 exec_time=result["exec_time"],
-                model_artifacts=result["model_artifacts"],
+                model_artifact_paths=result["model_artifacts"],
                 performance=extract_performance(result["stdout"]),
             )
 

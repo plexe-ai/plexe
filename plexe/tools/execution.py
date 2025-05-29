@@ -21,7 +21,7 @@ from plexe.core.object_registry import ObjectRegistry
 from plexe.internal.models.entities.code import Code
 from plexe.internal.models.entities.artifact import Artifact
 from plexe.internal.models.entities.metric import Metric, MetricComparator, ComparisonMethod
-from plexe.internal.models.entities.solution import Solution
+from plexe.core.entities.solution import Solution
 from plexe.internal.models.execution.process_executor import ProcessExecutor
 
 logger = logging.getLogger(__name__)
@@ -32,7 +32,7 @@ def get_executor_tool(distributed: bool = False) -> Callable:
 
     @tool
     def execute_training_code(
-        node_id: str,
+        solution_id: str,
         code: str,
         working_dir: str,
         dataset_names: List[str],
@@ -40,10 +40,10 @@ def get_executor_tool(distributed: bool = False) -> Callable:
         metric_to_optimise_name: str,
         metric_to_optimise_comparison_method: str,
     ) -> Dict:
-        """Executes training code in an isolated environment.
+        """Executes training code in an isolated environment and updates the Solution object.
 
         Args:
-            node_id: Unique identifier for this execution
+            solution_id: ID of the Solution object to update with execution results
             code: The code to execute
             working_dir: Directory to use for execution
             dataset_names: List of dataset names to retrieve from the registry
@@ -61,8 +61,11 @@ def get_executor_tool(distributed: bool = False) -> Callable:
 
         object_registry = ObjectRegistry()
 
-        execution_id = f"{node_id}-{uuid.uuid4()}"
+        execution_id = f"{solution_id}-{uuid.uuid4()}"
         try:
+            # Get the existing Solution object from registry
+            solution = object_registry.get(Solution, solution_id)
+
             # Get actual datasets from registry
             datasets = object_registry.get_multiple(TabularConvertible, dataset_names)
 
@@ -76,11 +79,8 @@ def get_executor_tool(distributed: bool = False) -> Callable:
             else:
                 comparison_method = ComparisonMethod.HIGHER_IS_BETTER
 
-            # Create a node to store execution results
-            node = Solution(plan="")  # We only need this for execute_node
-
-            # Get callbacks from the registry and notify them
-            node.training_code = code
+            # Update the solution with training code and get callbacks
+            solution.training_code = code
             # Create state info once for all callbacks
             state_info = BuildStateInfo(
                 intent="Unknown",  # Will be filled by agent context
@@ -89,7 +89,7 @@ def get_executor_tool(distributed: bool = False) -> Callable:
                 output_schema=None,  # Will be filled by agent context
                 datasets=datasets,
                 iteration=0,  # Default value, no longer used for MLFlow run naming
-                node=node,
+                node=solution,
             )
 
             # Notify all callbacks about execution start
@@ -113,14 +113,14 @@ def get_executor_tool(distributed: bool = False) -> Callable:
             )
 
             # Execute and collect results - ProcessExecutor.run() handles cleanup internally
-            logger.debug(f"Executing node {node} using executor {executor}")
+            logger.debug(f"Executing solution {solution} using executor {executor}")
             result = executor.run()
             logger.debug(f"Execution result: {result}")
-            node.execution_time = result.exec_time
-            node.execution_stdout = result.term_out
-            node.exception_was_raised = result.exception is not None
-            node.exception = result.exception or None
-            node.model_artifacts = result.model_artifacts
+            solution.execution_time = result.exec_time
+            solution.execution_stdout = result.term_out
+            solution.exception_was_raised = result.exception is not None
+            solution.exception = result.exception or None
+            solution.model_artifacts = [Artifact.from_path(p) for p in result.model_artifact_paths]
 
             # Handle the performance metric properly using the consolidated validation logic
             performance_value = None
@@ -131,48 +131,46 @@ def get_executor_tool(distributed: bool = False) -> Callable:
                 is_worst = False
 
             # Create a metric object with proper handling of None or invalid values
-            node.performance = Metric(
+            solution.performance = Metric(
                 name=metric_to_optimise_name,
                 value=performance_value,
                 comparator=MetricComparator(comparison_method=comparison_method),
                 is_worst=is_worst,
             )
 
-            node.training_code = code
-
             # Notify callbacks about the execution end with the same state_info
-            # The node reference in state_info automatically reflects the updates to node
+            # The solution reference in state_info automatically reflects the updates to solution
             _notify_callbacks(object_registry.get_all(Callback), "end", state_info)
 
             # Check if the execution failed in any way
-            if node.exception is not None:
-                raise RuntimeError(f"Execution failed with exception: {node.exception}")
+            if solution.exception is not None:
+                raise RuntimeError(f"Execution failed with exception: {solution.exception}")
             if not result.is_valid_performance():
                 raise RuntimeError(f"Execution failed due to not producing a valid performance: {result.performance}")
 
-            # Register code and artifacts
-            artifact_paths = node.model_artifacts if node.model_artifacts else []
-            artifacts = [Artifact.from_path(p) for p in artifact_paths]
-            object_registry.register_multiple(Artifact, {a.name: a for a in artifacts})
-            object_registry.register(Code, execution_id, Code(node.training_code, node.performance.value))
+            # Register artifacts and update solution in registry
+            object_registry.register_multiple(Artifact, {a.name: a for a in solution.model_artifacts})
+
+            # Update the solution in the registry with all execution results
+            object_registry.register(Solution, solution_id, solution, overwrite=True)
 
             # Return results
             return {
-                "success": not node.exception_was_raised,
+                "success": not solution.exception_was_raised,
                 "performance": (
                     {
-                        "name": node.performance.name if node.performance else None,
-                        "value": node.performance.value if node.performance else None,
+                        "name": solution.performance.name if solution.performance else None,
+                        "value": solution.performance.value if solution.performance else None,
                         "comparison_method": (
-                            str(node.performance.comparator.comparison_method) if node.performance else None
+                            str(solution.performance.comparator.comparison_method) if solution.performance else None
                         ),
                     }
-                    if node.performance
+                    if solution.performance
                     else None
                 ),
-                "exception": str(node.exception) if node.exception else None,
-                "model_artifact_names": [a.name for a in artifacts],
-                "training_code_id": execution_id,
+                "exception": str(solution.exception) if solution.exception else None,
+                "model_artifact_names": [a.name for a in solution.model_artifacts],
+                "solution_id": solution_id,
             }
         except Exception as e:
             # Log full stack trace at debug level

@@ -122,14 +122,14 @@ class ProcessExecutor(Executor):
                     term_out=[stdout],
                     exec_time=exec_time,
                     exception=RuntimeError(f"Process exited with code {self.process.returncode}: {stderr}"),
-                    model_artifacts=model_artifacts,
+                    model_artifact_paths=model_artifacts,
                 )
 
             # Extract performance and create result
             return ExecutionResult(
                 term_out=[stdout],
                 exec_time=exec_time,
-                model_artifacts=model_artifacts,
+                model_artifact_paths=model_artifacts,
                 performance=extract_performance(stdout),
             )
 

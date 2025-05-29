@@ -17,6 +17,7 @@ from plexe.tools.training import get_training_code_generation_tool, get_training
 from plexe.tools.validation import validate_training_code
 from plexe.tools.datasets import get_training_datasets
 from plexe.tools.code_analysis import get_feature_transformer_code
+from plexe.tools.solutions import list_solutions, get_solution_plan_by_id
 
 logger = logging.getLogger(__name__)
 
@@ -49,7 +50,7 @@ class ModelTrainerAgent:
                 "- input schema for the model"
                 "- output schema for the model"
                 "- the name and comparison method of the metric to optimise"
-                "- the full solution plan that outlines how to solve this problem"
+                "- the Solution ID to implement (from ML Research Scientist)"
                 "- the split train/validation dataset names"
                 "- the working directory to use for model execution"
             ),
@@ -65,6 +66,8 @@ class ModelTrainerAgent:
                 get_training_datasets,
                 get_model_schemas,
                 get_feature_transformer_code,
+                get_solution_plan_by_id,
+                list_solutions,
             ],
             add_base_tools=False,
             additional_authorized_imports=[

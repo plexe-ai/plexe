@@ -24,14 +24,15 @@ from plexe.internal.models.entities.artifact import Artifact
 from plexe.internal.models.entities.code import Code
 from plexe.internal.models.entities.metric import Metric
 from plexe.internal.models.entities.metric import MetricComparator, ComparisonMethod
+from plexe.core.entities.solution import Solution
 from plexe.core.interfaces.predictor import Predictor
 from plexe.tools.datasets import create_input_sample, get_latest_datasets
-from plexe.tools.evaluation import get_review_finalised_model, get_model_performances
+from plexe.tools.evaluation import get_review_finalised_model, get_solution_performances
 from plexe.tools.metrics import get_select_target_metric
 from plexe.tools.response_formatting import (
     format_final_orchestrator_agent_response,
 )
-from plexe.tools.training import register_best_training_code
+from plexe.tools.training import register_best_solution
 
 logger = logging.getLogger(__name__)
 
@@ -167,8 +168,8 @@ class PlexeAgent:
                 get_review_finalised_model(self.tool_model_id),
                 create_input_sample,
                 get_latest_datasets,
-                get_model_performances,
-                register_best_training_code,
+                get_solution_performances,
+                register_best_solution,
                 format_final_orchestrator_agent_response,
             ],
             managed_agents=[
@@ -210,8 +211,9 @@ class PlexeAgent:
                 result = json.loads(str(result))
 
             # Extract data from the agent result
-            training_code = object_registry.get(Code, "best_performing_training_code").code
-            inference_code = object_registry.get(Code, "final_inference_code_for_production").code
+            best_solution = object_registry.get(Solution, "best_performing_solution")
+            training_code = best_solution.training_code
+            inference_code = best_solution.inference_code
 
             # Extract performance metrics
             if "performance" in result and isinstance(result["performance"], dict):
@@ -239,9 +241,6 @@ class PlexeAgent:
                 comparator=comparator,
             )
 
-            # Get model artifacts from registry or result
-            artifact_names = object_registry.get(list, "model_artifact_names")
-
             # Model metadata
             metadata = result.get("metadata", {"model_type": "unknown", "framework": "unknown"})
 
@@ -250,7 +249,7 @@ class PlexeAgent:
             exec(inference_code, inference_module.__dict__)
             # Instantiate the predictor class from the loaded module
             predictor_class = getattr(inference_module, "PredictorImplementation")
-            predictor = predictor_class(object_registry.get_all(Artifact).values())
+            predictor = predictor_class(best_solution.model_artifacts)
 
             # Get feature transformer code if available
             feature_transformer_code = None
@@ -296,7 +295,7 @@ class PlexeAgent:
                 feature_transformer_source_code=feature_transformer_code,
                 dataset_split_code=dataset_split_code,
                 predictor=predictor,
-                model_artifacts=list(object_registry.get_multiple(Artifact, artifact_names).values()),
+                model_artifacts=best_solution.model_artifacts,
                 performance=performance,
                 test_performance=performance,  # Using the same performance for now
                 testing_source_code=testing_code,

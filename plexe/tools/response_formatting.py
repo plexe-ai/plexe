@@ -44,7 +44,7 @@ def format_final_orchestrator_agent_response(
 
 @tool
 def format_final_mle_agent_response(
-    training_code_id: str,
+    solution_id: str,
     execution_success: bool,
     performance_value: Optional[float] = None,
     exception: Optional[str] = None,
@@ -56,7 +56,7 @@ def format_final_mle_agent_response(
     available, but can be omitted if they are not available.
 
     Args:
-        training_code_id: The training code id returned by the code execution tool after executing the training code
+        solution_id: The solution ID returned by the code execution tool after executing the training code
         execution_success: Boolean indicating if the training code executed successfully
         performance_value: The value of the performance attained by the selected ML model, if any
         exception: Exception message if the code execution failed, if any
@@ -67,7 +67,7 @@ def format_final_mle_agent_response(
     """
 
     return {
-        "training_code_id": training_code_id,
+        "solution_id": solution_id,
         "execution_success": execution_success,
         "performance_value": performance_value,
         "exception": exception,

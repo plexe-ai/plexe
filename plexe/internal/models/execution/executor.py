@@ -16,7 +16,7 @@ class ExecutionResult:
 
     term_out: list[str]
     exec_time: float
-    model_artifacts: List[Path | str] = field(default_factory=list)
+    model_artifact_paths: List[Path | str] = field(default_factory=list)
     exception: Exception = field(default=None)
     performance: Optional[float] = field(default=None)
 
