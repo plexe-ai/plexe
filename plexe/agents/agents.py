@@ -20,7 +20,6 @@ from plexe.agents.model_trainer import ModelTrainerAgent
 from plexe.agents.schema_resolver import SchemaResolverAgent
 from plexe.config import config
 from plexe.core.object_registry import ObjectRegistry
-from plexe.internal.common.utils.agents import get_prompt_templates
 from plexe.internal.models.entities.artifact import Artifact
 from plexe.internal.models.entities.code import Code
 from plexe.internal.models.entities.metric import Metric
@@ -186,9 +185,6 @@ class PlexeAgent:
             verbosity_level=self.orchestrator_verbosity,
             additional_authorized_imports=config.code_generation.authorized_agent_imports,
             max_steps=self.max_steps,
-            prompt_templates=get_prompt_templates(
-                base_template_name="code_agent.yaml", override_template_name="manager_prompt_templates.yaml"
-            ),
             planning_interval=7,
             step_callbacks=[self.chain_of_thought_callable],
         )
