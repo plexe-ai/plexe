@@ -20,11 +20,7 @@ def get_review_finalised_model(llm_to_use: str) -> Callable:
     @tool
     def review_finalised_model(
         intent: str,
-        input_schema: Dict[str, str],
-        output_schema: Dict[str, str],
         solution_plan: str,
-        training_code_id: str,
-        inference_code_id: str,
     ) -> dict:
         """
         Reviews the entire model and extracts metadata. Use this function once you have completed work on the model, and
@@ -32,11 +28,7 @@ def get_review_finalised_model(llm_to_use: str) -> Callable:
 
         Args:
             intent: The model intent
-            input_schema: The input schema for the model, for example {"feat_1": "int", "feat_2": "str"}
-            output_schema: The output schema for the model, for example {"output": "float"}
             solution_plan: The solution plan explanation based on which the model was implemented
-            training_code_id: The training code id returned by the MLEngineer agent for the selected ML model
-            inference_code_id: The inference code id returned by the MLOperationsEngineer agent for the selected ML model
 
         Returns:
             A dictionary containing a summary and review of the model
@@ -46,14 +38,20 @@ def get_review_finalised_model(llm_to_use: str) -> Callable:
         object_registry = ObjectRegistry()
 
         try:
-            training_code = object_registry.get(Code, training_code_id)
+            input_schema = object_registry.get(dict, "input_schema")
+            output_schema = object_registry.get(dict, "output_schema")
         except Exception:
-            raise ValueError(f"Training code with ID {training_code_id} not found. Is this the correct ID?")
+            raise ValueError("Failed to retrieve schemas. Was schema resolution completed?")
 
         try:
-            inference_code = object_registry.get(Code, inference_code_id)
+            training_code = object_registry.get(Code, "best_performing_training_code")
         except Exception:
-            raise ValueError(f"Inference code with ID {inference_code_id} not found. Is this the correct ID?")
+            raise ValueError("Best performing training code not found. Was the best model selected?")
+
+        try:
+            inference_code = object_registry.get(Code, "final_inference_code_for_production")
+        except Exception:
+            raise ValueError("Inference code not found. Was the inference code produced?")
 
         reviewer = ModelReviewer(Provider(llm_to_use))
         return reviewer.review_model(

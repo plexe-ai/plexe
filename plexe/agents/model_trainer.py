@@ -54,7 +54,7 @@ class ModelTrainerAgent:
                 "- the working directory to use for model execution"
             ),
             model=LiteLLMModel(model_id=ml_engineer_model_id),
-            max_steps=10,
+            max_steps=12,
             tools=[
                 get_training_code_generation_tool(tool_model_id),
                 validate_training_code,

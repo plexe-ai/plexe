@@ -10,29 +10,22 @@ from smolagents import tool
 @tool
 def format_final_orchestrator_agent_response(
     solution_plan: str,
-    training_code_id: str,
-    inference_code_id: str,
     performance_metric_name: str,
     performance_metric_value: float,
     performance_metric_comparison_method: str,
     model_review_output: Dict[str, str],
-    model_artifact_names: List[str],
 ) -> dict:
     """
     Returns a dictionary containing the exact fields that the agent must return in its final response. The purpose
     of this tool is to 'package' the final deliverables of the ML engineering task. The 'solution_plan' has to be
-    the plan from which the best model was built, while 'training_code_id' and 'inference_code_id' must be
-    the identifiers returned by the MLEngineer and MLOperationsEngineer for the model's code.
+    the plan from which the best model was built.
 
     Args:
         solution_plan: The solution plan explanation for the selected ML model
-        training_code_id: The training code id returned by the MLEngineer agent for the selected ML model
-        inference_code_id: The inference code id returned by the MLOperationsEngineer agent for the selected ML model
         performance_metric_name: The name of the performance metric to optimise that was used in this task
         performance_metric_value: The value of the performance attained by the selected ML model
         performance_metric_comparison_method: The comparison method used to evaluate the performance metric
         model_review_output: The output of the 'review_model' tool which contains a review of the selected ML model
-        model_artifact_names: A list with the names of all the model artifacts created for the selected ML model
 
     Returns:
         Dictionary containing the fields that must be returned by the agent in its final response
@@ -40,15 +33,12 @@ def format_final_orchestrator_agent_response(
 
     return {
         "solution_plan": solution_plan,
-        "training_code_id": training_code_id,
-        "inference_code_id": inference_code_id,
         "performance": {
             "name": performance_metric_name,
             "value": performance_metric_value,
             "comparison_method": performance_metric_comparison_method,
         },
         "metadata": model_review_output,
-        "model_artifact_names": model_artifact_names,
     }
 
 

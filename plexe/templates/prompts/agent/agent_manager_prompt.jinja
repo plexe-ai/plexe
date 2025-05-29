@@ -29,10 +29,12 @@ names. If you create new datasets, you will also need to name them, and refer to
 
 
 ## 3. Instructions
-Carefully analyse the tools and managed agents available to you, and plan how to effectively plan possible approaches
-to the ML problem, run model training experiments, and finally deliver the best performing model as a bundle consisting
-of the model training code (as an ID), inference code (as an ID), model artifacts, a performance evaluation of the
-complete model, and other deliverables.
+Carefully analyse the tools and managed agents available to you. Plan how to effectively try possible approaches
+to the ML problem, perform data preparation, run model training experiments, package the model for production, and
+evaluate the model. Finally, use the 'format_final_orchestrator_agent_response' tool to format your final response,
+including the best model's solution plan, performance metrics, etc. Return the output of 'format_final_orchestrator_agent_response'
+EXACTLY as the final response using the 'final_answer' tool.
+
 Test {{ max_iterations }} different approaches, and for each train a model. Select the best performing model.
 
 {% if resume %}

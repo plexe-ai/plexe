@@ -13,7 +13,7 @@ managed_agent:
     ## Available Tools:
     - `get_test_dataset`: Get the test dataset name automatically (no need to wait for it from manager)
     - `get_model_schemas`: Get input/output schemas to understand expected formats
-    - `get_feature_transformer_code`: Check if feature transformations were applied
+    - `get_feature_transformer_code`: Retrieve the feature engineering code (if exists) if you need to review it
     - `register_testing_code`: Store your testing code
     - `register_evaluation_report`: Store your evaluation findings
     

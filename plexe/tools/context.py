@@ -54,6 +54,7 @@ def get_inference_context_tool(llm_to_use: str) -> Callable:
         # Extract artifacts
         try:
             artifact_names = _extract_artifacts(llm_to_use, training_code)
+            object_registry.register(list, "model_artifact_names", artifact_names, overwrite=True, immutable=True)
         except Exception as e:
             raise ValueError(f"Failed to extract artifacts from training code: {str(e)}")
 

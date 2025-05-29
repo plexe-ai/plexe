@@ -3,7 +3,6 @@ Tools related to code validation, including syntax and security checks.
 """
 
 import logging
-import uuid
 import ast
 from typing import Dict, List
 
@@ -103,8 +102,8 @@ def validate_inference_code(
 
     # Return appropriate result
     if validation.passed:
-        inference_code_id = uuid.uuid4().hex
-        object_registry.register(Code, inference_code_id, Code(inference_code))
+        inference_code_id = "final_inference_code_for_production"
+        object_registry.register(Code, inference_code_id, Code(inference_code), overwrite=True, immutable=True)
 
         # Also instantiate and register the predictor for the model tester agent
         try:

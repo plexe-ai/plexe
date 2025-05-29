@@ -33,10 +33,11 @@ def read_training_code(training_code_id: str) -> str:
 @tool
 def get_feature_transformer_code() -> Optional[str]:
     """
-    Get feature transformation code ID if available.
+    Get the feature transformation code that was used to transform the raw input dataset into the
+    feature-engineered dataset used for building the model.
 
     Returns:
-        Code ID for feature transformations or None if not available
+        Code for feature transformations if available, otherwise None.
     """
     object_registry = ObjectRegistry()
 
@@ -44,7 +45,7 @@ def get_feature_transformer_code() -> Optional[str]:
         # Feature transformer code is stored with fixed ID "feature_transformations"
         code = object_registry.get(Code, "feature_transformations")
         if code:
-            return "feature_transformations"
+            return code.code
         return None
     except KeyError:
         logger.debug("Feature transformation code not found in registry")

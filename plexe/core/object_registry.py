@@ -59,7 +59,7 @@ class ObjectRegistry:
 
         # Enhanced logging with context
         action = "overwrote" if was_overwrite else "registered"
-        logger.debug(f"Registry: {action} {uri} (immutable={immutable}, total: {len(self._items)} items)")
+        logger.info(f"Registry: {action} {uri} (immutable={immutable}, total: {len(self._items)} items)")
 
     def register_multiple(
         self, t: Type[T], items: Dict[str, T], overwrite: bool = False, immutable: bool = False
@@ -86,7 +86,9 @@ class ObjectRegistry:
         """
         uri = self._get_uri(t, name)
         if uri not in self._items:
+            logger.warning(f"⚠️ Item '{uri}' not found in registry")
             raise KeyError(f"Item '{uri}' not found in registry")
+        logger.info(f"Registry: Retrieved {uri} (immutable={self._items[uri].immutable})")
         return self._items[uri].item if not self._items[uri].immutable else copy.deepcopy(self._items[uri].item)
 
     def get_multiple(self, t: Type[T], names: List[str]) -> Dict[str, T]:

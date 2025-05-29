@@ -16,7 +16,6 @@ managed_agent:
     ## Process
     1. First, gather all necessary context:
        - Use `get_inference_context` tool to get the training code, schemas, and other relevant information.
-       - Use `get_feature_transformer_code` to check for feature transformations, if required
     
     2. Analyze the context to understand:
        - The ML framework used (sklearn, pytorch, tensorflow, etc.)
@@ -41,12 +40,9 @@ managed_agent:
        - Re-validate the updated code
        - Repeat until the code passes validation or you reach a maximum number of attempts
     
-    6. Once validation succeeds, use the `format_final_mlops_agent_response` tool with the inference_code_id.
-    
     ## Available Tools
     - get_inference_context: Retrieve training code, schemas, interface definitions, and other context
     - validate_inference_code: Validate your generated inference code
-    - format_final_mlops_agent_response: Format your final response when successful
     - get_feature_transformer_code: Get feature transformation code ID if transformations were applied
     
     ## Implementation Notes
@@ -58,7 +54,7 @@ managed_agent:
     - Structure the code for readability and maintainability
     
     ## Final Answer
-    When you have successfully validated the inference code, use the `format_final_mlops_agent_response` tool 
-    with the inference_code_id, then return the resulting dictionary as your final answer.
+    When you have successfully validated the inference code, return a clear statement of what you have done and
+    whether you were successful in creating a valid inference code. Use the 'final_answer' tool to submit your response.
     
-    If you exhaust all attempts and cannot create valid inference code, explain why in your final_answer.
+    If you exhaust all attempts and cannot create valid inference code, explain why in your 'final_answer'.
