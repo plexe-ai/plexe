@@ -21,7 +21,7 @@ from plexe.core.object_registry import ObjectRegistry
 from plexe.internal.models.entities.code import Code
 from plexe.internal.models.entities.artifact import Artifact
 from plexe.internal.models.entities.metric import Metric, MetricComparator, ComparisonMethod
-from plexe.internal.models.entities.node import Node
+from plexe.internal.models.entities.solution import Solution
 from plexe.internal.models.execution.process_executor import ProcessExecutor
 
 logger = logging.getLogger(__name__)
@@ -77,7 +77,7 @@ def get_executor_tool(distributed: bool = False) -> Callable:
                 comparison_method = ComparisonMethod.HIGHER_IS_BETTER
 
             # Create a node to store execution results
-            node = Node(solution_plan="")  # We only need this for execute_node
+            node = Solution(plan="")  # We only need this for execute_node
 
             # Get callbacks from the registry and notify them
             node.training_code = code

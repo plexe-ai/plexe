@@ -162,11 +162,11 @@ class ObjectRegistry:
 
         # Extract training code and their results
         from plexe.internal.models.entities.code import Code
-        from plexe.internal.models.entities.node import Node
+        from plexe.internal.models.entities.solution import Solution
 
         # Get all code objects
         code_items = self.get_all(Code)
-        node_items = self.get_all(Node)
+        node_items = self.get_all(Solution)
 
         # Build solution data from code and node objects
         for uri, code_obj in code_items.items():
@@ -181,7 +181,7 @@ class ObjectRegistry:
 
                 # Look for associated node to get performance metrics
                 for node_uri, node in node_items.items():
-                    if isinstance(node, Node) and node.training_code == code_obj.code:
+                    if isinstance(node, Solution) and node.training_code == code_obj.code:
                         if node.performance:
                             solution_data["performance"] = {
                                 "name": node.performance.name,

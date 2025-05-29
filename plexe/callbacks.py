@@ -14,7 +14,7 @@ from typing import Optional, Type, Dict, Any
 from pydantic import BaseModel
 
 from plexe.internal.common.datasets.interface import TabularConvertible
-from plexe.internal.models.entities.node import Node
+from plexe.internal.models.entities.solution import Solution
 
 logger = logging.getLogger(__name__)
 
@@ -59,7 +59,7 @@ class BuildStateInfo:
     datasets: Optional[Dict[str, TabularConvertible]] = None
 
     # Current node being evaluated
-    node: Optional[Node] = None
+    node: Optional[Solution] = None
     """The solution node being evaluated in the current iteration."""
 
     # Model information fields (replacing direct model reference)
