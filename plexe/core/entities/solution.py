@@ -52,6 +52,7 @@ class Solution:
     plan: str = field(default=None, hash=True, kw_only=True)
     training_code: str = field(default=None, hash=True, kw_only=True)
     inference_code: str = field(default=None, hash=True, kw_only=True)
+    testing_code: str = field(default=None, hash=True, kw_only=True)
     input_schema: Dict[str, str] = field(default=None, kw_only=True)
     output_schema: Dict[str, str] = field(default=None, kw_only=True)
 
@@ -63,4 +64,7 @@ class Solution:
     exception_was_raised: bool = field(default=False, kw_only=True)
     exception: Exception = field(default=None, kw_only=True)
     model_artifacts: List[Artifact] = field(default_factory=list, kw_only=True)
+
+    # Evaluations and analyses
     analysis: str = field(default=None, kw_only=True)
+    model_evaluation_report: Dict[str, any] = field(default_factory=dict, kw_only=True)

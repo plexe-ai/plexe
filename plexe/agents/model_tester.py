@@ -16,6 +16,7 @@ from plexe.tools.testing import register_testing_code, register_evaluation_repor
 from plexe.tools.datasets import get_test_dataset
 from plexe.tools.schemas import get_model_schemas
 from plexe.tools.code_analysis import get_feature_transformer_code
+from plexe.tools.solutions import list_solutions
 
 logger = logging.getLogger(__name__)
 
@@ -68,6 +69,7 @@ class ModelTesterAgent:
                 get_test_dataset,
                 get_model_schemas,
                 get_feature_transformer_code,
+                list_solutions,
             ],
             add_base_tools=False,
             verbosity_level=self.verbosity,
