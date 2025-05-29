@@ -43,35 +43,28 @@ def _convert_to_native_types(obj):
     Falls back to string representation for any type that can't be converted.
     """
     try:
+        # Handle NumPy types specifically
         if isinstance(obj, np.generic):
-            # Convert numpy scalars to native Python types
-            return obj.item()
+            return _convert_to_native_types(obj.item())
         elif isinstance(obj, np.ndarray):
-            # Convert numpy arrays to lists
-            return obj.tolist()
+            return _convert_to_native_types(obj.tolist())
+        # Handle common collections
         elif isinstance(obj, dict):
-            # Recursively convert dictionary values
             return {k: _convert_to_native_types(v) for k, v in obj.items()}
         elif isinstance(obj, (list, tuple)):
-            # Recursively convert list/tuple elements
             return type(obj)(_convert_to_native_types(item) for item in obj)
+        # Native types are already safe
         elif isinstance(obj, (str, int, float, bool, type(None))):
-            # Native types are already safe
             return obj
-        elif hasattr(obj, "__dict__"):
-            # For custom objects, try to convert to dict
-            try:
-                return _convert_to_native_types(obj.__dict__)
-            except Exception:
-                # If that fails, convert to string representation
-                return str(obj)
+        # For other types, raise error to trigger fallback
         else:
-            # For any other type, try to convert to string
-            return str(obj)
+            raise TypeError(f"Unsupported type: {type(obj).__name__}")
     except Exception as e:
-        # Ultimate fallback - if anything goes wrong, return string representation
-        logger.warning(f"Failed to convert object of type {type(obj).__name__}: {e}. Using string representation.")
-        return str(obj)
+        # Fallback: if anything goes wrong, use JSON serialization with sanitization
+        logger.warning(
+            f"Failed to convert object of type {type(obj).__name__} for serialization: {e}. Using string representation."
+        )
+        return json.loads(json.dumps(obj, skipkeys=True, default=str))
 
 
 def _load_yaml_or_json_from_tar(tar, yaml_path: str, json_path: str):
@@ -395,7 +388,8 @@ def _save_checkpoint_to_tar(model: Any, iteration: int, path: Optional[str | Pat
             for key, value in metadata.items():
                 if key in ["metadata"]:
                     info = tarfile.TarInfo(f"metadata/{key}.yaml")
-                    content = yaml.safe_dump(value, default_flow_style=False).encode("utf-8")
+                    safe_value = _convert_to_native_types(value)
+                    content = yaml.safe_dump(safe_value, default_flow_style=False).encode("utf-8")
                 else:
                     info = tarfile.TarInfo(f"metadata/{key}.txt")
                     content = str(value).encode("utf-8")
