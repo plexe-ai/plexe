@@ -52,7 +52,7 @@ ray = "^2.9.0"
 rich = "^13.7.1"
 torch = "^2.3.0"
 smolagents = "^1.14.0"
-fastapi = "^0.104.0"
+fastapi = "^0.115.12"
 uvicorn = {extras = ["standard"], version = "^0.24.0"}
 websockets = "^12.0"
 
