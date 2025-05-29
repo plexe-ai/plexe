@@ -40,6 +40,10 @@ managed_agent:
        - Re-validate the updated code
        - Repeat until the code passes validation or you reach a maximum number of attempts
     
+    IMPORTANT: do not attempt to run the inference code directly. You must only create the code as a string variable
+    and validate it using the provided tools. Do NOT stop attempting to generate/validate the inference code until you
+    are successful or have exhausted all attempts.
+    
     ## Available Tools
     - get_inference_context: Retrieve training code, schemas, interface definitions, and other context
     - validate_inference_code: Validate your generated inference code
