@@ -8,7 +8,7 @@ with large context window, such as the Google Gemini models.
 from pathlib import Path
 
 # === Config ===
-EXTENSIONS = {".py", ".md", ".jinja"}
+EXTENSIONS = {".py", ".md", ".jinja", ".yaml"}
 TARGET_DIRS = {"plexe"}
 ROOT_FILES = {"README.md"}  # Loose files to include from root
 OUTPUT_FILE = "plexe-full-codebase.txt"
