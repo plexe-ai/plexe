@@ -10,7 +10,7 @@ one experimental path from data processing through model deployment.
 import time
 import uuid
 from dataclasses import dataclass, field
-from typing import List
+from typing import List, Dict
 from pathlib import Path
 
 from plexe.internal.models.entities.metric import Metric
@@ -32,6 +32,8 @@ class Solution:
         plan (str): The ML approach description and strategy for this solution.
         training_code (str): The model training implementation code.
         inference_code (str): The production inference/prediction code.
+        input_schema (Dict[str, str]): Schema for the input data expected by the model.
+        output_schema (Dict[str, str]): Schema for the output data produced by the model.
         performance (Metric): Validation set performance metrics.
         test_performance (Metric): Test set performance metrics.
         execution_time (float): Time taken to train the model.
@@ -46,10 +48,12 @@ class Solution:
     id: str = field(default_factory=lambda: uuid.uuid4().hex, kw_only=True)
     created_time: float = field(default_factory=lambda: time.time(), kw_only=True)
 
-    # Pre-execution contents: the solution plan and the generated code
-    plan: str
+    # Core solution attributes
+    plan: str = field(default=None, hash=True, kw_only=True)
     training_code: str = field(default=None, hash=True, kw_only=True)
     inference_code: str = field(default=None, hash=True, kw_only=True)
+    input_schema: Dict[str, str] = field(default=None, kw_only=True)
+    output_schema: Dict[str, str] = field(default=None, kw_only=True)
 
     # Post-execution results: model performance, execution time, exceptions, etc.
     performance: Metric = field(default=None, kw_only=True)  # Validation performance
