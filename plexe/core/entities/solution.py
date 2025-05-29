@@ -11,8 +11,8 @@ import time
 import uuid
 from dataclasses import dataclass, field
 from typing import List, Dict
-from pathlib import Path
 
+from plexe.internal.models.entities.artifact import Artifact
 from plexe.internal.models.entities.metric import Metric
 
 
@@ -62,5 +62,5 @@ class Solution:
     execution_stdout: list[str] = field(default_factory=list, kw_only=True)
     exception_was_raised: bool = field(default=False, kw_only=True)
     exception: Exception = field(default=None, kw_only=True)
-    model_artifacts: List[Path] = field(default_factory=list, kw_only=True)
+    model_artifacts: List[Artifact] = field(default_factory=list, kw_only=True)
     analysis: str = field(default=None, kw_only=True)
