@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "plexe"
-version = "0.23.6"
+version = "0.24.0"
 description = "An agentic framework for building ML models from natural language"
 authors = [
     "marcellodebernardi <marcello.debernardi@outlook.com>",
