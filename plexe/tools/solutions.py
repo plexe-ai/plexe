@@ -11,7 +11,7 @@ from typing import Dict
 from smolagents import tool
 
 from plexe.core.object_registry import ObjectRegistry
-from plexe.internal.models.entities.solution import Solution
+from plexe.core.entities.solution import Solution
 
 logger = logging.getLogger(__name__)
 
@@ -19,7 +19,8 @@ logger = logging.getLogger(__name__)
 @tool
 def create_solution(plan: str) -> Dict[str, str]:
     """
-    Creates a new Solution object with the given plan and registers it in the object registry.
+    Creates a new Solution object with the given plan and registers it in the object registry so
+    that other agents in the team can access it.
 
     This tool should be used by the ML Research Scientist agent when developing new solution
     approaches. Each solution represents a distinct ML strategy that will be implemented
