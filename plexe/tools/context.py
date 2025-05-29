@@ -10,9 +10,9 @@ from pydantic import BaseModel
 from smolagents import tool
 
 from plexe.config import code_templates
+from plexe.core.entities.solution import Solution
 from plexe.internal.common.provider import Provider
 from plexe.core.object_registry import ObjectRegistry
-from plexe.internal.models.entities.code import Code
 
 logger = logging.getLogger(__name__)
 
@@ -32,11 +32,19 @@ def get_inference_context_tool(llm_to_use: str) -> Callable:
         """
         object_registry = ObjectRegistry()
 
-        # Retrieve training code
+        # Retrieve the best performing solution
         try:
-            training_code = object_registry.get(Code, "best_performing_training_code").code
+            best_solution = object_registry.get(Solution, "best_performing_solution")
         except Exception as e:
-            raise ValueError(f"Training code with ID 'best_performing_training_code' not found: {str(e)}")
+            raise ValueError(f"Best performing solution not found, has it been selected?: {str(e)}")
+
+        # Retrieve the training code
+        try:
+            training_code = best_solution.training_code
+        except Exception as e:
+            raise ValueError(
+                f"Solution '{best_solution.id}' doesn't have training code, has it been trained?: {str(e)}"
+            )
 
         # Retrieve schemas
         try:

@@ -32,7 +32,7 @@ managed_agent:
        - Implement prediction logic
        - Format output according to schema requirements
     
-    4. Use the `validate_inference_code` tool to validate your code.
+    4. Use the `validate_inference_code` tool to validate your code for the given Solution ID.
     
     5. If validation fails:
        - Analyze the structured error feedback (error_stage, error_type, error_details)
@@ -46,8 +46,8 @@ managed_agent:
     
     ## Available Tools
     - get_inference_context: Retrieve training code, schemas, interface definitions, and other context
-    - validate_inference_code: Validate your generated inference code
-    - get_feature_transformer_code: Get feature transformation code ID if transformations were applied
+    - validate_inference_code: Validate your generated inference code and update Solution object
+    - list_solutions: List all available Solution IDs (if needed)
     
     ## Implementation Notes
     When writing inference code:

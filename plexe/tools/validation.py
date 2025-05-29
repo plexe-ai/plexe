@@ -4,12 +4,11 @@ Tools related to code validation, including syntax and security checks.
 
 import logging
 import ast
-from typing import Dict, List
+from typing import Dict
 
 from smolagents import tool
 
 from plexe.config import code_templates
-from plexe.internal.models.entities.artifact import Artifact
 from plexe.internal.models.entities.code import Code
 from plexe.internal.models.validation.composites import (
     InferenceCodeValidator,
@@ -42,23 +41,30 @@ def validate_training_code(training_code: str) -> Dict:
 
 @tool
 def validate_inference_code(
+    solution_id: str,
     inference_code: str,
-    model_artifact_names: List[str],
 ) -> Dict:
     """
-    Validates inference code for syntax, security, and correctness.
+    Validates inference code for syntax, security, and correctness, and updates the Solution object.
 
     Args:
+        solution_id: ID of the Solution object to update with inference code
         inference_code: The inference code to validate
-        model_artifact_names: Names of model artifacts to use from registry
 
     Returns:
         Dict with validation results and error details if validation fails
     """
     from plexe.internal.common.utils.pydantic_utils import map_to_basemodel
     from plexe.core.object_registry import ObjectRegistry
+    from plexe.core.entities.solution import Solution
 
     object_registry = ObjectRegistry()
+
+    # Get solution object from registry
+    try:
+        solution = object_registry.get(Solution, solution_id)
+    except Exception as e:
+        return _error_response("solution_retrieval", type(e).__name__, str(e))
 
     # Get schemas from registry
     try:
@@ -82,28 +88,16 @@ def validate_inference_code(
     except Exception as e:
         return _error_response("input_sample", type(e).__name__, str(e))
 
-    # Get artifacts
-    artifact_objects = []
-    try:
-        for name in model_artifact_names:
-            try:
-                artifact_objects.append(object_registry.get(Artifact, name))
-            except KeyError:
-                return _error_response("artifacts", "MissingArtifact", f"Artifact '{name}' not found")
-
-        if not artifact_objects:
-            return _error_response("artifacts", "NoArtifacts", "No artifacts available for model loading")
-    except Exception as e:
-        return _error_response("artifacts", type(e).__name__, str(e))
-
     # Validate the code
     validator = InferenceCodeValidator(input_schema=input_model, output_schema=output_model, input_sample=input_samples)
-    validation = validator.validate(inference_code, model_artifacts=artifact_objects)
+    validation = validator.validate(inference_code, model_artifacts=solution.model_artifacts)
 
     # Return appropriate result
     if validation.passed:
-        inference_code_id = "final_inference_code_for_production"
-        object_registry.register(Code, inference_code_id, Code(inference_code), overwrite=True, immutable=True)
+        # Update the Solution object with inference code, and register an alias for production use
+        solution.inference_code = inference_code
+        object_registry.register(Solution, solution_id, solution, overwrite=True)
+        object_registry.register(Solution, "final_inference_solution", solution, overwrite=True, immutable=True)
 
         # Also instantiate and register the predictor for the model tester agent
         try:
@@ -112,7 +106,7 @@ def validate_inference_code(
             predictor_module = types.ModuleType("predictor")
             exec(inference_code, predictor_module.__dict__)
             predictor_class = getattr(predictor_module, "PredictorImplementation")
-            predictor = predictor_class(artifact_objects)
+            predictor = predictor_class(solution.model_artifacts)
 
             # Register the instantiated predictor
             from plexe.core.interfaces.predictor import Predictor
@@ -124,7 +118,7 @@ def validate_inference_code(
             logger.warning(f"⚠️ Failed to register instantiated predictor: {str(e)}")
             # Don't fail validation if predictor registration fails
 
-        return _success_response(validation.message, inference_code_id)
+        return _success_response(validation.message, solution_id)
 
     # Extract error details from validation result
     error_type = validation.error_type or (
@@ -146,12 +140,12 @@ def _error_response(stage, exc_type, details, message=None):
     }
 
 
-def _success_response(message, inference_code_id=None):
+def _success_response(message, solution_id=None):
     """Helper to create success response dictionaries"""
     response = {"passed": True, "message": message}
-    # Only include inference_code_id for inference code validation
-    if inference_code_id is not None:
-        response["inference_code_id"] = inference_code_id
+    # Only include solution_id for inference code validation
+    if solution_id is not None:
+        response["solution_id"] = solution_id
     return response
 
 
