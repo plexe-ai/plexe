@@ -16,45 +16,65 @@ from plexe.core.entities.solution import Solution
 logger = logging.getLogger(__name__)
 
 
-@tool
-def create_solution(plan: str) -> Dict[str, str]:
+def get_solution_creation_tool(max_solutions: int = 1):
     """
-    Creates a new Solution object with the given plan and registers it in the object registry so
-    that other agents in the team can access it.
-
-    This tool should be used by the ML Research Scientist agent when developing new solution
-    approaches. Each solution represents a distinct ML strategy that will be implemented
-    and evaluated.
+    Returns a tool function to create a new Solution object with a plan.
+    This tool is used by the ML Research Scientist agent to develop new solution approaches.
 
     Args:
-        plan: The detailed solution plan and strategy description for this ML approach
+        max_solutions: Maximum number of solutions that can be created at once
 
     Returns:
-        Dictionary containing the solution ID and success confirmation:
-        {
-            "solution_id": "unique_solution_identifier",
-            "message": "Success message"
-        }
+        A tool function that creates a Solution object
     """
-    object_registry = ObjectRegistry()
+    if max_solutions <= 0:
+        raise ValueError("max_solutions must be greater than 0")
 
-    try:
-        # Create a new Solution object with the provided plan
-        solution = Solution(plan=plan)
+    @tool
+    def create_solution(plan: str) -> Dict[str, str]:
+        """
+        Creates a new Solution object with the given plan and registers it in the object registry so
+        that other agents in the team can access it.
 
-        # Register the solution in the object registry
-        object_registry.register(Solution, solution.id, solution, overwrite=False)
+        This tool should be used by the ML Research Scientist agent when developing new solution
+        approaches. Each solution represents a distinct ML strategy that will be implemented
+        and evaluated.
 
-        logger.debug(f"✅ Created and registered solution with ID '{solution.id}'")
+        Args:
+            plan: The detailed solution plan and strategy description for this ML approach
 
-        return {
-            "solution_id": solution.id,
-            "message": f"Successfully created and registered solution with ID '{solution.id}'",
-        }
+        Returns:
+            Dictionary containing the solution ID and success confirmation:
+            {
+                "solution_id": "unique_solution_identifier",
+                "message": "Success message"
+            }
+        """
+        object_registry = ObjectRegistry()
 
-    except Exception as e:
-        logger.warning(f"⚠️ Error creating solution: {str(e)}")
-        raise RuntimeError(f"Failed to create solution: {str(e)}")
+        # Check if the maximum number of solutions has been reached
+        if len(object_registry.get_all(Solution)) >= max_solutions:
+            raise RuntimeError(f"Maximum number of solutions ({max_solutions}) reached. Cannot create more solutions.")
+
+        try:
+            # Create a new Solution object with the provided plan
+            solution = Solution(plan=plan)
+
+            # Register the solution in the object registry
+            object_registry.register(Solution, solution.id, solution, overwrite=False)
+
+            logger.debug(f"✅ Created and registered solution with ID '{solution.id}'")
+
+            return {
+                "solution_id": solution.id,
+                "message": f"Successfully created and registered solution with ID '{solution.id}'",
+            }
+
+        except Exception as e:
+            logger.warning(f"⚠️ Error creating solution: {str(e)}")
+            raise RuntimeError(f"Failed to create solution: {str(e)}")
+
+    return create_solution
 
 
 @tool

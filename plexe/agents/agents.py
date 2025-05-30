@@ -68,9 +68,10 @@ class PlexeAgent:
         ml_ops_engineer_model_id: str = "anthropic/claude-3-7-sonnet-20250219",
         tool_model_id: str = "openai/gpt-4o",
         verbose: bool = False,
-        max_steps: int = 30,
+        max_steps: int = 50,
         distributed: bool = False,
         chain_of_thought_callable: Optional[Callable] = None,
+        max_solutions: int = 1,
     ):
         """
         Initialize the multi-agent ML engineering system.
@@ -105,6 +106,7 @@ class PlexeAgent:
             model_id=self.ml_researcher_model_id,
             verbose=verbose,
             chain_of_thought_callable=chain_of_thought_callable,
+            max_solutions=max_solutions,
         ).agent
 
         # Create and run the schema resolver agent

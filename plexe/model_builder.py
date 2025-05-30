@@ -161,6 +161,7 @@ class ModelBuilder:
                 max_steps=30,
                 distributed=self.distributed,
                 chain_of_thought_callable=cot_callable,
+                max_solutions=max_iterations,
             )
 
             agent_prompt = prompt_templates.agent_builder_prompt(

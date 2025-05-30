@@ -5,7 +5,7 @@ from smolagents import ToolCallingAgent, LiteLLMModel
 from plexe.internal.common.utils.agents import get_prompt_templates
 from plexe.tools.datasets import get_dataset_preview, get_latest_datasets, get_dataset_reports
 from plexe.tools.schemas import get_global_schemas
-from plexe.tools.solutions import create_solution
+from plexe.tools.solutions import get_solution_creation_tool
 
 logger = logging.getLogger(__name__)
 
@@ -28,6 +28,7 @@ class ModelPlannerAgent:
         model_id: str,
         verbose: bool = False,
         chain_of_thought_callable: callable = None,
+        max_solutions: int = 1,
     ):
         """
         Initialize the ModelPlannerAgent.
@@ -59,7 +60,7 @@ class ModelPlannerAgent:
                 get_latest_datasets,
                 get_dataset_reports,
                 get_global_schemas,
-                create_solution,
+                get_solution_creation_tool(max_solutions),
             ],
             add_base_tools=False,
             verbosity_level=self.verbosity,
