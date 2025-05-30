@@ -58,7 +58,7 @@ def register_final_model_schemas(
             raise e
 
     # Create input sample now that we know schema exists
-    create_input_sample(n=5)  # TODO: this tool -> tool dependency will lead to difficult to debug errors
+    create_input_sample()  # TODO: this tool -> tool dependency will lead to difficult to debug errors
 
     # Register output schema if possible
     try:
