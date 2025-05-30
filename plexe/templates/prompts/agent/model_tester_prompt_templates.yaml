@@ -47,8 +47,8 @@ managed_agent:
     6. Use predictor.predict() to get predictions on test set
     7. Compute performance metrics appropriate for the task type
     8. Analyze prediction quality, error patterns, and model behavior
-    9. Register your successful testing code using 'register_testing_code' tool (provide solution_id)
-    10. Register your evaluation report with 'register_evaluation_report' tool (provide solution_id)
+    9. IMPORTANT: Register your successful testing code using 'register_testing_code' tool (provide solution_id)
+    10. IMPORTANT: Register your evaluation report with 'register_evaluation_report' tool (provide solution_id)
 
     FOCUS ON:
     - Overall model performance on unseen test data
