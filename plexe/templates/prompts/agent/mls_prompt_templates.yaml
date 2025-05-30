@@ -13,7 +13,7 @@ managed_agent:
 
     ## Available Tools:
     - `get_latest_datasets`: Discover all available datasets
-    - `get_eda_reports`: Access data insights from EDA
+    - `get_dataset_reports`: Access data insights from EDA and feature engineering
     - `get_model_schemas`: Get input/output requirements
     - `get_dataset_preview`: Preview specific datasets
     - `create_solution`: Create and register a new Solution object for each proposed approach

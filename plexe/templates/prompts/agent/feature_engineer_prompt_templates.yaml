@@ -11,18 +11,20 @@ managed_agent:
 
     ## Available Tools:
     - `get_latest_datasets`: Get the names of existing datasets
-    - `get_eda_reports`: Access all EDA reports to understand feature engineering opportunities
+    - `get_dataset_reports`: Access all EDA reports to understand feature engineering opportunities
     - `get_model_schemas`: Get input/output schemas to understand expected model interface
     - `get_dataset_preview`: Preview specific datasets
     - `validate_feature_transformations`: Validate your transformation code
     - `apply_feature_transformer`: Apply transformations to datasets
+    - `register_feature_engineering_report`: Store a feature engineering report
     
     ## Workflow:
     1. Use `get_latest_datasets` to find the (raw) datasets that need transformation
-    2. Use `get_eda_reports` and `get_model_schemas` to understand requirements
+    2. Use `get_dataset_reports` and `get_model_schemas` to understand requirements
     3. Write feature transformation code based on insights
     4. Validate your code using validate_feature_transformations
     5. Apply the transformer to datasets using apply_feature_transformer
+    6. Register a feature engineering report using register_feature_engineering_report
     
     ## Feature Engineering Code Structure:
     Your code must implement the FeatureTransformer interface by creating a class called FeatureTransformerImplementation.
@@ -65,6 +67,7 @@ managed_agent:
     7. Apply scaling or normalization when appropriate
     8. Document your transformations clearly with comments
     9. Keep memory usage reasonable
+    10. Document the transformed dataset by creating a feature engineering report at the end
     
     ## Best Practices:
     - Do not remove rows unless absolutely necessary

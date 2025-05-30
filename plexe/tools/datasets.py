@@ -304,7 +304,7 @@ def register_eda_report(
         recommendations: Specific, prioritized actions for preprocessing and feature engineering
 
     Returns:
-        True if the report was successfully registered, False otherwise
+        A string indicating success or failure of the registration
     """
     object_registry = ObjectRegistry()
 
@@ -331,6 +331,55 @@ def register_eda_report(
     except Exception as e:
         logger.warning(f"⚠️ Error registering EDA report: {str(e)}")
         raise RuntimeError(f"Failed to register EDA report for dataset '{dataset_name}': {str(e)}")
+
+
+@tool
+def register_feature_engineering_report(
+    dataset_name: str,
+    overview: Dict[str, Any],
+    feature_catalog: Dict[str, Any],
+    feature_importance: Dict[str, Any],
+    insights: List[str],
+    recommendations: List[str],
+) -> str:
+    """
+    Register a feature engineering report for a transformed dataset. This tool registers a structured report with
+    actionable insights from feature engineering for use by other agents. The purpose is to ensure that the features
+    created during feature engineering are well-documented.
+
+    Args:
+        dataset_name: Name of the dataset that was analyzed
+        overview: Essential dataset statistics including target variable analysis
+        feature_catalog: Catalog of engineered features with descriptions and transformations
+        feature_importance: Assessment of feature predictive potential and relevance
+        insights: Key insights derived from the analysis that directly impact feature engineering
+        recommendations: Specific, prioritized actions for preprocessing and feature engineering
+
+    Returns:
+        A string indicating success or failure of the registration
+    """
+    object_registry = ObjectRegistry()
+
+    try:
+        # Create structured feature engineering report
+        fe_report = {
+            "dataset_name": dataset_name,
+            "timestamp": datetime.now().isoformat(),
+            "overview": overview,
+            "feature_catalog": feature_catalog,
+            "feature_importance": feature_importance,
+            "insights": insights,
+            "recommendations": recommendations,
+        }
+
+        # Register in registry
+        object_registry.register(dict, f"fe_report_{dataset_name}", fe_report, overwrite=True)
+        logger.debug(f"✅ Registered Feature Engineering report for dataset '{dataset_name}'")
+        return f"Successfully registered Feature Engineering report for dataset '{dataset_name}'"
+
+    except Exception as e:
+        logger.warning(f"⚠️ Error registering Feature Engineering report: {str(e)}")
+        raise RuntimeError(f"Failed to register Feature Engineering report for dataset '{dataset_name}': {str(e)}")
 
 
 @tool
@@ -540,14 +589,16 @@ def get_test_dataset() -> str:
         raise ValueError(f"Failed to get test dataset: {str(e)}")
 
 
+# TODO: this can return a very large amount of data, consider dividing this into list_reports() and get_report(name)
 @tool
-def get_eda_reports() -> Dict[str, Dict]:
+def get_dataset_reports() -> Dict[str, Dict]:
     """
-    Get all available EDA reports.
+    Get all available data analysis reports, including EDA for raw datasets and feature engineering reports
+    for transformed datasets.
 
     Returns:
-        Dictionary mapping dataset names to their EDA reports.
-        Empty dict if no reports found.
+        Dictionary with the following structure:
+
     """
     object_registry = ObjectRegistry()
 
@@ -568,7 +619,23 @@ def get_eda_reports() -> Dict[str, Dict]:
                     logger.debug(f"Failed to retrieve EDA report {name}: {str(e)}")
                     continue
 
-        return eda_reports
+        # Filter for feature engineering reports (they have pattern "fe_report_{dataset_name}")
+        fe_reports = {}
+        for name in all_dicts:
+            if name.startswith("fe_report_"):
+                # Extract dataset name
+                dataset_name = name[10:]  # Remove "fe_report_" prefix
+                try:
+                    report = object_registry.get(dict, name)
+                    fe_reports[dataset_name] = report
+                except Exception as e:
+                    logger.debug(f"Failed to retrieve Feature Engineering report {name}: {str(e)}")
+                    continue
+
+        return {
+            "eda_reports": eda_reports,
+            "feature_engineering_reports": fe_reports,
+        }
 
     except Exception as e:
         logger.warning(f"⚠️ Error getting EDA reports: {str(e)}")

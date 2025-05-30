@@ -13,7 +13,7 @@ managed_agent:
 
     ## Available Tools:
     - `get_latest_datasets`: Get the names of all available datasets, including their roles (raw, transformed, etc)
-    - `get_eda_reports`: Access all EDA reports to understand data structure
+    - `get_dataset_reports`: Access all data analysis reports to understand data structure
     - `get_dataset_preview`: Preview specific datasets
     - `register_final_model_schemas`: Register your determined schemas
     
@@ -25,7 +25,7 @@ managed_agent:
     ## Workflow:
     1. Use 'get_model_schemas' to check what model schemas are already defined, if any
     1. Use `get_latest_datasets` to find the transformed dataset from which to derive schemas
-    2. Use `get_eda_reports` to understand data structure
+    2. Use `get_dataset_reports` to understand data structure
     3. Examine the data if needed using 'get_dataset_preview'
     4. Determine minimal, sufficient input and output schemas that are aligned with task and dataset structure
     5. Call register_final_model_schemas with your determined schemas and reasoning

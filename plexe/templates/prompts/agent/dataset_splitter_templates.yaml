@@ -14,7 +14,7 @@ managed_agent:
     
     ## Available Tools:
     - `get_latest_datasets`: Discover all available datasets and their current state (raw, transformed, etc.)
-    - `get_eda_reports`: Access all EDA reports to understand data characteristics for informed splitting
+    - `get_dataset_reports`: Access all data reports to understand characteristics for informed splitting
     - `get_dataset_preview`: Preview a specific dataset
     - `register_split_datasets`: Register your train/val/test splits
     
@@ -34,7 +34,7 @@ managed_agent:
     
     ## Workflow:
     1. Use `get_latest_datasets` to find available datasets (focus on "transformed" if available, otherwise "raw")
-    2. Use `get_eda_reports` to understand data characteristics
+    2. Use `get_dataset_reports` to understand data characteristics
     3. Access the dataset using the registry pattern above
     4. Split according to best practices below
     5. Register splits with `register_split_datasets`
