@@ -11,6 +11,7 @@ from smolagents import tool
 from plexe.internal.common.datasets.interface import TabularConvertible
 from plexe.core.object_registry import ObjectRegistry
 from plexe.internal.common.utils.pydantic_utils import map_to_basemodel
+from plexe.tools.datasets import create_input_sample
 
 logger = logging.getLogger(__name__)
 
@@ -55,6 +56,9 @@ def register_final_model_schemas(
     except ValueError as e:
         if "already registered" not in str(e):
             raise e
+
+    # Create input sample now that we know schema exists
+    create_input_sample(n=5)  # TODO: this tool -> tool dependency will lead to difficult to debug errors
 
     # Register output schema if possible
     try:

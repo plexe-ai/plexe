@@ -92,20 +92,21 @@ def register_split_datasets(
     }
 
 
+# TODO: does not need to be a tool
 @tool
-def create_input_sample(input_schema: Dict[str, str], n_samples: int = 5) -> bool:
+def create_input_sample(n_samples: int = 5) -> bool:
     """
     Create and register a synthetic sample input dataset that matches the model's input schema.
     This sample is used for validating inference code.
 
     Args:
-        input_schema: Dictionary mapping field names to their types
         n_samples: Number of samples to generate (default: 5)
 
     Returns:
         True if sample was successfully created and registered, False otherwise
     """
     object_registry = ObjectRegistry()
+    input_schema = object_registry.get(dict, "input_schema")
 
     try:
         # Create synthetic sample data that matches the schema
@@ -131,7 +132,7 @@ def create_input_sample(input_schema: Dict[str, str], n_samples: int = 5) -> boo
         # TODO: we should use an LLM call to generate sensible values; then validate using pydantic
 
         # Register the input sample in the registry for validation tool to use
-        object_registry.register(list, "predictor_input_sample", input_sample_dicts)
+        object_registry.register(list, "predictor_input_sample", input_sample_dicts, overwrite=True, immutable=True)
         logger.debug(
             f"✅ Registered synthetic input sample with {len(input_sample_dicts)} examples for inference validation"
         )
