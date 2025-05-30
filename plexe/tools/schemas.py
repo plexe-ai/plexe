@@ -11,21 +11,16 @@ from smolagents import tool
 from plexe.internal.common.datasets.interface import TabularConvertible
 from plexe.core.object_registry import ObjectRegistry
 from plexe.internal.common.utils.pydantic_utils import map_to_basemodel
-from plexe.tools.datasets import create_input_sample
 
 logger = logging.getLogger(__name__)
 
 
 @tool
-def register_final_model_schemas(
+def register_global_schemas(
     input_schema: Dict[str, str], output_schema: Dict[str, str], reasoning: str
 ) -> Dict[str, str]:
     """
-    Register agent-determined schemas in the ObjectRegistry with validation.
-
-    Validates schemas by attempting to convert them to Pydantic models
-    and registers them in the ObjectRegistry if valid. If validation fails,
-    raises an exception with details.
+    Register input and output schemas that should be used by all models built for all solutions.
 
     Args:
         input_schema: Finalized input schema as field:type dictionary
@@ -50,17 +45,14 @@ def register_final_model_schemas(
         logger.error(error_msg)
         raise ValueError(error_msg) from e
 
-    # Register input schema if possible
+    # Register input schema if possible; global schemas are typically registered once
     try:
         object_registry.register(dict, "input_schema", input_schema)
     except ValueError as e:
         if "already registered" not in str(e):
             raise e
 
-    # Create input sample now that we know schema exists
-    create_input_sample()  # TODO: this tool -> tool dependency will lead to difficult to debug errors
-
-    # Register output schema if possible
+    # Register output schema if possible; global schemas are typically registered once
     try:
         object_registry.register(dict, "output_schema", output_schema)
     except ValueError as e:
@@ -112,9 +104,9 @@ def get_dataset_schema(dataset_name: str) -> Dict[str, Any]:
 
 
 @tool
-def get_model_schemas() -> Dict[str, Dict[str, str]]:
+def get_global_schemas() -> Dict[str, Dict[str, str]]:
     """
-    Get input and output schemas if available.
+    Get global input and output schemas that should apply to a model.
 
     Returns:
         Dictionary with 'input' and 'output' schemas (if registered).
@@ -131,7 +123,7 @@ def get_model_schemas() -> Dict[str, Dict[str, str]]:
             if input_schema:
                 result["input"] = input_schema
         except KeyError:
-            logger.debug("Input schema not found in registry")
+            logger.debug("Global input schema not found in registry")
 
         # Try to get output schema
         try:
@@ -139,10 +131,169 @@ def get_model_schemas() -> Dict[str, Dict[str, str]]:
             if output_schema:
                 result["output"] = output_schema
         except KeyError:
-            logger.debug("Output schema not found in registry")
+            logger.debug("Global output schema not found in registry")
 
         return result
 
     except Exception as e:
-        logger.warning(f"⚠️ Error getting model schemas: {str(e)}")
+        logger.warning(f"⚠️ Error getting global schemas: {str(e)}")
+        return {}
+
+
+@tool
+def register_solution_schemas(
+    solution_id: str, input_schema: Dict[str, str], output_schema: Dict[str, str], reasoning: str
+) -> Dict[str, str]:
+    """
+    Register input and output schemas for a specific solution.
+
+    Args:
+        solution_id: ID of the solution to register schemas for
+        input_schema: Solution-specific input schema as field:type dictionary
+        output_schema: Solution-specific output schema as field:type dictionary
+        reasoning: Explanation of schema design decisions
+
+    Returns:
+        Status message confirming registration
+
+    Raises:
+        ValueError: If schema validation fails or solution not found
+    """
+    from plexe.core.entities.solution import Solution
+
+    object_registry = ObjectRegistry()
+
+    # If schemas are locked by the user, we must use the global schemas
+    input_is_locked = object_registry.get(bool, "input_schema_is_locked")
+    output_is_locked = object_registry.get(bool, "output_schema_is_locked")
+    global_schemas = get_global_schemas()
+    global_input_schema = global_schemas["input"]
+    global_output_schema = global_schemas["output"]
+
+    solution = object_registry.get(Solution, solution_id)
+
+    # If both schemas are locked, use global schemas
+    if input_is_locked and output_is_locked:
+        solution.input_schema = global_input_schema
+        solution.output_schema = global_output_schema
+        solution.schema_reasoning = "Using schemas provided by the user"
+    # If input is locked, validate output schema and set
+    elif input_is_locked:
+        try:
+            map_to_basemodel("OutputSchema", output_schema)
+        except Exception as e:
+            error_msg = f"Output schema validation failed: {str(e)}"
+            logger.error(error_msg)
+            raise ValueError(error_msg) from e
+        solution.input_schema = global_input_schema
+        solution.output_schema = output_schema
+        solution.schema_reasoning = reasoning
+    # If output is locked, validate input schema and set
+    elif output_is_locked:
+        try:
+            map_to_basemodel("InputSchema", input_schema)
+        except Exception as e:
+            error_msg = f"Input schema validation failed: {str(e)}"
+            logger.error(error_msg)
+            raise ValueError(error_msg) from e
+        solution.input_schema = input_schema
+        solution.output_schema = global_output_schema
+        solution.schema_reasoning = reasoning
+    # If neither schema is locked, validate both schemas
+    else:
+        try:
+            map_to_basemodel("InputSchema", input_schema)
+            map_to_basemodel("OutputSchema", output_schema)
+        except Exception as e:
+            error_msg = f"Schema validation failed: {str(e)}"
+            logger.error(error_msg)
+            raise ValueError(error_msg) from e
+        solution.input_schema = input_schema
+        solution.output_schema = output_schema
+        solution.schema_reasoning = reasoning
+
+    # Re-register the updated solution
+    object_registry.register(Solution, solution_id, solution, overwrite=True)
+
+    # Construct response depending on actions taken
+    if input_is_locked and output_is_locked:
+        logger.debug(f"✅ Registered global schemas for solution '{solution_id}' (schemas locked)")
+        return {
+            "status": "success",
+            "message": "Nothing to register, as schemas are locked by user.",
+            "registered_input_schema": global_input_schema,
+            "registered_output_schema": global_output_schema,
+        }
+    elif input_is_locked:
+        logger.debug(f"✅ Registered output schema for solution '{solution_id}' (input locked)")
+        return {
+            "status": "success",
+            "message": "New output schema was registered; input schema is locked by the user so defaulted to global.",
+            "registered_input_schema": global_input_schema,
+            "registered_output_schema": output_schema,
+        }
+    elif output_is_locked:
+        logger.debug(f"✅ Registered input schema for solution '{solution_id}' (output locked)")
+        return {
+            "status": "success",
+            "message": "New input schema was registered; output schema is locked by the user so defaulted to global.",
+            "registered_input_schema": input_schema,
+            "registered_output_schema": global_output_schema,
+        }
+    else:
+        logger.debug(f"✅ Registered schemas for solution '{solution_id}'")
+        return {
+            "status": "success",
+            "message": f"Schemas validated and registered for solution '{solution_id}'",
+            "registered_input_schema": input_schema,
+            "registered_output_schema": output_schema,
+        }
+
+
+@tool
+def get_solution_schemas(solution_id: str) -> Dict[str, Dict[str, str]]:
+    """
+    Get schemas for a specific solution, with fallback to global schemas.
+
+    Args:
+        solution_id: ID of the solution to get schemas for
+
+    Returns:
+        Dictionary with 'input' and 'output' schemas.
+        Prioritizes solution-specific schemas over global schemas.
+        Returns empty dict if no schemas found.
+    """
+    from plexe.core.entities.solution import Solution
+
+    object_registry = ObjectRegistry()
+    result = {}
+
+    try:
+        # First try to get solution-specific schemas
+        try:
+            solution = object_registry.get(Solution, solution_id)
+            if solution.input_schema:
+                result["input"] = solution.input_schema
+            if solution.output_schema:
+                result["output"] = solution.output_schema
+
+            # If we have both schemas from solution, return them
+            if "input" in result and "output" in result:
+                logger.debug(f"Using solution-specific schemas for '{solution_id}'")
+                return result
+
+        except KeyError:
+            logger.debug(f"Solution '{solution_id}' not found, falling back to global schemas")
+
+        # Fallback to global schemas for missing schemas
+        global_schemas = get_global_schemas()
+        if "input" not in result and "input" in global_schemas:
+            result["input"] = global_schemas["input"]
+        if "output" not in result and "output" in global_schemas:
+            result["output"] = global_schemas["output"]
+
+        return result
+
+    except Exception as e:
+        logger.warning(f"⚠️ Error getting solution schemas: {str(e)}")
         return {}

@@ -34,6 +34,7 @@ class ModelPackagerAgent:
         tool_model_id: str,
         verbose: bool = False,
         chain_of_thought_callable: Optional[Callable] = None,
+        schema_resolver_agent=None,
     ):
         """
         Initialize the model packager agent.
@@ -61,6 +62,7 @@ class ModelPackagerAgent:
                 validate_inference_code,
                 list_solutions,
             ],
+            managed_agents=[schema_resolver_agent] if schema_resolver_agent else [],
             add_base_tools=False,
             verbosity_level=self.verbosity,
             additional_authorized_imports=config.code_generation.authorized_agent_imports + ["plexe", "plexe.*"],

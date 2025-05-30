@@ -9,6 +9,7 @@ from smolagents import tool
 
 from plexe.internal.common.provider import Provider
 from plexe.internal.models.generation.review import ModelReviewer
+from plexe.tools.schemas import get_solution_schemas
 
 logger = logging.getLogger(__name__)
 
@@ -38,8 +39,9 @@ def get_review_finalised_model(llm_to_use: str) -> Callable:
         object_registry = ObjectRegistry()
 
         try:
-            input_schema = object_registry.get(dict, "input_schema")
-            output_schema = object_registry.get(dict, "output_schema")
+            schemas = get_solution_schemas(solution_id)
+            input_schema = schemas["input"]
+            output_schema = schemas["output"]
         except Exception:
             raise ValueError("Failed to retrieve schemas. Was schema resolution completed?")
 

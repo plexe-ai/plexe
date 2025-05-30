@@ -12,7 +12,7 @@ managed_agent:
     ## Available Tools:
     - `get_latest_datasets`: Get the names of existing datasets
     - `get_dataset_reports`: Access all EDA reports to understand feature engineering opportunities
-    - `get_model_schemas`: Get input/output schemas to understand expected model interface
+    - `get_global_schemas`: Get global input/output schemas to understand expected model interface
     - `get_dataset_preview`: Preview specific datasets
     - `validate_feature_transformations`: Validate your transformation code
     - `apply_feature_transformer`: Apply transformations to datasets

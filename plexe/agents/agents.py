@@ -142,6 +142,7 @@ class PlexeAgent:
             distributed=self.distributed,
             verbose=verbose,
             chain_of_thought_callable=self.chain_of_thought_callable,
+            schema_resolver_agent=self.schema_resolver_agent,
         ).agent
 
         # Create predictor builder agent - creates inference code
@@ -150,6 +151,7 @@ class PlexeAgent:
             tool_model_id=self.tool_model_id,
             verbose=verbose,
             chain_of_thought_callable=self.chain_of_thought_callable,
+            schema_resolver_agent=self.schema_resolver_agent,
         ).agent
 
         # Create model tester agent - tests and evaluates the finalized model
@@ -273,18 +275,16 @@ class PlexeAgent:
             # Get testing code if available
             testing_code = None
             try:
-                testing_code_obj = object_registry.get(Code, "model_testing_code")
-                if testing_code_obj:
-                    testing_code = testing_code_obj.code
-            except KeyError:
+                testing_code = best_solution.testing_code
+            except Exception:
                 # No testing code found, that's ok
                 pass
 
             # Get evaluation report if available
             evaluation_report = None
             try:
-                evaluation_report = object_registry.get(dict, "model_evaluation_report")
-            except KeyError:
+                evaluation_report = best_solution.model_evaluation_report
+            except Exception:
                 # No evaluation report found, that's ok
                 pass
 

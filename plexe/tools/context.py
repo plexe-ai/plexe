@@ -13,6 +13,8 @@ from plexe.config import code_templates
 from plexe.core.entities.solution import Solution
 from plexe.internal.common.provider import Provider
 from plexe.core.object_registry import ObjectRegistry
+from plexe.tools.datasets import create_input_sample
+from plexe.tools.schemas import get_solution_schemas
 
 logger = logging.getLogger(__name__)
 
@@ -48,13 +50,16 @@ def get_inference_context_tool(llm_to_use: str) -> Callable:
 
         # Retrieve schemas
         try:
-            input_schema = object_registry.get(dict, "input_schema")
-            output_schema = object_registry.get(dict, "output_schema")
+            schemas = get_solution_schemas("best_performing_solution")
+            input_schema = schemas["input"]
+            output_schema = schemas["output"]
         except Exception as e:
             raise ValueError(f"Failed to retrieve schemas from registry: {str(e)}")
 
         # Retrieve input sample
         try:
+            # Create input sample now that we know schema exists
+            create_input_sample()  # TODO: this tool -> tool dependency will lead to difficult to debug errors
             input_sample = object_registry.get(list, "predictor_input_sample")
         except Exception as e:
             raise ValueError(f"Failed to retrieve input sample: {str(e)}")

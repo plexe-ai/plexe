@@ -14,6 +14,7 @@ from plexe.internal.models.validation.composites import (
     InferenceCodeValidator,
     TrainingCodeValidator,
 )
+from plexe.tools.schemas import get_solution_schemas
 
 logger = logging.getLogger(__name__)
 
@@ -68,8 +69,9 @@ def validate_inference_code(
 
     # Get schemas from registry
     try:
-        input_schema = object_registry.get(dict, "input_schema")
-        output_schema = object_registry.get(dict, "output_schema")
+        schemas = get_solution_schemas("best_performing_solution")
+        input_schema = schemas["input"]
+        output_schema = schemas["output"]
     except Exception as e:
         return _error_response("schema_preparation", type(e).__name__, str(e))
 

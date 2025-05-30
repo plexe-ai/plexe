@@ -26,6 +26,7 @@ from plexe.core.object_registry import ObjectRegistry
 from plexe.internal.common.utils.pydantic_utils import map_to_basemodel, format_schema
 from plexe.internal.common.utils.markdown_utils import format_eda_report_markdown
 from plexe.core.state import ModelState
+from plexe.tools.schemas import get_solution_schemas
 
 logger = logging.getLogger(__name__)
 
@@ -105,6 +106,9 @@ class ModelBuilder:
         input_schema = map_to_basemodel("in", input_schema) if input_schema else None
         output_schema = map_to_basemodel("out", output_schema) if output_schema else None
 
+        object_registry.register(bool, "input_schema_is_locked", input_schema is not None, immutable=True)
+        object_registry.register(bool, "output_schema_is_locked", output_schema is not None, immutable=True)
+
         # Initialize callbacks
         callbacks = callbacks or []
         if enable_checkpointing and not any(isinstance(cb, ModelCheckpointCallback) for cb in callbacks):
@@ -182,8 +186,9 @@ class ModelBuilder:
             generated = agent.run(agent_prompt, additional_args=additional_args)
 
             # Extract final schemas (may have been inferred)
-            final_input_schema = map_to_basemodel("InputSchema", object_registry.get(dict, "input_schema"))
-            final_output_schema = map_to_basemodel("OutputSchema", object_registry.get(dict, "output_schema"))
+            schemas = get_solution_schemas("best_performing_solution")
+            final_input_schema = map_to_basemodel("InputSchema", schemas["input"])
+            final_output_schema = map_to_basemodel("OutputSchema", schemas["output"])
 
             # Build metadata
             metadata = {

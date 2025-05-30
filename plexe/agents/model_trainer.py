@@ -12,7 +12,7 @@ from plexe.config import config
 from plexe.internal.common.utils.agents import get_prompt_templates
 from plexe.tools.execution import get_executor_tool
 from plexe.tools.response_formatting import format_final_mle_agent_response
-from plexe.tools.schemas import get_dataset_schema, get_model_schemas
+from plexe.tools.schemas import get_dataset_schema, get_solution_schemas
 from plexe.tools.training import get_training_code_generation_tool, get_training_code_fixing_tool
 from plexe.tools.validation import validate_training_code
 from plexe.tools.datasets import get_training_datasets
@@ -36,6 +36,7 @@ class ModelTrainerAgent:
         distributed: bool = False,
         verbose: bool = False,
         chain_of_thought_callable: callable = None,
+        schema_resolver_agent=None,
     ):
         # Set verbosity level
         self.verbosity = 1 if verbose else 0
@@ -47,8 +48,6 @@ class ModelTrainerAgent:
                 "Expert ML engineer that implements, trains and validates ML models based on provided plans. "
                 "To work effectively, as part of the 'task' prompt the agent STRICTLY requires:"
                 "- the ML task definition (i.e. 'intent')"
-                "- input schema for the model"
-                "- output schema for the model"
                 "- the name and comparison method of the metric to optimise"
                 "- the Solution ID to implement (from ML Research Scientist)"
                 "- the split train/validation dataset names"
@@ -64,11 +63,12 @@ class ModelTrainerAgent:
                 get_executor_tool(distributed),
                 format_final_mle_agent_response,
                 get_training_datasets,
-                get_model_schemas,
+                get_solution_schemas,
                 get_feature_transformer_code,
                 get_solution_plan_by_id,
                 list_solutions,
             ],
+            managed_agents=[schema_resolver_agent] if schema_resolver_agent else [],
             add_base_tools=False,
             additional_authorized_imports=[
                 "plexe",

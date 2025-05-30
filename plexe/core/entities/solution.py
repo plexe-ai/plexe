@@ -55,6 +55,7 @@ class Solution:
     testing_code: str = field(default=None, hash=True, kw_only=True)
     input_schema: Dict[str, str] = field(default=None, kw_only=True)
     output_schema: Dict[str, str] = field(default=None, kw_only=True)
+    schema_reasoning: str = field(default=None, kw_only=True)  # Explanation of schema design
 
     # Post-execution results: model performance, execution time, exceptions, etc.
     performance: Metric = field(default=None, kw_only=True)  # Validation performance

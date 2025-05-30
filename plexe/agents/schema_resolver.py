@@ -13,7 +13,13 @@ from smolagents import LiteLLMModel, CodeAgent
 
 from plexe.internal.common.utils.agents import get_prompt_templates
 from plexe.tools.datasets import get_dataset_preview, get_dataset_reports, get_latest_datasets
-from plexe.tools.schemas import register_final_model_schemas, get_model_schemas
+from plexe.tools.schemas import (
+    register_global_schemas,
+    get_global_schemas,
+    register_solution_schemas,
+    get_solution_schemas,
+)
+from plexe.tools.solutions import list_solutions
 
 logger = logging.getLogger(__name__)
 
@@ -59,10 +65,13 @@ class SchemaResolverAgent:
             model=LiteLLMModel(model_id=self.model_id),
             tools=[
                 get_dataset_preview,
-                get_model_schemas,
-                register_final_model_schemas,
+                get_global_schemas,
+                register_global_schemas,
+                register_solution_schemas,
+                get_solution_schemas,
                 get_latest_datasets,
                 get_dataset_reports,
+                list_solutions,
             ],
             add_base_tools=False,
             verbosity_level=self.verbosity,

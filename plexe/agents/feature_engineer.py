@@ -20,7 +20,7 @@ from plexe.tools.datasets import (
 )
 from plexe.tools.execution import apply_feature_transformer
 from plexe.tools.validation import validate_feature_transformations
-from plexe.tools.schemas import get_model_schemas
+from plexe.tools.schemas import get_global_schemas
 
 logger = logging.getLogger(__name__)
 
@@ -68,7 +68,7 @@ class FeatureEngineeringAgent:
                 apply_feature_transformer,
                 get_latest_datasets,
                 get_dataset_reports,
-                get_model_schemas,
+                get_global_schemas,
                 register_feature_engineering_report,
             ],
             add_base_tools=False,
