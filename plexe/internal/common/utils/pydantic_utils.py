@@ -84,8 +84,12 @@ def map_to_basemodel(name: str, schema: dict | Type[BaseModel]) -> Type[BaseMode
                         annotated_schema[k] = (type_mapping[v], ...)
                     else:
                         raise ValueError(f"Invalid type specification: {v} for field {k}")
-                # If v is already a type, use it directly
-                elif isinstance(v, type):
+                # If v is already a type or one of our allowed typing generics, use it directly
+                elif isinstance(v, type) or v in {List[int], List[float], List[str], List[bool]}:
+                    # Validate that it's one of our allowed types
+                    allowed_types = {int, float, str, bool, List[int], List[float], List[str], List[bool]}
+                    if v not in allowed_types:
+                        raise ValueError(f"Unsupported type '{v}' for field '{k}'. Allowed types: {allowed_types}")
                     annotated_schema[k] = (v, ...)
                 else:
                     raise ValueError(f"Invalid field specification for {k}: {v}")
