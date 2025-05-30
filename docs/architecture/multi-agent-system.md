@@ -58,16 +58,17 @@ graph TD
         SchemaResolver --> |"Schemas"| Orchestrator
         EDA --> |"Analysis & Reports"| Orchestrator
         FE --> |"Transformed Datasets"| Orchestrator
-        MLS --> |"Solution Plans"| Orchestrator
+        MLS --> |"Multiple Solution Plans"| Orchestrator
         DS --> |"Split Datasets"| Orchestrator
-        MLE --> |"Training Code"| Orchestrator
-        MLOPS --> |"Inference Code"| Orchestrator
-        Tester --> |"Evaluation Reports"| Orchestrator
+        MLE --> |"Multiple Trained Models"| Orchestrator
+        MLOPS --> |"Inference Code for Each Model"| Orchestrator
+        Tester --> |"Evaluation Reports for All Models"| Orchestrator
     end
     
     subgraph Registry["Object Registry"]
         Datasets[(Datasets)]
         EdaReports[(EDA Reports)]
+        Solutions[(Solution Objects)]
         Artifacts[(Model Artifacts)]
         Code[(Code Snippets)]
         Schemas[(I/O Schemas)]
@@ -80,6 +81,7 @@ graph TD
         ExecutionTool["Execution"]
         DatasetTool["Dataset Handling"]
         ReviewTool["Model Review"]
+        SolutionTool["Solution Management"]
     end
     
     Orchestrator <--> Registry
@@ -97,7 +99,7 @@ graph TD
     DS <--> Registry
     DS <--> Tools
     
-    Orchestrator --> Result([Trained Model])
+    Orchestrator --> |"Best Solution Selected"| Result([Trained Model])
     Result --> Model
     Model --> |predict| Prediction([Predictions])
 ```
@@ -205,7 +207,9 @@ self.manager_agent = CodeAgent(
     tools=[
         get_select_target_metric(self.tool_model_id),
         get_review_finalised_model(self.tool_model_id),
-        create_input_sample,
+        get_latest_datasets,
+        get_solution_performances,
+        register_best_solution,
         format_final_orchestrator_agent_response,
     ],
     managed_agents=[
@@ -222,7 +226,6 @@ self.manager_agent = CodeAgent(
     verbosity_level=self.orchestrator_verbosity,
     additional_authorized_imports=config.code_generation.authorized_agent_imports,
     max_steps=self.max_steps,
-    prompt_templates=get_prompt_templates("code_agent.yaml", "manager_prompt_templates.yaml"),
     planning_interval=7,
     step_callbacks=[self.chain_of_thought_callable],
 )
@@ -269,7 +272,8 @@ self.mle_agent = ModelTrainerAgent(
     tool_model_id=self.tool_model_id,
     distributed=self.distributed,
     verbose=verbose,
-    chain_of_thought_callable=self.chain_of_thought_callable,
+    chain_of_thought_callable=chain_of_thought_callable,
+    schema_resolver_agent=self.schema_resolver_agent,
 ).agent
 ```
 
@@ -292,7 +296,8 @@ self.mlops_engineer = ModelPackagerAgent(
     model_id=self.ml_ops_engineer_model_id,
     tool_model_id=self.tool_model_id,
     verbose=verbose,
-    chain_of_thought_callable=self.chain_of_thought_callable,
+    chain_of_thought_callable=chain_of_thought_callable,
+    schema_resolver_agent=self.schema_resolver_agent,
 ).agent
 ```
 
@@ -437,26 +442,28 @@ The multi-agent workflow follows these key steps:
    - Registers split datasets in the Object Registry
 
 7. **Solution Planning**:
-   - ML Research Scientist analyzes the problem and proposes solution approaches
-   - Manager Agent evaluates and selects approaches based on requirements
+   - ML Research Scientist analyzes the problem and proposes multiple solution approaches
+   - Manager Agent evaluates and selects the best approaches based on requirements
+   - Solution plans are registered for implementation
 
 8. **Model Implementation**:
-   - ML Engineer generates and executes training code based on the solution plan
-   - Model artifacts are registered in the Object Registry
-   - Training results and performance metrics are captured
+   - ML Engineer generates and executes training code for each solution plan
+   - Multiple models may be trained to compare performance
+   - Model artifacts and performance metrics are captured for each solution
 
 9. **Inference Code Generation**:
-   - ML Operations Engineer generates compatible inference code
+   - ML Operations Engineer generates compatible inference code for each trained solution
    - Code is validated with sample inputs for correctness
-   - Predictor instances are registered for testing
+   - Predictor instances are created and tested
 
 10. **Model Testing**:
-   - Model Tester Agent evaluates the finalized model on test data
-   - Comprehensive evaluation reports are generated
+   - Model Tester Agent evaluates all finalized models on test data
+   - Comprehensive evaluation reports are generated for performance comparison
    - Quality analysis and robustness testing are performed
 
-11. **Finalization**:
-   - Manager Agent reviews and finalizes the model using the review tool
+11. **Solution Selection and Finalization**:
+   - Manager Agent compares all solution performances and selects the best performing model
+   - The best solution is registered as the final model
    - All artifacts, code, and evaluation results are collected
    - Model metadata is extracted and stored
    - Completed model is returned to the user
