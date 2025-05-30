@@ -47,7 +47,7 @@ managed_agent:
     
     ## Key requirements:
     1. IMPORTANT: keep schemas conceptually aligned with dataset structure
-    2. Use only Python types: "int", "float", "str", "bool"
+    2. Use ONLY these types: "int", "float", "str", "bool", "List[int]", "List[float]", "List[str]", "List[bool]"
     3. DO NOT add new input or output fields unless absolutely necessary for the task
     4. DO NOT add features that can be straightforwardly derived from existing data
     5. Schemas should include only necessary fields for the model's purpose
