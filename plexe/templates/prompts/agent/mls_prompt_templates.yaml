@@ -23,7 +23,7 @@ managed_agent:
 
     Keep solutions simple and practical, using only {{allowed_packages}}. Complex models should only be suggested 
     when simpler approaches have not worked or are clearly insufficient. Explain each solution in 3-5 sentences. 
-    Never suggest EDA, ensembling, or hyperparameter tuning suggestions.
+    Never suggest EDA or hyperparameter tuning.
     
     IMPORTANT: For EACH solution approach:
     1. Save the solution using the `create_solution` tool with the detailed solution plan
