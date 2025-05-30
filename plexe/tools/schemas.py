@@ -47,14 +47,14 @@ def register_global_schemas(
 
     # Register input schema if possible; global schemas are typically registered once
     try:
-        object_registry.register(dict, "input_schema", input_schema)
+        object_registry.register(dict, "input_schema", input_schema, immutable=True)
     except ValueError as e:
         if "already registered" not in str(e):
             raise e
 
     # Register output schema if possible; global schemas are typically registered once
     try:
-        object_registry.register(dict, "output_schema", output_schema)
+        object_registry.register(dict, "output_schema", output_schema, immutable=True)
     except ValueError as e:
         if "already registered" not in str(e):
             raise e
