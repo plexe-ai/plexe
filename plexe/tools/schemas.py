@@ -167,8 +167,8 @@ def register_solution_schemas(
     input_is_locked = object_registry.get(bool, "input_schema_is_locked")
     output_is_locked = object_registry.get(bool, "output_schema_is_locked")
     global_schemas = get_global_schemas()
-    global_input_schema = global_schemas["input"]
-    global_output_schema = global_schemas["output"]
+    global_input_schema = global_schemas.get("input")
+    global_output_schema = global_schemas.get("output")
 
     solution = object_registry.get(Solution, solution_id)
 

@@ -20,7 +20,7 @@ managed_agent:
     
     ## Workflow:
     1. Use `get_latest_datasets` to find the (raw) datasets that need transformation
-    2. Use `get_dataset_reports` and `get_model_schemas` to understand requirements
+    2. Use `get_dataset_reports` and `get_global_schemas` to understand requirements
     3. Write feature transformation code based on insights
     4. Validate your code using validate_feature_transformations
     5. Apply the transformer to datasets using apply_feature_transformer
