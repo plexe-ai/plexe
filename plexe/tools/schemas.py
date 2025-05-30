@@ -5,12 +5,12 @@ Tools for schema inference, definition, and validation.
 import logging
 from typing import Dict, Any
 
-import pandas as pd
 from smolagents import tool
 
 from plexe.internal.common.datasets.interface import TabularConvertible
 from plexe.core.object_registry import ObjectRegistry
 from plexe.internal.common.utils.pydantic_utils import map_to_basemodel
+from plexe.internal.common.utils.pandas_utils import convert_dtype_to_python
 
 logger = logging.getLogger(__name__)
 
@@ -89,15 +89,9 @@ def get_dataset_schema(dataset_name: str) -> Dict[str, Any]:
     schema = {}
     for col in df.columns:
         dtype = df[col].dtype
-        # Map pandas types to Python types
-        if pd.api.types.is_integer_dtype(dtype):
-            py_type = "int"
-        elif pd.api.types.is_float_dtype(dtype):
-            py_type = "float"
-        elif pd.api.types.is_bool_dtype(dtype):
-            py_type = "bool"
-        else:
-            py_type = "str"
+        # Map pandas types to Python types, detecting List[T] for object columns
+        sample_values = df[col].dropna().head(10).tolist() if len(df) > 0 else None
+        py_type = convert_dtype_to_python(dtype, sample_values)
         schema[col] = py_type
 
     return {"dataset_name": dataset_name, "columns": schema}

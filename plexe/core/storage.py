@@ -571,7 +571,16 @@ def _process_schema_dict(schema_dict: Dict[str, str]) -> Type:
 
     def type_from_name(type_name: str) -> type:
         # Map string type names to actual Python types
-        type_map = {"str": str, "int": int, "float": float, "bool": bool, "list": list}
+        type_map = {
+            "str": str,
+            "int": int,
+            "float": float,
+            "bool": bool,
+            "List[int]": List[int],
+            "List[float]": List[float],
+            "List[str]": List[str],
+            "List[bool]": List[bool],
+        }
         return type_map[type_name]
 
     # Create a Pydantic model from the schema dictionary

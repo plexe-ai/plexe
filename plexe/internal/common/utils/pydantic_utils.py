@@ -6,6 +6,19 @@ from pydantic import BaseModel, create_model
 from typing import Type, List, Dict, get_type_hints
 
 
+def _validate_schema_types(schema: Type[BaseModel]) -> None:
+    """Validate that a BaseModel schema only contains allowed types."""
+    allowed_types = {int, float, str, bool, List[int], List[float], List[str], List[bool]}
+
+    for field_name, field_info in schema.model_fields.items():
+        field_type = field_info.annotation
+        if field_type not in allowed_types:
+            raise ValueError(
+                f"Field '{field_name}' has unsupported type '{field_type}'. "
+                f"Allowed types: int, float, str, bool, List[int], List[float], List[str], List[bool]"
+            )
+
+
 def merge_models(model_name: str, models: List[Type[BaseModel]]) -> Type[BaseModel]:
     """
     Merge multiple Pydantic models into a single model. The ordering of the list determines
@@ -43,8 +56,9 @@ def map_to_basemodel(name: str, schema: dict | Type[BaseModel]) -> Type[BaseMode
     :param [dict] schema: the schema to be converted to a Pydantic model
     :return: the Pydantic model
     """
-    # Pydantic model: return as is
+    # Pydantic model: validate and return
     if isinstance(schema, type) and issubclass(schema, BaseModel):
+        _validate_schema_types(schema)
         return schema
 
     # Dictionary: convert to Pydantic model, if possible
@@ -56,7 +70,16 @@ def map_to_basemodel(name: str, schema: dict | Type[BaseModel]) -> Type[BaseMode
             for k, v in schema.items():
                 # If v is a string like "int", convert it to the actual type
                 if isinstance(v, str):
-                    type_mapping = {"int": int, "float": float, "str": str, "bool": bool, "list": list, "dict": dict}
+                    type_mapping = {
+                        "int": int,
+                        "float": float,
+                        "str": str,
+                        "bool": bool,
+                        "List[int]": List[int],
+                        "List[float]": List[float],
+                        "List[str]": List[str],
+                        "List[bool]": List[bool],
+                    }
                     if v in type_mapping:
                         annotated_schema[k] = (type_mapping[v], ...)
                     else:

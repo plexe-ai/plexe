@@ -87,7 +87,10 @@ class SchemaResolver:
                 match feature.split("."):
                     case [dataset, column]:
                         if isinstance(datasets[dataset], TabularConvertible):
-                            types[column] = convert_dtype_to_python(datasets[dataset].to_pandas()[column].dtype)
+                            df = datasets[dataset].to_pandas()
+                            # Pass sample values to help detect list types in object columns
+                            sample_values = df[column].dropna().head(10).tolist() if len(df) > 0 else None
+                            types[column] = convert_dtype_to_python(df[column].dtype, sample_values)
                         else:
                             raise ValueError(f"Dataset {dataset} has unsupported type: '{type(datasets[dataset])}'")
                     case [dataset]:

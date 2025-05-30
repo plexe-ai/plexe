@@ -125,8 +125,14 @@ def create_input_sample(n_samples: int = 5) -> bool:
                     sample[field_name] = i % 2 == 0
                 elif field_type == "str":
                     sample[field_name] = f"sample_{field_name}_{i}"
-                elif field_type == "list":
-                    sample[field_name] = [i * 10, i * 20, i * 30]  # Generate sample list with numeric values
+                elif field_type == "List[int]":
+                    sample[field_name] = [i * 10, i * 20, i * 30]
+                elif field_type == "List[float]":
+                    sample[field_name] = [i * 10.5, i * 20.5, i * 30.5]
+                elif field_type == "List[bool]":
+                    sample[field_name] = [True, False, i % 2 == 0]
+                elif field_type == "List[str]":
+                    sample[field_name] = [f"item_{i}_1", f"item_{i}_2", f"item_{i}_3"]
                 else:
                     sample[field_name] = None
             input_sample_dicts.append(sample)
