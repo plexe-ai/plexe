@@ -339,7 +339,7 @@ class MLFlowCallback(Callback):
                 # Log model artifacts
                 artifacts = self._safe_get(node, ["model_artifacts"], [])
                 for artifact in artifacts:
-                    if Path(artifact).exists():
+                    if artifact.is_path() and Path(artifact.path).exists():
                         try:
                             mlflow.log_artifact(str(artifact))
                         except Exception:
