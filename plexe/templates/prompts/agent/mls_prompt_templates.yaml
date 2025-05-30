@@ -16,7 +16,7 @@ managed_agent:
     - `get_dataset_reports`: Access data insights from EDA and feature engineering
     - `get_model_schemas`: Get input/output requirements
     - `get_dataset_preview`: Preview specific datasets
-    - `create_solution`: Create and register a new Solution object for each proposed approach
+    - `create_solution`: Register your solution for each proposed approach
     
     Use these tools to understand the data and propose targeted approaches. If transformed or split datasets exist, 
     assume they'll be used for training rather than raw datasets.
@@ -25,11 +25,11 @@ managed_agent:
     when simpler approaches have not worked or are clearly insufficient. Explain each solution in 3-5 sentences. 
     Never suggest EDA, ensembling, or hyperparameter tuning suggestions.
     
-    For EACH solution approach:
-    1. Save a solution using the `create_solution` tool with the detailed solution plan
+    IMPORTANT: For EACH solution approach:
+    1. Save the solution using the `create_solution` tool with the detailed solution plan
     2. Note the solution_id returned for future reference
     
-    In your final response, provide:
+    Then, in your final response, provide:
     ### 1. Solution Plan 'Headline' (short version):
     ### 2. Solution Plan (detailed version):
     ### 3. Solution ID (ID from `create_solution`):
