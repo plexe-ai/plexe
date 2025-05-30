@@ -201,7 +201,7 @@ class PlexeAgent:
         object_registry = ObjectRegistry()
         result = self.manager_agent.run(task=task, additional_args=additional_args)
 
-        print(f"Registry contents:\n\n" f"{json.dumps(object_registry.list(), indent=4)}" f"\n\n")
+        print(f"Registry contents:\n\n" f"{json.dumps(sorted(object_registry.list()), indent=4)}" f"\n\n")
 
         try:
             # Only log the full result when in verbose mode
