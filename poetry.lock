@@ -6742,10 +6742,11 @@ test = ["big-O", "importlib_resources", "jaraco.functools", "jaraco.itertools", 
 type = ["pytest-mypy"]
 
 [extras]
+all = ["accelerate", "fastapi", "safetensors", "tokenizers", "transformers", "uvicorn", "websockets"]
 chatui = ["fastapi", "uvicorn", "websockets"]
 transformers = ["accelerate", "safetensors", "tokenizers", "transformers"]
 
 [metadata]
 lock-version = "2.0"
 python-versions = ">=3.11,<3.13"
-content-hash = "fa485e85a9e0fcef1edbac270b21655d3fe070b11f5445c5238c723e96f80d0c"
+content-hash = "df3d635e13c9d594fcec321001b28fdb60dbca5be1d95405963ade2d5a7addd6"
