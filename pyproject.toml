@@ -67,6 +67,15 @@ websockets = { version = "^12.0", optional = true }
 [tool.poetry.extras]
 transformers = ["transformers", "tokenizers", "accelerate", "safetensors"]
 chatui = ["fastapi", "uvicorn", "websockets"]
+all = [
+    "transformers",
+    "tokenizers",
+    "accelerate",
+    "safetensors",
+    "fastapi",
+    "uvicorn",
+    "websockets"
+]
 
 [tool.poetry.group.dev.dependencies]
 pytest = "^8.3.4"

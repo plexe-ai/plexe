@@ -162,6 +162,7 @@ See [LiteLLM providers](https://docs.litellm.ai/docs/providers) for instructions
 pip install plexe                  # Standard installation, minimal dependencies
 pip install plexe[transformers]    # Support for transformers, tokenizers, etc
 pip install plexe[chatui]          # Local chat UI for model interaction
+pip install plexe[all]             # All optional dependencies
 ```
 
 ### 3.2. API Keys
