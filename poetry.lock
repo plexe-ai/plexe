@@ -6746,4 +6746,4 @@ transformers = ["accelerate", "safetensors", "tokenizers", "transformers"]
 [metadata]
 lock-version = "2.0"
 python-versions = ">=3.11,<3.13"
-content-hash = "70ee63d01c62bab31a432f5047c4b86c562fc7c470542534657181842b979f60"
+content-hash = "46f431b72bf1852e5bd0f17a3f9b65b47a2c53b0cfdc900eceb7323683f5a282"
