@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "plexe"
-version = "0.26.1"
+version = "0.26.2"
 description = "An agentic framework for building ML models from natural language"
 authors = [
     "Marcello De Bernardi <mdebernardi@plexe.ai>",
@@ -31,7 +31,7 @@ python = ">=3.11,<3.13"
 pandas = ">=1.5.0, <=2.2.0"
 imbalanced-learn = "^0.12.4"
 pydantic = "^2.9.2"
-scikit-learn = "^1.5.2"
+scikit-learn = "1.6.1"
 seaborn = "^0.12.2"
 dataclasses-json = "^0.6.7"
 bandit = "^1.8.2"
