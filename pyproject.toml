@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "plexe"
-version = "0.26.0"
+version = "0.26.1"
 description = "An agentic framework for building ML models from natural language"
 authors = [
     "Marcello De Bernardi <mdebernardi@plexe.ai>",
@@ -52,6 +52,7 @@ ray = "^2.9.0"
 rich = "^13.7.1"
 torch = "^2.3.0"
 smolagents = "^1.14.0"
+deprecated = "^1.2.18"
 
 # Deep learning dependencies
 transformers = { version = "^4.50.0", optional = true }
