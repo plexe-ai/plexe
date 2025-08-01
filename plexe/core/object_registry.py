@@ -111,18 +111,40 @@ class ObjectRegistry:
         """
         return {name: item.item for name, item in self._items.items() if name.startswith(str(t))}
 
-    def delete(self, t: Type[T], name: str) -> None:
+    def delete(self, t: Type[T], name: str, confirm: bool = False) -> None:
         """
         Delete an item by name.
 
         :param t: type prefix for the item
         :param name: the name of the item to delete
+        :param confirm: whether to show confirmation prompt (default: False for backward compatibility)
         """
         uri = self._get_uri(t, name)
+        
         if uri in self._items:
+            item = self._items[uri]
+            
+            if confirm:
+                print(f"About to delete: {uri}")
+                print(f"Item type: {type(item.item).__name__}")
+                print(f"Immutable: {item.immutable}")
+                response = input("Continue? (y/n): ")
+                if response.lower() != 'y':
+                    logger.info(f"Delete cancelled for: {uri}")
+                    return
+            
             del self._items[uri]
+            logger.info(f"Registry: Deleted {uri}")
         else:
-            raise KeyError(f"Item '{uri}' not found in registry")
+            # Provide helpful error message with available items
+            similar_items = self.list_by_type(t)
+            if similar_items:
+                error_msg = f"Item '{uri}' not found. Available {t.__name__} items: {similar_items}"
+            else:
+                error_msg = f"No {t.__name__} items found in registry"
+            
+            logger.warning(f"⚠️ {error_msg}")
+            raise KeyError(error_msg)
 
     def clear(self) -> None:
         """
