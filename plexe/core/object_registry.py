@@ -120,19 +120,19 @@ class ObjectRegistry:
         :param confirm: whether to show confirmation prompt (default: False for backward compatibility)
         """
         uri = self._get_uri(t, name)
-        
+
         if uri in self._items:
             item = self._items[uri]
-            
+
             if confirm:
                 print(f"About to delete: {uri}")
                 print(f"Item type: {type(item.item).__name__}")
                 print(f"Immutable: {item.immutable}")
                 response = input("Continue? (y/n): ")
-                if response.lower() != 'y':
+                if response.lower() != "y":
                     logger.info(f"Delete cancelled for: {uri}")
                     return
-            
+
             del self._items[uri]
             logger.info(f"Registry: Deleted {uri}")
         else:
@@ -142,7 +142,7 @@ class ObjectRegistry:
                 error_msg = f"Item '{uri}' not found. Available {t.__name__} items: {similar_items}"
             else:
                 error_msg = f"No {t.__name__} items found in registry"
-            
+
             logger.warning(f"⚠️ {error_msg}")
             raise KeyError(error_msg)
 
