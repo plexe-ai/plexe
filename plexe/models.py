@@ -93,8 +93,8 @@ class Model:
     def __init__(
         self,
         intent: str,
-        input_schema: Type[BaseModel] | Dict[str, type] = None,
-        output_schema: Type[BaseModel] | Dict[str, type] = None,
+        input_schema: Type[BaseModel] | Dict[str, type] = {},
+        output_schema: Type[BaseModel] | Dict[str, type] = {},
         distributed: bool = False,
     ):
         """
