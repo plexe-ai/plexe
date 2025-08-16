@@ -38,7 +38,7 @@ import os
 import uuid
 import warnings
 from datetime import datetime
-from typing import Dict, List, Type, Any
+from typing import Dict, List, Type, Any, Optional
 from deprecated import deprecated
 
 import pandas as pd
@@ -110,8 +110,8 @@ class Model:
 
         # The model's identity is defined by these fields
         self.intent: str = intent
-        self.input_schema: Type[BaseModel] = map_to_basemodel("in", input_schema) if input_schema else None
-        self.output_schema: Type[BaseModel] = map_to_basemodel("out", output_schema) if output_schema else None
+        self.input_schema: Optional[Type[BaseModel]] = map_to_basemodel("in", input_schema) if input_schema else None
+        self.output_schema: Optional[Type[BaseModel]] = map_to_basemodel("out", output_schema) if output_schema else None
         self.training_data: Dict[str, Dataset] = dict()
         self.distributed: bool = distributed
 
