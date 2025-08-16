@@ -66,7 +66,7 @@ def map_to_basemodel(name: str, schema: dict | Type[BaseModel]) -> Type[BaseMode
         try:
             # Handle both Dict[str, type] and Dict[str, str] formats
             annotated_schema = {}
-            
+
             type_mapping = {
                 "int": int,
                 "float": float,
