@@ -66,20 +66,21 @@ def map_to_basemodel(name: str, schema: dict | Type[BaseModel]) -> Type[BaseMode
         try:
             # Handle both Dict[str, type] and Dict[str, str] formats
             annotated_schema = {}
+            
+            type_mapping = {
+                "int": int,
+                "float": float,
+                "str": str,
+                "bool": bool,
+                "List[int]": List[int],
+                "List[float]": List[float],
+                "List[str]": List[str],
+                "List[bool]": List[bool],
+            }
 
             for k, v in schema.items():
                 # If v is a string like "int", convert it to the actual type
                 if isinstance(v, str):
-                    type_mapping = {
-                        "int": int,
-                        "float": float,
-                        "str": str,
-                        "bool": bool,
-                        "List[int]": List[int],
-                        "List[float]": List[float],
-                        "List[str]": List[str],
-                        "List[bool]": List[bool],
-                    }
                     if v in type_mapping:
                         annotated_schema[k] = (type_mapping[v], ...)
                     else:
