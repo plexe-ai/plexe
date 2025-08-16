@@ -72,6 +72,11 @@ To set up the development environment:
    -python setup.py
    ```
 
+   If you would like to use uv instead, copy and paste **pyproject-uv.toml** to **pyproject.toml**, then run the following command.
+   ```
+   uv sync
+   ```
+
 
 3. **Run Tests**:
 
