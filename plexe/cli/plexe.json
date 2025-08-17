@@ -1,0 +1,13 @@
+{
+  "provider": {
+    "default_provider": "openai/gpt-4o-mini",
+    "orchestrator_provider": "openai/gpt-4o-mini",
+    "research_provider": null,
+    "engineer_provider": "openai/gpt-4o-mini",
+    "ops_provider": null,
+    "tool_provider": "openai/gpt-4o-mini"
+  },
+  "verbose": true,
+  "distributed": false,
+  "working_dir": "/path/to/dir"
+}
