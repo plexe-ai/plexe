@@ -1,14 +1,14 @@
 """
-    Provides a way to read configurate file instead of hard code. 
-    WARNING: This file has not been intergrated with other files. 
+Provides a way to read configurate file instead of hard code.
+WARNING: This file has not been intergrated with other files.
 """
 
-from typing import Dict, List, Type, Optional
+from typing import Optional
 from plexe.model_builder import ModelBuilder
 from plexe.internal.common.provider import ProviderConfig
 
 import json
-from dataclasses import dataclass, field, fields
+from dataclasses import dataclass, fields
 
 
 @dataclass
@@ -30,7 +30,6 @@ class ModelJSONConfig:
 
 
 class ModelConfigFactory:
-
     def __init__(self, config_file: str = "./plexe.json"):
         try:
             data = None
@@ -49,7 +48,7 @@ class ModelConfigFactory:
                 raise Exception("Config Error: Default provider must be provided")
 
             for field in fields(ModelProviderJSONConfig):
-                if getattr(model_provider, field.name) == None:
+                if getattr(model_provider, field.name) is None:
                     setattr(model_provider, field.name, model_provider.default_provider)
 
             model_config = ModelJSONConfig(
@@ -61,8 +60,7 @@ class ModelConfigFactory:
             raise Exception(f"Parsing Config Error {e}")
 
     def get_model_builder(self) -> ModelBuilder:
-
-        if self.model_config == None:
+        if self.model_config is None:
             raise Exception("No config found")
 
         model_provider = self.model_config.provider
