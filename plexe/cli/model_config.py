@@ -4,6 +4,8 @@
 """
 
 from typing import Dict, List, Type, Optional
+from plexe.model_builder import ModelBuilder
+from plexe.internal.common.provider import ProviderConfig
 
 import json
 from dataclasses import dataclass, field, fields
@@ -57,3 +59,23 @@ class ModelConfigFactory:
             self.model_config = model_config
         except Exception as e:
             raise Exception(f"Parsing Config Error {e}")
+
+    def get_model_builder(self) -> ModelBuilder:
+
+        if self.model_config == None:
+            raise Exception("No config found")
+
+        model_provider = self.model_config.provider
+
+        _provider_config = ProviderConfig(
+            default_provider=model_provider.default_provider,
+            orchestrator_provider=model_provider.orchestrator_provider,
+            research_provider=model_provider.research_provider,
+            engineer_provider=model_provider.engineer_provider,
+            ops_provider=model_provider.ops_provider,
+            tool_provider=model_provider.tool_provider,
+        )
+
+        return ModelBuilder(
+            _provider_config, self.model_config.verbose, self.model_config.distributed, self.model_config.working_dir
+        )
