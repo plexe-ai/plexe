@@ -37,7 +37,7 @@ class ModelConfigFactory:
             with open(config_file, "r") as f:
                 data = json.load(f)
 
-            if not data or len(data) == 0:
+            if not data:
                 raise Exception(f"Config Error: No data in {config_file}")
 
             # now the data consist of something
