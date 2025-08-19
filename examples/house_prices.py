@@ -36,7 +36,6 @@ model = ModelBuilder(
         tool_provider="openai/gpt-4o",
     ),
     verbose=False,
-
 )
 
 # Step 2: Build the model using the training dataset
