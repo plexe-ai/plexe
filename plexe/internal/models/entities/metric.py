@@ -168,11 +168,12 @@ class _MetricDefinition:
             self.name == other.name
             and self.comparator.comparison_method == other.comparator.comparison_method
             and self.comparator.target == other.comparator.target
+            and self.comparator.epsilon == other.comparator.epsilon
         )
     
     def __hash__(self) -> int:
         """Hash the metric definition."""
-        return hash((self.name, self.comparator.comparison_method, self.comparator.target))
+        return hash((self.name, self.comparator.comparison_method, self.comparator.target, self.comparator.epsilon))
 
 
 @total_ordering
@@ -244,7 +245,7 @@ class Metric:
         if not isinstance(other, Metric):
             return NotImplemented
 
-        if self.is_worst or (self.is_worst and other.is_worst):
+        if self.is_worst:
             return False
 
         if other.is_worst:
