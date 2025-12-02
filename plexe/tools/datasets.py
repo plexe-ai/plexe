@@ -82,7 +82,7 @@ def register_split_datasets(
     dataset_sizes["validation"].append(len(val_ds))
     dataset_sizes["test"].append(len(test_ds))
 
-    logger.debug(  
+    logger.debug(
         f"✅ Registered custom split of dataset {dataset_name} into train/validation/test with sizes "
         f"{len(train_ds)}/{len(val_ds)}/{len(test_ds)}"
     )
