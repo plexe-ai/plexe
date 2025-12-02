@@ -105,15 +105,13 @@ class MetricComparator:
 _comparator_cache: WeakValueDictionary = WeakValueDictionary()
 
 
-def _get_shared_comparator(
-    comparison_method: ComparisonMethod, target: Optional[float] = None, epsilon: float = 1e-9
-) -> MetricComparator:
+def _get_shared_comparator(comparison_method: ComparisonMethod, target: Optional[float] = None, epsilon: float = 1e-9) -> MetricComparator:
     """
     Get or create a shared MetricComparator instance.
-
+    
     This function ensures that identical comparators are reused across all Metric instances,
     reducing memory usage and ensuring consistency.
-
+    
     :param comparison_method: The comparison method.
     :param target: Optional target value for TARGET_IS_BETTER.
     :param epsilon: Tolerance for floating-point comparisons.
@@ -121,11 +119,11 @@ def _get_shared_comparator(
     """
     # Create a cache key from the comparator parameters
     cache_key = (comparison_method, target, epsilon)
-
+    
     # Try to get existing comparator from cache
     if cache_key in _comparator_cache:
         return _comparator_cache[cache_key]
-
+    
     # Create new comparator and cache it
     comparator = MetricComparator(comparison_method, target, epsilon)
     _comparator_cache[cache_key] = comparator
@@ -135,33 +133,33 @@ def _get_shared_comparator(
 class _MetricDefinition:
     """
     Internal class representing a metric type definition.
-
+    
     This separates the metric definition (what it is) from the metric value (a measurement).
     Metric definitions are immutable and can be shared across multiple metric values.
-
+    
     This is an internal implementation detail - users should not interact with this class directly.
     """
-
+    
     def __init__(self, name: str, comparator: MetricComparator):
         """
         Initialize a metric definition.
-
+        
         :param name: The name of the metric.
         :param comparator: The shared comparator instance.
         """
         self._name = name
         self._comparator = comparator
-
+    
     @property
     def name(self) -> str:
         """The name of the metric."""
         return self._name
-
+    
     @property
     def comparator(self) -> MetricComparator:
         """The shared comparator instance."""
         return self._comparator
-
+    
     def __eq__(self, other) -> bool:
         """Check if two metric definitions are equal."""
         if not isinstance(other, _MetricDefinition):
@@ -170,12 +168,11 @@ class _MetricDefinition:
             self.name == other.name
             and self.comparator.comparison_method == other.comparator.comparison_method
             and self.comparator.target == other.comparator.target
-            and self.comparator.epsilon == other.comparator.epsilon
         )
-
+    
     def __hash__(self) -> int:
         """Hash the metric definition."""
-        return hash((self.name, self.comparator.comparison_method, self.comparator.target, self.comparator.epsilon))
+        return hash((self.name, self.comparator.comparison_method, self.comparator.target))
 
 
 @total_ordering
@@ -207,28 +204,30 @@ class Metric:
         # Store the metric value (dynamic, instance-specific)
         self.value = value
         self.is_worst = is_worst or value is None
-
+        
         # Get or create a shared comparator instance
         if comparator is not None:
             # Use the shared comparator cache to ensure we reuse identical comparators
             # This is the key optimization: identical comparators are shared across all metrics
             shared_comparator = _get_shared_comparator(
-                comparison_method=comparator.comparison_method, target=comparator.target, epsilon=comparator.epsilon
+                comparison_method=comparator.comparison_method,
+                target=comparator.target,
+                epsilon=comparator.epsilon
             )
         else:
             # If no comparator provided, raise an error as it's required for a valid metric
             # This maintains the same behavior as before
             raise ValueError("Metric requires a comparator. Provide a MetricComparator instance.")
-
+        
         # Create internal metric definition (separates type from value)
         # This is the key separation: definition (what it is) vs value (measurement)
         self._definition = _MetricDefinition(name=name, comparator=shared_comparator)
-
+    
     @property
     def name(self) -> str:
         """The name of the metric (for backward compatibility)."""
         return self._definition.name
-
+    
     @property
     def comparator(self) -> MetricComparator:
         """The shared comparator instance (for backward compatibility)."""
@@ -245,7 +244,7 @@ class Metric:
         if not isinstance(other, Metric):
             return NotImplemented
 
-        if self.is_worst:
+        if self.is_worst or (self.is_worst and other.is_worst):
             return False
 
         if other.is_worst:
@@ -283,7 +282,10 @@ class Metric:
             return False
 
         # Use definition equality for cleaner comparison
-        return self._definition == other._definition and self.comparator.compare(self.value, other.value) == 0
+        return (
+            self._definition == other._definition
+            and self.comparator.compare(self.value, other.value) == 0
+        )
 
     def __repr__(self) -> str:
         """
