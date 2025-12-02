@@ -8,15 +8,18 @@ registering exploratory data analysis (EDA) reports, and registering feature eng
 """
 
 import logging
+import json
 from datetime import datetime
 from typing import Dict, List, Any
 
 import numpy as np
 import pandas as pd
+from pydantic import BaseModel, ValidationError
 from smolagents import tool
 
 from plexe.internal.common.datasets.adapter import DatasetAdapter
 from plexe.internal.common.datasets.interface import TabularConvertible
+from plexe.internal.common.provider import Provider
 from plexe.core.object_registry import ObjectRegistry
 from plexe.internal.models.entities.code import Code
 
@@ -79,7 +82,7 @@ def register_split_datasets(
     dataset_sizes["validation"].append(len(val_ds))
     dataset_sizes["test"].append(len(test_ds))
 
-    logger.debug(
+    logger.debug(  
         f"✅ Registered custom split of dataset {dataset_name} into train/validation/test with sizes "
         f"{len(train_ds)}/{len(val_ds)}/{len(test_ds)}"
     )
@@ -109,35 +112,78 @@ def create_input_sample(n_samples: int = 5) -> bool:
     input_schema = object_registry.get(dict, "input_schema")
 
     try:
-        # Create synthetic sample data that matches the schema
+        # Create a Pydantic model dynamically from the schema for validation
+        schema_fields = {}
+        for field_name, field_type in input_schema.items():
+            # Map string type names to Python types
+            type_mapping = {
+                "int": int,
+                "float": float,
+                "bool": bool,
+                "str": str,
+                "List[int]": List[int],
+                "List[float]": List[float],
+                "List[bool]": List[bool],
+                "List[str]": List[str],
+            }
+            python_type = type_mapping.get(field_type, Any)
+            schema_fields[field_name] = (python_type, ...)
+
+        SampleModel = type("SampleModel", (BaseModel,), schema_fields)
+
+        # Use LLM to generate sensible sample values based on field names and types
+        provider = Provider("openai/gpt-4o-mini")
         input_sample_dicts = []
 
-        # Generate synthetic examples
+        # Generate samples using LLM
         for i in range(n_samples):
-            sample = {}
-            for field_name, field_type in input_schema.items():
-                # Generate appropriate sample values based on type
-                if field_type == "int":
-                    sample[field_name] = i * 10
-                elif field_type == "float":
-                    sample[field_name] = i * 10.5
-                elif field_type == "bool":
-                    sample[field_name] = i % 2 == 0
-                elif field_type == "str":
-                    sample[field_name] = f"sample_{field_name}_{i}"
-                elif field_type == "List[int]":
-                    sample[field_name] = [i * 10, i * 20, i * 30]
-                elif field_type == "List[float]":
-                    sample[field_name] = [i * 10.5, i * 20.5, i * 30.5]
-                elif field_type == "List[bool]":
-                    sample[field_name] = [True, False, i % 2 == 0]
-                elif field_type == "List[str]":
-                    sample[field_name] = [f"item_{i}_1", f"item_{i}_2", f"item_{i}_3"]
-                else:
-                    sample[field_name] = None
-            input_sample_dicts.append(sample)
+            # Create prompt for LLM to generate realistic sample
+            schema_description = ", ".join([f"{name}: {type_str}" for name, type_str in input_schema.items()])
+            user_prompt = f"""Generate a realistic sample data point for a machine learning model with the following schema:
+{schema_description}
 
-        # TODO: we should use an LLM call to generate sensible values; then validate using pydantic
+Generate realistic, sensible values that make sense for each field name. For example:
+- If field is "age", use a realistic age like 25 or 45, not 1000 or -5
+- If field is "email", use a realistic email format like "user@example.com"
+- If field is "price", use a realistic price value
+- Make values diverse across different samples"""
+
+            try:
+                # Get LLM response with Pydantic validation
+                response_str = provider.query(
+                    system_message="You are a data generation assistant. Generate realistic sample data that matches the given schema.",
+                    user_message=user_prompt,
+                    response_format=SampleModel,
+                )
+
+                # Parse and validate the response using Pydantic
+                response_dict = json.loads(response_str) if isinstance(response_str, str) else response_str
+                validated_sample = SampleModel(**response_dict)
+                input_sample_dicts.append(validated_sample.model_dump())
+            except (json.JSONDecodeError, ValidationError, Exception) as e:
+                # Fallback to simple synthetic generation if LLM fails
+                logger.warning(f"LLM generation failed for sample {i}, using fallback: {str(e)}")
+                sample = {}
+                for field_name, field_type in input_schema.items():
+                    if field_type == "int":
+                        sample[field_name] = i * 10
+                    elif field_type == "float":
+                        sample[field_name] = i * 10.5
+                    elif field_type == "bool":
+                        sample[field_name] = i % 2 == 0
+                    elif field_type == "str":
+                        sample[field_name] = f"sample_{field_name}_{i}"
+                    elif field_type == "List[int]":
+                        sample[field_name] = [i * 10, i * 20, i * 30]
+                    elif field_type == "List[float]":
+                        sample[field_name] = [i * 10.5, i * 20.5, i * 30.5]
+                    elif field_type == "List[bool]":
+                        sample[field_name] = [True, False, i % 2 == 0]
+                    elif field_type == "List[str]":
+                        sample[field_name] = [f"item_{i}_1", f"item_{i}_2", f"item_{i}_3"]
+                    else:
+                        sample[field_name] = None
+                input_sample_dicts.append(sample)
 
         # Register the input sample in the registry for validation tool to use
         object_registry.register(list, "predictor_input_sample", input_sample_dicts, overwrite=True, immutable=True)
