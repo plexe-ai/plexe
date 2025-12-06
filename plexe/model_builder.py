@@ -12,7 +12,7 @@ from datetime import datetime
 from typing import Dict, List, Type, Optional
 
 import pandas as pd
-from pydantic import BaseModel
+from pydantic import BaseModel, ValidationError
 
 from plexe.config import prompt_templates
 from plexe.datasets import DatasetGenerator
@@ -21,7 +21,7 @@ from plexe.internal.common.utils.chain_of_thought.emitters import ConsoleEmitter
 from plexe.agents.agents import PlexeAgent
 from plexe.internal.common.datasets.interface import TabularConvertible
 from plexe.internal.common.datasets.adapter import DatasetAdapter
-from plexe.internal.common.provider import ProviderConfig
+from plexe.internal.common.provider import ProviderConfig, Provider
 from plexe.core.object_registry import ObjectRegistry
 from plexe.internal.common.utils.pydantic_utils import map_to_basemodel, format_schema
 from plexe.internal.common.utils.markdown_utils import format_eda_report_markdown
@@ -63,6 +63,79 @@ class ModelBuilder:
         os.makedirs(working_dir, exist_ok=True)
         return working_dir
 
+    def _validate_intent(self, intent: str) -> None:
+        """
+        Validate the intent string using basic checks and LLM validation.
+        
+        Performs:
+        1. Basic validation (non-empty, reasonable length)
+        2. LLM-based validation to check if intent is clear and actionable
+        
+        :param intent: The intent string to validate
+        :raises ValueError: If intent fails validation
+        """
+        # Basic validation first (no LLM call needed)
+        if not intent or not intent.strip():
+            raise ValueError("Intent cannot be empty or whitespace only")
+        
+        if len(intent.strip()) < 10:
+            raise ValueError("Intent is too short. Please provide a more detailed description (at least 10 characters)")
+        
+        if len(intent) > 2000:
+            raise ValueError("Intent is too long. Please keep it under 2000 characters")
+        
+        # LLM-based validation for quality and clarity
+        try:
+            class IntentValidationResponse(BaseModel):
+                """Response model for intent validation."""
+                is_valid: bool
+                feedback: str  # Optional feedback on how to improve the intent
+            
+            provider = Provider(self.provider_config.tool_provider)
+            
+            validation_prompt = f"""Analyze the following machine learning model intent and determine if it is clear, actionable, and well-defined for building an ML model.
+
+Intent: "{intent}"
+
+Check if the intent:
+1. Clearly describes what the model should predict or classify
+2. Is specific enough to build a model (not too vague)
+3. Describes a valid ML task (not something that requires non-ML solutions)
+4. Has sufficient detail for an ML engineer to understand the problem
+
+Return whether the intent is valid and provide brief feedback if improvements are needed."""
+
+            response_str = provider.query(
+                system_message="You are an expert ML consultant that validates machine learning problem definitions. Analyze intents for clarity, specificity, and feasibility.",
+                user_message=validation_prompt,
+                response_format=IntentValidationResponse,
+            )
+            
+            # Parse and validate response
+            try:
+                response_dict = json.loads(response_str) if isinstance(response_str, str) else response_str
+                validation = IntentValidationResponse(**response_dict)
+            except (json.JSONDecodeError, ValidationError) as parse_error:
+                logger.warning(f"Failed to parse LLM validation response: {str(parse_error)}")
+                # Don't block - basic validation passed, LLM parsing failed
+                return
+            
+            if not validation.is_valid:
+                error_msg = f"Intent validation failed: {validation.feedback}"
+                logger.warning(f"Intent validation failed: {validation.feedback}")
+                raise ValueError(error_msg)
+            
+            logger.debug(f"Intent validation passed: {validation.feedback if validation.feedback else 'Intent is clear and actionable'}")
+            
+        except ValueError:
+            # Re-raise ValueError (validation failed) - this should block the build
+            raise
+        except Exception as e:
+            # If LLM validation fails for other reasons, log warning but don't block (graceful degradation)
+            # Basic validation already passed, so we allow it through
+            logger.warning(f"LLM intent validation failed, proceeding with basic validation only: {str(e)}")
+            # Don't raise - basic validation passed, LLM validation is a nice-to-have
+
     def build(
         self,
         intent: str,
@@ -101,6 +174,9 @@ class ModelBuilder:
             raise ValueError("At least one of 'timeout' or 'max_iterations' must be set")
         if run_timeout is not None and timeout is not None and run_timeout > timeout:
             raise ValueError(f"Run timeout ({run_timeout}s) cannot exceed total timeout ({timeout}s)")
+
+        # Validate intent using LLM
+        self._validate_intent(intent)
 
         # Process schemas
         input_schema = map_to_basemodel("in", input_schema) if input_schema else None
