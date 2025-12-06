@@ -1,7 +1,7 @@
 """
 ModelBuilder for creating ML models through agentic workflows.
 
-This module provides the ModelBuilder class that handles the orchestration of 
+This module provides the ModelBuilder class that handles the orchestration of
 the multi-agent system to build machine learning models.
 """
 
@@ -66,33 +66,35 @@ class ModelBuilder:
     def _validate_intent(self, intent: str) -> None:
         """
         Validate the intent string using basic checks and LLM validation.
-        
+
         Performs:
         1. Basic validation (non-empty, reasonable length)
         2. LLM-based validation to check if intent is clear and actionable
-        
+
         :param intent: The intent string to validate
         :raises ValueError: If intent fails validation
         """
         # Basic validation first (no LLM call needed)
         if not intent or not intent.strip():
             raise ValueError("Intent cannot be empty or whitespace only")
-        
+
         if len(intent.strip()) < 10:
             raise ValueError("Intent is too short. Please provide a more detailed description (at least 10 characters)")
-        
+
         if len(intent) > 2000:
             raise ValueError("Intent is too long. Please keep it under 2000 characters")
-        
+
         # LLM-based validation for quality and clarity
         try:
+
             class IntentValidationResponse(BaseModel):
                 """Response model for intent validation."""
+
                 is_valid: bool
                 feedback: str  # Optional feedback on how to improve the intent
-            
+
             provider = Provider(self.provider_config.tool_provider)
-            
+
             validation_prompt = f"""Analyze the following machine learning model intent and determine if it is clear, actionable, and well-defined for building an ML model.
 
 Intent: "{intent}"
@@ -110,7 +112,7 @@ Return whether the intent is valid and provide brief feedback if improvements ar
                 user_message=validation_prompt,
                 response_format=IntentValidationResponse,
             )
-            
+
             # Parse and validate response
             try:
                 response_dict = json.loads(response_str) if isinstance(response_str, str) else response_str
@@ -119,14 +121,16 @@ Return whether the intent is valid and provide brief feedback if improvements ar
                 logger.warning(f"Failed to parse LLM validation response: {str(parse_error)}")
                 # Don't block - basic validation passed, LLM parsing failed
                 return
-            
+
             if not validation.is_valid:
                 error_msg = f"Intent validation failed: {validation.feedback}"
                 logger.warning(f"Intent validation failed: {validation.feedback}")
                 raise ValueError(error_msg)
-            
-            logger.debug(f"Intent validation passed: {validation.feedback if validation.feedback else 'Intent is clear and actionable'}")
-            
+
+            logger.debug(
+                f"Intent validation passed: {validation.feedback if validation.feedback else 'Intent is clear and actionable'}"
+            )
+
         except ValueError:
             # Re-raise ValueError (validation failed) - this should block the build
             raise
