@@ -25,3 +25,10 @@ repos:
         pass_filenames: false
         files: ^plexe/
         stages: [pre-commit]
+      - id: generate-code-index
+        name: Generate code index
+        entry: bash -c 'python3 scripts/generate_code_index.py --include-tests && git add plexe/CODE_INDEX.md tests/CODE_INDEX.md'
+        language: system
+        pass_filenames: false
+        files: ^(plexe|tests)/.*\.py$
+        stages: [pre-commit]
