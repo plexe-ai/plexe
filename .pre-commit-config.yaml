@@ -14,3 +14,14 @@ repos:
     rev: v8.30.0
     hooks:
       - id: gitleaks
+  - repo: local
+    hooks:
+      - id: plexe-version-check
+        name: Check plexe version bump
+        entry: python3 scripts/check_version_bump.py
+        language: python
+        language_version: python3
+        additional_dependencies: ['packaging']
+        pass_filenames: false
+        files: ^plexe/
+        stages: [pre-commit]
