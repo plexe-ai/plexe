@@ -91,9 +91,9 @@ def has_changes_in_plexe() -> bool:
         print("Make sure origin/main exists (run: git fetch origin main)", file=sys.stderr)
         raise RuntimeError("Failed to get diff from origin/main")
 
-    # Check if any changed files are in plexe/ directory
+    # Check if any changed files are in plexe/ directory (excluding auto-generated files)
     changed_files = output.split("\n") if output else []
-    relevant_changes = [f for f in changed_files if f.startswith("plexe/")]
+    relevant_changes = [f for f in changed_files if f.startswith("plexe/") and not f.endswith("CODE_INDEX.md")]
 
     if relevant_changes:
         print(f"\n🔍 Found {len(relevant_changes)} changed file(s) in plexe/:")
@@ -122,7 +122,7 @@ def main() -> int:
     # Check if there are changes in plexe/
     try:
         if not has_changes_in_plexe():
-            print("\n✅ No changes detected in plexe/")
+            print("\n✅ No relevant changes detected in plexe/")
             print("   Version check skipped.")
             return 0
     except RuntimeError as e:
