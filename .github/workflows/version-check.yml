@@ -44,6 +44,7 @@ jobs:
           # Extract version from current branch
           CURRENT_VERSION=$(python3 -c "
           import tomllib
+          import sys
           with open('pyproject.toml', 'rb') as f:
               data = tomllib.load(f)
           # Try old Poetry format first, then new PEP 621 format
@@ -51,6 +52,10 @@ jobs:
               print(data['tool']['poetry']['version'])
           elif 'project' in data and 'version' in data['project']:
               print(data['project']['version'])
+          else:
+              print('❌ Error: Could not find version in pyproject.toml', file=sys.stderr)
+              print('Expected tool.poetry.version or project.version', file=sys.stderr)
+              sys.exit(1)
           ")
 
           # Extract version from main branch
@@ -63,6 +68,10 @@ jobs:
               print(data['tool']['poetry']['version'])
           elif 'project' in data and 'version' in data['project']:
               print(data['project']['version'])
+          else:
+              print('❌ Error: Could not find version in origin/main pyproject.toml', file=sys.stderr)
+              print('Expected tool.poetry.version or project.version', file=sys.stderr)
+              sys.exit(1)
           ")
 
           echo "Current branch version: $CURRENT_VERSION"
