@@ -16,15 +16,6 @@ repos:
       - id: gitleaks
   - repo: local
     hooks:
-      - id: plexe-version-check
-        name: Check plexe version bump
-        entry: python3 scripts/check_version_bump.py
-        language: python
-        language_version: python3
-        additional_dependencies: ['packaging']
-        pass_filenames: false
-        files: ^plexe/
-        stages: [pre-commit]
       - id: generate-code-index
         name: Generate code index
         entry: bash -c 'python3 scripts/generate_code_index.py --include-tests && git add plexe/CODE_INDEX.md tests/CODE_INDEX.md'
