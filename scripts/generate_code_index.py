@@ -158,7 +158,7 @@ class PythonCodeExtractor:
                 try:
                     arg_str += f": {ast.unparse(arg.annotation)}"
                 except Exception:
-                    pass
+                    pass  # Complex type annotations may fail to unparse; skip gracefully
             args.append(arg_str)
 
         signature = f"{node.name}({', '.join(args)})"
@@ -167,7 +167,7 @@ class PythonCodeExtractor:
             try:
                 signature += f" -> {ast.unparse(node.returns)}"
             except Exception:
-                pass
+                pass  # Complex return annotations may fail to unparse; skip gracefully
 
         return signature
 
@@ -245,7 +245,7 @@ class CodeIndexGenerator:
         # Generate content
         content = self._generate_index_content(
             title=f"Code Index: {test_path.name}",
-            description=f"Test suite structure and test case documentation.",
+            description="Test suite structure and test case documentation.",
             files=files,
             base_path=test_path,
             include_private=False,  # Still exclude private helpers
