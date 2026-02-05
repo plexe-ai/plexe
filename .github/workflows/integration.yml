@@ -58,6 +58,8 @@ jobs:
   lint-python-black:
     name: Check Python Formatting (Black)
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
     steps:
       - uses: actions/checkout@v4
         with:
@@ -100,6 +102,8 @@ jobs:
   lint-python-ruff:
     name: Lint Python Code (Ruff)
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
     steps:
       - uses: actions/checkout@v4
         with:
@@ -140,6 +144,8 @@ jobs:
           echo "${{ steps.changed-files.outputs.files }}" | xargs ruff check --output-format=github
 
   run-tests:
+    permissions:
+      contents: read
     runs-on: ubuntu-latest
     strategy:
       matrix:
