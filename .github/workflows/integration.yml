@@ -55,28 +55,89 @@ jobs:
           fi
           echo "✅ PR title '$pr_title' follows conventional commits format."
 
-  linting:
+  lint-python-black:
+    name: Check Python Formatting (Black)
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout Code
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
           python-version: '3.12'
 
-      - name: Install Dependencies
+      - name: Install Black
+        run: pip install black==25.12.0
+
+      - name: Get changed Python files
+        id: changed-files
         run: |
-          python -m pip install --upgrade pip
-          pip install poetry
-          poetry install
+          if [[ "${{ github.event_name }}" == "pull_request" ]]; then
+            git fetch origin ${{ github.base_ref }}
+            FILES=$(git diff --name-only --diff-filter=ACMRT origin/${{ github.base_ref }}...HEAD | grep '\.py$' || true)
+          else
+            FILES=$(git diff --name-only --diff-filter=ACMRT HEAD~1 | grep '\.py$' || true)
+          fi
+          if [ -z "$FILES" ]; then
+            echo "No Python files changed"
+            echo "has_changes=false" >> $GITHUB_OUTPUT
+          else
+            echo "Changed Python files:"
+            echo "$FILES"
+            echo "has_changes=true" >> $GITHUB_OUTPUT
+            echo "files<<EOF" >> $GITHUB_OUTPUT
+            echo "$FILES" >> $GITHUB_OUTPUT
+            echo "EOF" >> $GITHUB_OUTPUT
+          fi
 
-      - name: Format Code with Black
-        run: poetry run black --check .
+      - name: Run Black check on changed files
+        if: steps.changed-files.outputs.has_changes == 'true'
+        run: |
+          echo "${{ steps.changed-files.outputs.files }}" | xargs black --check --diff
 
-      - name: Lint Code with Ruff
-        run: poetry run ruff check .
+  lint-python-ruff:
+    name: Lint Python Code (Ruff)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Install Ruff
+        run: pip install ruff==0.14.9
+
+      - name: Get changed Python files
+        id: changed-files
+        run: |
+          if [[ "${{ github.event_name }}" == "pull_request" ]]; then
+            git fetch origin ${{ github.base_ref }}
+            FILES=$(git diff --name-only --diff-filter=ACMRT origin/${{ github.base_ref }}...HEAD | grep '\.py$' || true)
+          else
+            FILES=$(git diff --name-only --diff-filter=ACMRT HEAD~1 | grep '\.py$' || true)
+          fi
+          if [ -z "$FILES" ]; then
+            echo "No Python files changed"
+            echo "has_changes=false" >> $GITHUB_OUTPUT
+          else
+            echo "Changed Python files:"
+            echo "$FILES"
+            echo "has_changes=true" >> $GITHUB_OUTPUT
+            echo "files<<EOF" >> $GITHUB_OUTPUT
+            echo "$FILES" >> $GITHUB_OUTPUT
+            echo "EOF" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Run Ruff check on changed files
+        if: steps.changed-files.outputs.has_changes == 'true'
+        run: |
+          echo "${{ steps.changed-files.outputs.files }}" | xargs ruff check --output-format=github
 
   run-tests:
     runs-on: ubuntu-latest
