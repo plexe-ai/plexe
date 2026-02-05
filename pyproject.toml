@@ -114,6 +114,13 @@ line-length = 120
 target-version = "py312"
 
 [tool.ruff.lint]
+# Note: we enforce docstrings because scripts/generate_code_index.py relies on them to produce good documentation
+extend-select = [
+    "D100", # Missing docstring in public module
+    "D101", # Missing docstring in public class
+    "D102", # Missing docstring in public method
+    "D103", # Missing docstring in public function
+]
 ignore = [
     "E203", # Whitespace before ':'
     "E501", # Line length
