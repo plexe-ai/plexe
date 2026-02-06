@@ -1,0 +1,35 @@
+# Model Package: {experiment_id}
+
+## Intent
+{intent}
+
+## Model Information
+- **Type**: {model_type}
+- **Task**: {task_type}
+- **Target**: {target_columns}
+- **Metric**: {metric_name} ({metric_direction})
+
+## Performance
+- **Baseline**: {baseline_performance}
+- **Final Model**: {final_performance}
+- **Test Samples**: {test_samples}
+
+## Files
+- `model.pkl`: Trained model
+- `pipeline.pkl`: Feature engineering pipeline
+- `predictor.py`: Inference code (use {predictor_class} class)
+- `metadata.json`: Training configuration
+- `reports.json`: All analysis reports
+
+## Usage
+```python
+from predictor import {predictor_class}
+import pandas as pd
+
+# Load model
+predictor = {predictor_class}(model_dir=".")
+
+# Make predictions
+input_data = pd.DataFrame({{...}})
+predictions = predictor.predict(input_data)
+```

@@ -1,796 +1,633 @@
 # Code Index: plexe
 
-> Generated on 2026-02-06 09:56:54
+> Generated on 2026-02-06 10:32:59
 
 Code structure and public interface documentation for the **plexe** package.
 
-## `agents/agents.py`
-This module defines a multi-agent ML engineering system for building machine learning models.
+## `adapters/base.py`
+Base adapter interface for environment-specific infrastructure.
 
-**`ModelGenerationResult`** - No description
-
-**`PlexeAgent`** - Multi-agent ML engineering system for building machine learning models.
-- `__init__(self, orchestrator_model_id: str, ml_researcher_model_id: str, ml_engineer_model_id: str, ml_ops_engineer_model_id: str, tool_model_id: str, verbose: bool, max_steps: int, distributed: bool, chain_of_thought_callable: Optional[Callable], max_solutions: int)`
-- `run(self, task, additional_args: dict) -> ModelGenerationResult` - Run the orchestrator agent to generate a machine learning model.
+**`WorkflowAdapter`** - Adapter interface for environment-specific infrastructure.
+- `setup_environment(self)` - Setup environment-specific configuration.
+- `prepare_workspace(self, experiment_id: str, data_refs: list[str], work_dir: Path) -> tuple[str, str]` - Setup workspace and prepare datasets before workflow starts.
+- `on_checkpoint(self, phase_name: str, checkpoint_path: Path, work_dir: Path)` - Persist checkpoint and workdir to external storage.
+- `on_completion(self, experiment_id: str, work_dir: Path, final_metrics: dict, evaluation_report)` - Upload final model and update metadata when workflow completes.
+- `on_failure(self, experiment_id: str, error: Exception)` - Handle workflow failure.
+- `prepare_original_model(self, model_reference: str, work_dir: Path) -> str` - Ensure original model is available locally for retraining.
+- `on_pause(self, phase_name: str)` - Handle workflow pause for user feedback.
+- `get_splits_output_location(self, dataset_uri: str, experiment_id: str, work_dir: Path) -> str` - Determine where dataset splits should be written.
+- `get_samples_output_location(self, dataset_uri: str, experiment_id: str, work_dir: Path) -> str` - Determine where dataset samples should be written (follows same logic as splits).
+- `get_transformed_output_location(self, dataset_uri: str, experiment_id: str, work_dir: Path) -> str` - Determine where transformed datasets should be written (follows same logic as splits).
+- `ensure_samples_local(self, sample_uris: list[str], work_dir: Path) -> list[str]` - Ensure samples are available locally (download from S3 if needed).
 
 ---
-## `agents/conversational.py`
-Conversational Agent for guiding users through ML model definition and initiation.
+## `adapters/plexe_platform.py`
+Plexe Platform adapter for model-builder-v2.
 
-**`ConversationalAgent`** - Agent for conversational model definition and build initiation.
-- `__init__(self, model_id: str, verbose: bool)`
+**`PlexePlatformAdapter`** - Plexe Platform adapter for full cloud integration.
+- `__init__(self, experiment_id: str, experiment_store: ExperimentStore, config)`
+- `setup_environment(self)` - Load API keys from AWS Secrets Manager.
+- `prepare_workspace(self, experiment_id: str, data_refs: list[str], work_dir: Path) -> tuple[str, str]` - Prepare workspace and normalize dataset format.
+- `on_checkpoint(self, phase_name: str, checkpoint_path: Path, work_dir: Path)` - Upload checkpoint and workdir to S3, update DynamoDB.
+- `on_completion(self, experiment_id: str, work_dir: Path, final_metrics: dict, evaluation_report)` - Upload final model to S3 and mark experiment as completed in DynamoDB.
+- `on_failure(self, experiment_id: str, error: Exception)` - Mark experiment as failed in DynamoDB.
+- `prepare_original_model(self, model_reference: str, work_dir: Path) -> str` - Download original model from S3 for retraining.
+- `on_pause(self, phase_name: str)` - Update experiment status to paused in DynamoDB.
+- `get_splits_output_location(self, dataset_uri: str, experiment_id: str, work_dir: Path) -> str` - No description
+- `get_samples_output_location(self, dataset_uri: str, experiment_id: str, work_dir: Path) -> str` - No description
+- `get_transformed_output_location(self, dataset_uri: str, experiment_id: str, work_dir: Path) -> str` - No description
+- `ensure_samples_local(self, sample_uris: list[str], work_dir: Path) -> list[str]` - Download S3 samples to local if needed (handles Spark parquet directories).
+
+**Functions:**
+- `convert_floats_to_decimal(obj)` - Recursively convert floats to Decimals for DynamoDB compatibility.
 
 ---
-## `agents/dataset_analyser.py`
-Exploratory Data Analysis (EDA) Agent for data analysis and insights in ML models.
+## `adapters/standalone.py`
+Standalone adapter for development and testing.
 
-**`EdaAgent`** - Agent for performing exploratory data analysis on datasets.
-- `__init__(self, model_id: str, verbose: bool, chain_of_thought_callable: Callable)`
-- `run(self, intent: str, dataset_names: List[str]) -> bool` - Run the EDA agent to analyze datasets and create EDA reports.
+**`StandaloneAdapter`** - Standalone adapter for local development and testing.
+- `__init__(self, config, external_storage_uri: str | None, user_id: str | None)`
+- `setup_environment(self)` - No-op - standalone mode uses environment variables as-is.
+- `prepare_workspace(self, experiment_id: str, data_refs: list[str], work_dir: Path) -> tuple[str, str]` - Prepare workspace and normalize dataset format.
+- `on_checkpoint(self, phase_name: str, checkpoint_path: Path, work_dir: Path)` - Upload checkpoint and workdir to S3 if external storage configured.
+- `on_completion(self, experiment_id: str, work_dir: Path, final_metrics: dict, evaluation_report)` - Upload final model to S3 if external storage configured.
+- `on_failure(self, experiment_id: str, error: Exception)` - No-op - error already logged.
+- `prepare_original_model(self, model_reference: str, work_dir: Path) -> str` - Prepare original model for retraining.
+- `on_pause(self, phase_name: str)` - No-op - local mode has no external state tracking.
+- `get_splits_output_location(self, dataset_uri: str, experiment_id: str, work_dir: Path) -> str` - No description
+- `get_samples_output_location(self, dataset_uri: str, experiment_id: str, work_dir: Path) -> str` - No description
+- `get_transformed_output_location(self, dataset_uri: str, experiment_id: str, work_dir: Path) -> str` - No description
+- `ensure_samples_local(self, sample_uris: list[str], work_dir: Path) -> list[str]` - Download S3 samples to local if needed (handles Spark parquet directories).
+
+---
+## `agents/baseline_builder.py`
+Baseline Builder Agent.
+
+**`BaselineBuilderAgent`** - Agent that creates simple baseline predictors.
+- `__init__(self, spark: SparkSession, context: BuildContext, config: Config)`
+- `run(self) -> Baseline` - Build baseline predictor using agent.
 
 ---
 ## `agents/dataset_splitter.py`
-Dataset Splitter Agent for partitioning datasets into training, validation, and test sets.
+Dataset Splitter Agent.
 
-**`DatasetSplitterAgent`** - Agent for intelligently splitting datasets into train, validation, and test sets.
-- `__init__(self, model_id: str, verbose: bool, chain_of_thought_callable: Optional[Callable])`
-
----
-## `agents/feature_engineer.py`
-Feature Engineering Agent for transforming raw datasets into optimized features for ML models.
-
-**`FeatureEngineeringAgent`** - Agent for creating optimized features from raw datasets for ML models.
-- `__init__(self, model_id: str, verbose: bool, chain_of_thought_callable: Optional[Callable])`
+**`DatasetSplitterAgent`** - Agent that generates PySpark code for intelligent dataset splitting.
+- `__init__(self, spark: SparkSession, dataset_uri: str, context: BuildContext, config: Config)`
+- `run(self, split_ratios: dict[str, float], output_dir: str | Path) -> tuple[str, str, str]` - Generate and execute intelligent dataset splitting.
 
 ---
-## `agents/model_packager.py`
-Model Packager Agent for creating production-ready inference code for ML models.
+## `agents/feature_processor.py`
+Feature Processor Agent.
 
-**`ModelPackagerAgent`** - Agent for creating production-ready inference code for ML models.
-- `__init__(self, model_id: str, tool_model_id: str, verbose: bool, chain_of_thought_callable: Optional[Callable], schema_resolver_agent)`
-
----
-## `agents/model_planner.py`
-No description
-
-**`ModelPlannerAgent`** - Agent responsible for planning ML model solutions based on provided requirements.
-- `__init__(self, model_id: str, verbose: bool, chain_of_thought_callable: callable, max_solutions: int)`
+**`FeatureProcessorAgent`** - Agent that designs sklearn Pipeline for feature engineering.
+- `__init__(self, spark: SparkSession, train_uri: str, context: BuildContext, config: Config, plan: Any)`
+- `run(self) -> tuple[Pipeline, str]` - Design feature engineering pipeline.
 
 ---
-## `agents/model_tester.py`
-Model Tester Agent for comprehensive testing and evaluation of finalized ML models.
+## `agents/hypothesiser.py`
+Hypothesiser Agent.
 
-**`ModelTesterAgent`** - Agent for comprehensive testing and evaluation of finalized ML models.
-- `__init__(self, model_id: str, verbose: bool, chain_of_thought_callable: Optional[Callable])`
-
----
-## `agents/model_trainer.py`
-Model Trainer Agent for training ML models based on provided plans.
-
-**`ModelTrainerAgent`** - Agent for training ML models based on provided plans.
-- `__init__(self, ml_engineer_model_id: str, tool_model_id: str, distributed: bool, verbose: bool, chain_of_thought_callable: callable, schema_resolver_agent)`
+**`HypothesiserAgent`** - Agent that generates hypotheses for next search direction.
+- `__init__(self, journal: SearchJournal, context: BuildContext, config: Config, expand_solution_id: int)`
+- `run(self) -> Hypothesis` - Generate hypothesis for next exploration.
 
 ---
-## `agents/schema_resolver.py`
-Schema Resolver Agent for inferring input and output schemas for ML models.
+## `agents/insight_extractor.py`
+Insight Extractor Agent.
 
-**`SchemaResolverAgent`** - Agent for resolving input and output schemas for ML models.
-- `__init__(self, model_id: str, verbose: bool, chain_of_thought_callable: Callable)`
+**`InsightExtractorAgent`** - Agent that extracts structured insights from experiment results.
+- `__init__(self, hypothesis: Hypothesis, variant_solutions: list[Solution], insight_store, context: BuildContext, config: Config)`
+- `run(self) -> int` - Extract insights from variant results.
 
 ---
-## `callbacks.py`
-Callbacks for model building process in Plexe.
+## `agents/layout_detector.py`
+Layout Detection Agent.
 
-**`BuildStateInfo`** - Consolidated information about model build state at any point in the process.
+**`LayoutDetectionAgent`** - Agent that detects data layout and identifies primary input column.
+- `__init__(self, spark: SparkSession, dataset_uri: str, context: BuildContext, config: Config)`
+- `run(self) -> dict` - Run layout detection.
 
-**`Callback`** - Abstract base class for callbacks during model building.
-- `on_build_start(self, info: BuildStateInfo) -> None` - Called when the model building process starts.
-- `on_build_end(self, info: BuildStateInfo) -> None` - Called when the model building process ends.
-- `on_iteration_start(self, info: BuildStateInfo) -> None` - Called at the start of each model building iteration.
-- `on_iteration_end(self, info: BuildStateInfo) -> None` - Called at the end of each model building iteration.
+---
+## `agents/metric_implementer.py`
+Metric Implementation Agent.
+
+**`MetricImplementationAgent`** - Agent that generates metric computation function code.
+- `__init__(self, context: BuildContext, config: Config)`
+- `run(self) -> str` - Generate metric computation function code.
+
+---
+## `agents/metric_selector.py`
+Metric Selector Agent.
+
+**`MetricSelectorAgent`** - Agent that selects evaluation metric using smolagents with structured submission tool.
+- `__init__(self, context: BuildContext, config: Config)`
+- `run(self) -> Metric` - Run metric selection with structured submission.
+
+---
+## `agents/ml_task_analyser.py`
+ML Task Analyser Agent.
+
+**`MLTaskAnalyserAgent`** - Agent that analyzes dataset from ML perspective.
+- `__init__(self, spark: SparkSession, dataset_uri: str, stats_report: dict, context: BuildContext, config: Config)`
+- `run(self) -> dict` - Run ML task analysis.
+
+---
+## `agents/model_definer.py`
+Model Definer Agent.
+
+**`ModelDefinerAgent`** - Agent that defines model configuration.
+- `__init__(self, model_type: str, context: BuildContext, config: Config, transformed_schema: dict, plan: Any)`
+- `run(self) -> tuple[Any, str]` - Create untrained model object from plan.
+
+---
+## `agents/model_evaluator.py`
+Model Evaluator Agent for comprehensive ML model evaluation.
+
+**`ModelEvaluatorAgent`** - Agent that performs comprehensive model evaluation through structured phases.
+- `__init__(self, spark: SparkSession, context: BuildContext, config: Config)`
+- `run(self, solution: Solution, test_sample_df: pd.DataFrame, predictor: Any) -> EvaluationReport | None` - Execute multi-phase evaluation.
+
+---
+## `agents/planner.py`
+Planner Agent.
+
+**`PlannerAgent`** - Agent that creates concrete plan specifications from hypotheses.
+- `__init__(self, journal: SearchJournal, context: BuildContext, config: Config, hypothesis: Hypothesis | None, num_bootstrap: int)`
+- `run(self) -> list[UnifiedPlan]` - Generate concrete plan specifications.
+
+---
+## `agents/sampler.py`
+Sampling Agent.
+
+**`SamplingAgent`** - Agent that generates PySpark code for intelligent dataset sampling.
+- `__init__(self, spark: SparkSession, context: BuildContext, config: Config)`
+- `run(self, train_uri: str, val_uri: str, train_sample_size: int, val_sample_size: int, output_dir: Path) -> tuple[str, str]` - Generate and execute intelligent sampling for both train and val datasets.
+
+---
+## `agents/statistical_analyser.py`
+Statistical Analyser Agent.
+
+**`StatisticalAnalyserAgent`** - Agent that performs statistical profiling of datasets.
+- `__init__(self, spark: SparkSession, dataset_uri: str, context: BuildContext, config: Config)`
+- `run(self) -> dict` - Run statistical analysis.
+
+---
+## `agents/utils.py`
+Shared utilities for agents.
+
+**Functions:**
+- `format_user_feedback_for_prompt(user_feedback: dict | str | None) -> str` - Format user feedback for inclusion in agent prompts.
+
+---
+## `checkpointing.py`
+Checkpointing functionality for model-builder-v2.
+
+**Functions:**
+- `pickle_to_base64(obj) -> str` - Serialize object to base64-encoded pickle string.
+- `base64_to_pickle(b64_string: str)` - Deserialize base64-encoded pickle string to object.
+- `save_checkpoint(experiment_id: str, phase_name: str, context: BuildContext, work_dir: Path, search_journal: SearchJournal | None, insight_store: InsightStore | None) -> Path | None` - Save checkpoint to local disk only.
+- `load_checkpoint(phase_name: str, work_dir: Path) -> dict | None` - Load checkpoint from local disk.
 
 ---
 ## `config.py`
-Configuration for the plexe library.
+Configuration for model-builder-v2.
+
+**`ModelType`** - Supported model types (architectural decision).
+
+**`StandardMetric`** - Standard metrics with hardcoded implementations.
+
+**`YamlConfigSettingsSource`** - Custom settings source that loads config from YAML file specified by CONFIG_FILE env var.
+- `get_field_value(self, field, field_name)` - Not used in Pydantic v2 - use __call__ instead.
+
+**`RoutingProviderConfig`** - Configuration for a single routing provider.
+
+**`RoutingConfig`** - LiteLLM routing configuration for custom API endpoints.
+- `validate_model_providers(cls, v: dict[str, str], info) -> dict[str, str]` - Validate that all model provider references exist.
+
+**`Config`** - Configuration for model building workflow.
+- `settings_customise_sources(cls, settings_cls, init_settings, env_settings, dotenv_settings, file_secret_settings)` - Customize settings source priority.
+- `parse_otel_headers_from_env(self) -> 'Config'` - Parse OTEL_EXPORTER_OTLP_HEADERS (comma-separated key=value pairs).
 
 **Functions:**
-- `is_package_available(package_name: str) -> bool` - Check if a Python package is available/installed.
-- `configure_logging(level: str | int, file: str) -> None` - No description
+- `get_routing_for_model(config: RoutingConfig | None, model_id: str) -> tuple[str | None, dict[str, str]]` - Get routing configuration for a specific model ID.
+- `setup_logging(config: Config) -> logging.Logger` - Configure logging for the model-builder-v2 package.
+- `setup_litellm(config: Config) -> None` - Configure LiteLLM global settings.
+- `get_config() -> Config` - Get configuration from YAML file (if specified) with environment variable overrides.
 
 ---
-## `core/entities/solution.py`
-This module defines the `Solution` class used to represent complete ML pipelines.
+## `constants.py`
+Constants for model-builder-v2.
 
-**`Solution`** - Represents a complete ML solution from planning through deployment.
+**`ScratchKeys`** - Keys for BuildContext.scratch dictionary.
 
----
-## `core/interfaces/feature_transformer.py`
-This module defines the FeatureTransformer interface, which all generated feature transformers must implement.
+**`DatasetPatterns`** - Naming patterns for dataset artifacts.
+- `transformed_name(base_uri: str, iteration: int) -> str` - Generate name for transformed dataset.
 
-**`FeatureTransformer`** - Abstract base class for all dynamically generated feature transformers.
-- `transform(self, inputs: pd.DataFrame) -> pd.DataFrame` - No description
+**`SearchDefaults`** - Default values for search configuration.
 
----
-## `core/interfaces/predictor.py`
-This module defines the Predictor interface, which all dynamically generated inference codes must implement.
+**`DirNames`** - Standard directory and file names used across the codebase.
 
-**`Predictor`** - Abstract base class for all dynamically generated inference code.
-- `__init__(self, artifacts: List[Artifact])`
-- `predict(self, inputs: dict) -> dict` - No description
+**`PhaseNames`** - Standardized phase names for workflow orchestration.
 
 ---
-## `core/object_registry.py`
-This module provides a generic Registry pattern implementation for storing and retrieving objects by name or prefix.
+## `execution/dataproc/dataset_io.py`
+Dataset I/O with format detection and normalization.
 
-**`Item`** - No description
+**`DatasetFormat`** - Supported dataset formats.
 
-**`ObjectRegistry`** - Registry for storing and retrieving objects by name.
-- `register(self, t: Type[T], name: str, item: T, overwrite: bool, immutable: bool) -> None` - Register an item with a given name.
-- `register_multiple(self, t: Type[T], items: Dict[str, T], overwrite: bool, immutable: bool) -> None` - Register multiple items with a given prefix.
-- `get(self, t: Type[T], name: str) -> T` - Retrieve an item by name.
-- `get_multiple(self, t: Type[T], names: List[str]) -> Dict[str, T]` - Retrieve multiple items by name.
-- `get_all(self, t: Type[T]) -> Dict[str, T]` - Retrieve all items for a given prefix.
-- `delete(self, t: Type[T], name: str) -> None` - Delete an item by name.
-- `clear(self) -> None` - Clear all registered items.
-- `list(self) -> List[str]` - List all registered item names.
-- `list_by_type(self, t: Type[T]) -> List[str]` - List all registered names for a specific type.
-- `get_all_solutions(self) -> List[Dict[str, Any]]` - Get all solutions tracked during model building.
+**`FormatDetector`** - Detects dataset format from URI.
+- `detect(uri: str) -> DatasetFormat` - Detect format from URI.
 
----
-## `core/state.py`
-Model state definitions for Plexe.
+**`DatasetReader`** - Reads datasets in any supported format using Spark.
+- `__init__(self, spark: SparkSession)`
+- `read(self, uri: str, format: DatasetFormat, options: dict | None) -> DataFrame` - Read dataset in specified format.
 
-**`ModelState`** - States a model can be in during its lifecycle.
+**`DatasetNormalizer`** - Normalizes datasets to Parquet format.
+- `__init__(self, spark: SparkSession)`
+- `normalize(self, input_uri: str, output_uri: str, format_hint: DatasetFormat | None, read_options: dict | None) -> tuple[str, DatasetFormat]` - Normalize dataset to Parquet format.
 
 ---
-## `core/storage.py`
-Core storage functions for model and checkpoint persistence.
-
-**`FallbackNoneLoader`** - No description
+## `execution/dataproc/session.py`
+Spark session management with singleton pattern.
 
 **Functions:**
-- `fallback_to_none(loader, tag_suffix, node)` - No description
+- `get_or_create_spark_session(config) -> SparkSession` - Get or create Spark session based on config.
+- `stop_spark_session()` - Stop and cleanup Spark session.
 
 ---
-## `datasets.py`
-This module provides the Dataset class, which represents a collection of data that can be real,
+## `execution/training/local_runner.py`
+Local process runner - executes training in subprocess.
 
-**`DatasetGenerator`** - Represents a dataset, which can contain real data, synthetic data, or both.
-- `__init__(self, description: str, provider: str, schema: Type[BaseModel] | Dict[str, type], data: pd.DataFrame) -> None`
-- `generate(self, num_samples: int)` - Generate synthetic data samples or augment existing data.
-- `data(self) -> pd.DataFrame` - Get the dataset as a pandas DataFrame.
+**`LocalProcessRunner`** - Runs training in local subprocess.
+- `__init__(self, work_dir: str)`
+- `run_training(self, template: str, model: Any, feature_pipeline: Pipeline, train_uri: str, val_uri: str, timeout: int, target_columns: list[str], optimizer: Any, loss: Any, epochs: int, batch_size: int, group_column: str | None) -> Path` - Execute training in subprocess.
 
 ---
-## `fileio.py`
-This module provides file I/O utilities for saving and loading models to and from archive files.
+## `execution/training/runner.py`
+Training runner abstract base class.
+
+**`TrainingRunner`** - Abstract base class for training execution environments.
+- `run_training(self, template: str, model: Any, feature_pipeline: Pipeline, train_uri: str, val_uri: str, timeout: int, target_columns: list[str]) -> Path` - Execute model training and return path to artifacts.
+
+---
+## `helpers.py`
+Helper functions for workflow.
 
 **Functions:**
-- `save_model(model: Any, path: str | Path) -> str` - Save a model to a tar archive.
-- `load_model(path: str | Path)` - Load a model from a tar archive.
-- `save_checkpoint(model: Any, iteration: int, path: Optional[str | Path]) -> str` - Save a model checkpoint to a tar archive.
-- `load_checkpoint(checkpoint_path: Optional[str | Path], model_id: Optional[str], latest: bool) -> Any` - Load a model from a checkpoint.
-- `list_checkpoints(model_id: Optional[str]) -> List[str]` - List available checkpoints.
-- `delete_checkpoint(path: str | Path) -> bool` - Delete a specific checkpoint.
-- `clear_checkpoints(model_id: Optional[str], older_than_days: Optional[int]) -> int` - Clear checkpoints based on filter criteria.
-
----
-## `internal/common/datasets/adapter.py`
-This module provides the DatasetAdapter class, which converts various dataset formats into standardized Dataset
-
-**`DatasetAdapter`** - A utility class for converting different dataset formats into standardized Dataset objects.
-- `coerce(dataset: Any) -> Dataset` - Converts a dataset to a standardized format.
-- `auto_detect(cls, data: Any) -> Optional[str]` - Auto-detect the appropriate dataset type for the given data.
-- `features(datasets: Dict[str, Dataset]) -> List[str]` - Extracts a flat list of feature names from the given datasets.
-
----
-## `internal/common/datasets/interface.py`
-This module defines the core interfaces for dataset handling in plexe.
-
-**`DatasetStructure`** - Descriptor for the dataset structure.
-
-**`Dataset`** - Base interface for all dataset implementations with universal operations.
-- `split(self, train_ratio: float, val_ratio: float, test_ratio: float, stratify_column: str, random_state: int) -> Tuple[T, T, T]` - Split dataset into train, validation and test sets.
-- `sample(self, n: int, frac: float, replace: bool, random_state: int) -> T` - Sample records from dataset.
-- `to_bytes(self) -> bytes` - Serialize dataset to bytes.
-- `from_bytes(cls: Type[T], data: bytes) -> T` - Deserialize dataset from bytes.
-- `structure(self) -> DatasetStructure` - Return a descriptor of the dataset's structure.
-
-**`TabularConvertible`** - Interface for datasets that can be converted to tabular formats.
-- `to_pandas(self) -> pd.DataFrame` - Convert to pandas DataFrame.
-- `to_numpy(self) -> np.ndarray` - Convert to numpy array.
-
-**`TorchConvertible`** - Interface for datasets that can be converted to PyTorch formats.
-- `to_torch_dataset(self)` - Convert to PyTorch Dataset.
-- `to_torch_tensor(self)` - Convert to PyTorch Tensor.
-
-**`TensorflowConvertible`** - Interface for datasets that can be converted to TensorFlow formats.
-- `to_tf_dataset(self)` - Convert to TensorFlow Dataset.
-
----
-## `internal/common/datasets/tabular.py`
-This module provides the TabularDataset implementation, which handles tabular data like pandas DataFrames
-
-**`TabularDataset`** - Dataset implementation for tabular data.
-- `__init__(self, data: pd.DataFrame)`
-- `split(self, train_ratio: float, val_ratio: float, test_ratio: float, stratify_column: Optional[str], random_state: Optional[int], is_time_series: bool, time_index_column: Optional[str]) -> Tuple['TabularDataset', 'TabularDataset', 'TabularDataset']` - Split dataset into train, validation and test sets.
-- `sample(self, n: int, frac: float, replace: bool, random_state: int) -> 'TabularDataset'` - Sample records from dataset.
-- `to_bytes(self) -> bytes` - Serialize the dataset to bytes using Parquet format.
-- `from_bytes(cls, data: bytes) -> 'TabularDataset'` - Deserialize bytes back into a TabularDataset.
-- `structure(self) -> DatasetStructure` - Return structural metadata for the dataset.
-- `to_pandas(self) -> pd.DataFrame` - Return a copy of the dataset as a pandas DataFrame.
-- `to_numpy(self) -> np.ndarray` - Convert the dataset to a NumPy array.
-
----
-## `internal/common/provider.py`
-This module defines the base class for LLM providers and includes
-
-**`ProviderConfig`** - Configuration class for specifying different LLM providers for various agent roles.
-- `__init__(self, default_provider: str, orchestrator_provider: Optional[str], research_provider: Optional[str], engineer_provider: Optional[str], ops_provider: Optional[str], tool_provider: Optional[str])`
-
-**`Provider`** - Base class for LiteLLM provider.
-- `__init__(self, model: str)`
-- `query(self, system_message: str, user_message: str, response_format: Type[BaseModel], retries: int, backoff: bool) -> str` - Method to query the provider using litellm.completion.
-
----
-## `internal/common/utils/agents.py`
-This module provides utilities for working with agents defined using the smolagents library.
-
-**Functions:**
-- `get_prompt_templates(base_template_name: str, override_template_name: str) -> dict` - Given the name of a smolagents prompt template (the 'base template') and a plexe prompt template
-
----
-## `internal/common/utils/chain_of_thought/adapters.py`
-This module provides adapters for extracting step information from different agent frameworks.
-
-**Functions:**
-- `extract_step_summary_from_smolagents(step: Any, agent: Any) -> StepSummary` - Extract step summary from a SmoLAgents step object.
-
----
-## `internal/common/utils/chain_of_thought/callable.py`
-This module defines Callables for capturing and formatting agent chain of thought.
-
-**`ChainOfThoughtCallable`** - Callable that captures and formats agent chain of thought.
-- `__init__(self, emitter: Optional[ChainOfThoughtEmitter], extractor: StepExtractor)`
-- `get_full_chain_of_thought(self) -> List[StepSummary]` - Get the full chain of thought captured so far.
-- `clear(self) -> None` - Clear all captured steps.
-
----
-## `internal/common/utils/chain_of_thought/emitters.py`
-This module defines Emitters for outputting chain of thought information.
-
-**`ChainOfThoughtEmitter`** - Abstract base class for chain of thought emitters.
-- `emit_thought(self, agent_name: str, message: str) -> None` - Emit a thought from an agent.
-
-**`ConsoleEmitter`** - Emitter that outputs chain of thought to the console with rich formatting.
-- `__init__(self, output: TextIO)`
-- `emit_thought(self, agent_name: str, message: str) -> None` - Emit a thought to the console using Rich tree visualization.
-
-**`LoggingEmitter`** - Emitter that outputs chain of thought to the logging system.
-- `__init__(self, level: int)`
-- `emit_thought(self, agent_name: str, message: str) -> None` - Emit a thought to the logger.
-
-**`MultiEmitter`** - Emitter that outputs chain of thought to multiple emitters.
-- `__init__(self, emitters: List[ChainOfThoughtEmitter])`
-- `emit_thought(self, agent_name: str, message: str) -> None` - Emit a thought to all configured emitters.
-
----
-## `internal/common/utils/chain_of_thought/protocol.py`
-Defines protocols and data classes for capturing agent reasoning steps.
-
-**`ToolCall`** - Information about a tool called by an agent.
-
-**`StepSummary`** - Framework-agnostic representation of an agent's reasoning step.
-
-**`StepExtractor`** - Protocol for extracting step information from agent frameworks.
-
----
-## `internal/common/utils/dataset_storage.py`
-This module provides utilities for dataset storage and transfer across processes.
-
-**Functions:**
-- `write_dataset_to_file(dataset: Dataset, path: str) -> None` - Write dataset to a file.
-- `read_dataset_from_file(dataset_class: Type[T], path: str) -> T` - Read dataset from a file.
-- `dataset_to_shared_memory(dataset: Dataset, name: str) -> None` - Place dataset in shared memory for cross-process access.
-- `dataset_from_shared_memory(dataset_class: Type[T], name: str, size: Optional[int]) -> T` - Retrieve dataset from shared memory.
-
----
-## `internal/common/utils/dependency_utils.py`
-Utilities for handling optional dependencies.
-
-**Functions:**
-- `requires_package(package_name: str, error_message: str) -> Callable[[Callable[..., T]], Callable[..., T]]` - Decorator that checks if a required package is installed before executing a function.
-
----
-## `internal/common/utils/markdown_utils.py`
-Utilities for markdown formatting of reports and data.
-
-**Functions:**
-- `format_eda_report_markdown(eda_report: Dict[Any, Any]) -> str` - Convert an EDA report dictionary to a well-formatted markdown document.
-
----
-## `internal/common/utils/model_state.py`
-Model state definitions for Plexe.
-
-**`ModelState`** - States a model can be in during its lifecycle.
-
----
-## `internal/common/utils/model_utils.py`
-This module provides utility functions for working with model descriptions and metadata.
-
-**Functions:**
-- `calculate_model_size(artifacts: list) -> Optional[int]` - Calculate the total size of the model artifacts in bytes.
-- `format_code_snippet(code: Optional[str]) -> Optional[str]` - Format a code snippet for display, truncating if necessary.
-
----
-## `internal/common/utils/pandas_utils.py`
-No description
-
-**Functions:**
-- `convert_dtype_to_python(dtype, sample_values) -> str` - Convert a Pandas dtype to a Python type.
-
----
-## `internal/common/utils/prompt_utils.py`
-No description
-
-**Functions:**
-- `join_task_statement(intent: str, input_schema: Type[BaseModel], output_schema: Type[BaseModel]) -> str` - Join the problem statement into a single string.
-
----
-## `internal/common/utils/pydantic_utils.py`
-This module provides utility functions for manipulating Pydantic models.
-
-**Functions:**
-- `merge_models(model_name: str, models: List[Type[BaseModel]]) -> Type[BaseModel]` - Merge multiple Pydantic models into a single model. The ordering of the list determines
-- `create_model_from_fields(model_name: str, model_fields: dict) -> Type[BaseModel]` - Create a Pydantic model from a dictionary of fields.
-- `map_to_basemodel(name: str, schema: dict | Type[BaseModel]) -> Type[BaseModel]` - Ensure that the schema is a Pydantic model or a dictionary, and return the model.
-- `format_schema(schema: Type[BaseModel]) -> Dict[str, str]` - Format a schema model into a dictionary representation of field names and types.
-- `convert_schema_to_type_dict(schema: Type[BaseModel]) -> Dict[str, type]` - Convert a Pydantic model to a dictionary mapping field names to their Python types.
-
----
-## `internal/common/utils/response.py`
-No description
-
-**Functions:**
-- `wrap_code(code: str, lang) -> str` - Wraps code with three backticks.
-- `is_valid_python_script(script)` - Check if a script is a valid Python script.
-- `extract_jsons(text)` - Extract all JSON objects from the text. Caveat: This function cannot handle nested JSON objects.
-- `trim_long_string(string, threshold, k)` - No description
-- `extract_code(text)` - Extract python code blocks from the text.
-- `extract_text_up_to_code(s)` - Extract (presumed) natural language text up to the start of the first code block.
-- `format_code(code) -> str` - Format Python code using Black.
-- `extract_performance(output: str) -> float | None` - Extract the performance metric from the output.
-- `extract_json_array(text: str) -> str` - Extract a JSON array from an LLM response, handling common formatting issues.
-- `json_to_dataframe(text: str) -> 'pd.DataFrame'` - Convert LLM-generated JSON text to a pandas DataFrame.
-
----
-## `internal/datasets/config.py`
-This module provides configuration for the data generation service.
-
-**`Config`** - Configuration class for the dataset generation functionality.
-
----
-## `internal/datasets/core/generation/base.py`
-This module defines the base class for data generators used in the project.
-
-**`BaseDataGenerator`** - Abstract base class for an object that generates data samples in a given schema.
-- `generate(self, intent: str, n_generate: int, schema: Type[BaseModel], existing_data: Optional[pd.DataFrame]) -> pd.DataFrame` - Generate synthetic data for a given problem description.
-
----
-## `internal/datasets/core/generation/simple_llm.py`
-No description
-
-**`SimpleLLMDataGenerator`** - Implementation of BaseDataGenerator that uses a straightforward LLM prompting mechanism to generate
-- `__init__(self, provider: Provider)`
-- `generate(self, intent: str, n_generate: int, schema: Type[BaseModel], existing_data: Optional[pd.DataFrame]) -> pd.DataFrame` - Generate synthetic data based on the given intent, schema, and optionally existing data.
-
----
-## `internal/datasets/core/validation/base.py`
-No description
-
-**`BaseDataValidator`** - No description
-- `validate(self, report_output_path: str, synthetic_data_path: str, reference_data_path: str, data_schema: dict) -> str` - Validate synthetic data against reference data and schema. The validation results are saved to a report
-
----
-## `internal/datasets/core/validation/eda.py`
-No description
-
-**`EdaDataValidator`** - No description
-- `validate(self, report_output_path: str, synthetic_data_path: str, reference_data_path: str, data_schema: dict) -> str` - Validates the synthetic data by comparing it to reference data (if available) and producing an
-
----
-## `internal/datasets/generator.py`
-No description
-
-**`DatasetGenerator`** - Generate synthetic data based on request parameters.
-- `__init__(self, provider: Provider, description: str, schema: Type[BaseModel])`
-- `generate(self, n_samples: int, existing_data: pd.DataFrame) -> pd.DataFrame` - Generate synthetic data based on request parameters.
-
----
-## `internal/models/callbacks/chain_of_thought.py`
-Chain of Thought model callback for emitting chain of thought information
-
-**`ChainOfThoughtModelCallback`** - Callback that captures and formats the chain of thought for model building.
-- `__init__(self, emitter)`
-- `on_build_start(self, info: BuildStateInfo) -> None` - Reset the chain of thought at the beginning of the build process.
-- `on_build_end(self, info: BuildStateInfo) -> None` - Emit completion message at the end of the build process.
-- `on_iteration_start(self, info: BuildStateInfo) -> None` - Emit iteration start message.
-- `on_iteration_end(self, info: BuildStateInfo) -> None` - Emit iteration end message with performance metrics.
-- `get_chain_of_thought_callable(self)` - Get the underlying chain of thought callable.
-- `get_full_chain_of_thought(self) -> List` - Get the full chain of thought captured during model building.
-
----
-## `internal/models/callbacks/checkpoint.py`
-Checkpoint callback for model building process in Plexe.
-
-**`ModelCheckpointCallback`** - Callback that saves model state checkpoints during the build process.
-- `__init__(self, keep_n_latest: Optional[int], checkpoint_dir: Optional[str], delete_on_success: Optional[bool])`
-- `on_build_start(self, info: BuildStateInfo) -> None` - Store reference to the model on build start.
-- `on_iteration_end(self, info: BuildStateInfo) -> None` - Create a checkpoint after each iteration.
-- `on_build_end(self, info: BuildStateInfo) -> None` - Optionally clean up checkpoints when build completes successfully.
-
----
-## `internal/models/callbacks/mlflow.py`
-MLFlow callback for tracking model building process.
-
-**`MLFlowCallback`** - Callback that logs the model building process to MLFlow with hierarchical run organization.
-- `__init__(self, tracking_uri: str, experiment_name: str, connect_timeout: int)`
-- `on_build_start(self, info: BuildStateInfo) -> None` - Start MLFlow parent run and log initial parameters.
-- `on_iteration_start(self, info: BuildStateInfo) -> None` - Start a new nested child run for this iteration.
-- `on_iteration_end(self, info: BuildStateInfo) -> None` - Log metrics for this iteration and end the child run.
-- `on_build_end(self, info: BuildStateInfo) -> None` - Log final model details and end MLFlow parent run.
-
----
-## `internal/models/entities/artifact.py`
-This module defines the "Artifact" dataclass, a simple representation of an external artifact.
-
-**`Artifact`** - Represents a model artifact, which can either be a file path or raw text/binary data.
-- `__init__(self, name: str, path: Path, handle: BinaryIO, data: bytes)`
-- `is_path(self) -> bool` - True if the artifact is a file path.
-- `is_handle(self) -> bool` - True if the artifact is file path or file-like object.
-- `is_data(self) -> bool` - True if the artifact is a string or bytes object loaded in memory.
-- `get_as_handle(self) -> BinaryIO` - Get the artifact as a file-like object.
-- `from_path(path: Union[str, Path])` - Create an Artifact instance from a file path.
-- `from_data(name: str, data: bytes)` - Create an Artifact instance from an in-memory sequence of bytes.
-
----
-## `internal/models/entities/code.py`
-This module defines a Code dataclass for representing code objects passed around by agents.
-
-**`Code`** - Represents a code object.
-
----
-## `internal/models/entities/description.py`
-This module defines dataclasses for structured model descriptions.
-
-**`SchemaInfo`** - Information about the model's input and output schemas.
-
-**`ImplementationInfo`** - Technical information about the model implementation.
-
-**`PerformanceInfo`** - Performance metrics and training data information.
-
-**`CodeInfo`** - Information about the model's source code.
-
-**`ModelDescription`** - A comprehensive description of a model.
-- `as_text(self) -> str` - Convert the model description to a formatted text string.
-- `as_markdown(self) -> str` - Convert the model description to a markdown string.
-
----
-## `internal/models/entities/metric.py`
-Module: plexe/internal/common/dataclasses/metric
-
-**`ComparisonMethod`** - Defines methods for comparing metrics.
-
-**`MetricComparator`** - Encapsulates comparison logic for metrics.
-- `__init__(self, comparison_method: ComparisonMethod, target: float, epsilon: float)`
-- `compare(self, value1: float, value2: float) -> int` - Compare two metric values based on the defined comparison method.
-
-**`Metric`** - Represents a metric with a name, a value, and a comparator for determining which metric is better.
-- `__init__(self, name: str, value: float, comparator: MetricComparator, is_worst: bool)`
-- `is_valid(self) -> bool` - Check if the metric value is valid (i.e., not None or NaN).
-
----
-## `internal/models/execution/docker_executor.py`
-No description
-
-**`DockerExecutor`** - Execute Python code snippets in an isolated Docker container.
-- `__init__(self, code: str, timeout: int) -> None`
-- `run(self) -> ExecutionResult` - No description
-- `cleanup(self) -> None` - No description
-
----
-## `internal/models/execution/executor.py`
-No description
-
-**`ExecutionResult`** - Result of executing code in an environment.
-- `is_valid_performance(self) -> bool` - Validate if performance metric is usable.
-
-**`Executor`** - Abstract base class for code execution environments.
-- `__init__(self, code: str, timeout: int) -> None`
-- `run(self) -> ExecutionResult` - Execute the code in the defined environment.
-- `cleanup(self) -> None` - Perform any necessary cleanup (e.g., terminate processes, remove temporary files).
-
----
-## `internal/models/execution/process_executor.py`
-Module: ProcessExecutor for Isolated Python Code Execution
-
-**`ProcessExecutor`** - Execute Python code snippets in an isolated process.
-- `__init__(self, execution_id: str, code: str, working_dir: Path | str, datasets: Dict[str, TabularConvertible], timeout: int, code_execution_file_name: str)`
-- `run(self) -> ExecutionResult` - Execute code in a subprocess and return results.
-- `cleanup(self)` - Clean up resources after execution while preserving model artifacts.
-
----
-## `internal/models/execution/ray_executor.py`
-Module: RayExecutor for Distributed Python Code Execution
-
-**`RayExecutor`** - Execute Python code snippets on a Ray cluster.
-- `__init__(self, execution_id: str, code: str, working_dir: Path | str, datasets: Dict[str, TabularConvertible], timeout: int, code_execution_file_name: str)`
-- `run(self) -> ExecutionResult` - Execute code using Ray and return results.
-- `cleanup(self) -> None` - Clean up Ray resources if needed.
-
----
-## `internal/models/generation/planning.py`
-This module provides functions and classes for generating and planning solutions for machine learning problems.
-
-**`SolutionPlanGenerator`** - A class to generate solution plans for given problem statements.
-- `__init__(self, provider: Provider)`
-- `select_target_metric(self, problem_statement: str) -> Metric` - Selects the metric to optimise for the given problem statement and dataset.
-
----
-## `internal/models/generation/review.py`
-This module provides functionality for reviewing and analyzing generated models.
-
-**`ModelReviewResponse`** - Response model for the model review operation.
-
-**`ModelReviewer`** - A class for analyzing and reviewing generated models.
-- `__init__(self, provider: Provider)`
-- `review_model(self, intent: str, input_schema: Dict[str, str], output_schema: Dict[str, str], solution_plan: str, training_code: str, inference_code: str) -> Dict[str, str]` - Review a generated model to extract metadata, explanations and insights about the trained model.
-
----
-## `internal/models/generation/training.py`
-This module provides functions and classes for generating, fixing, and reviewing machine learning model training code.
-
-**`TrainingCodeGenerator`** - A class to generate, fix, and review machine learning model training code.
-- `__init__(self, provider: Provider)`
-- `generate_training_code(self, problem_statement: str, plan: str, train_dataset_names: list[str], validation_dataset_names: list[str]) -> str` - Generates machine learning model training code based on the given problem statement and solution plan.
-- `fix_training_code(self, training_code: str, plan: str, review: str, train_dataset_names: list[str], validation_dataset_names: list[str], problems: str) -> str` - Fixes the machine learning model training code based on the review and identified problems.
-- `review_training_code(self, training_code: str, problem_statement: str, plan: str, problems: str) -> str` - Reviews the machine learning model training code to identify improvements and fix issues.
-- `generate_training_tests(self, problem_statement: str, plan: str, training_code: str) -> str` - No description
-- `fix_training_tests(self, training_tests: str, training_code: str, review: str, problems: str) -> str` - No description
-- `review_training_tests(self, training_tests: str, training_code: str, problem_statement: str, plan: str) -> str` - No description
-
----
-## `internal/models/validation/composite.py`
-This module defines the `CompositeValidator` class, which chains multiple validators together in a workflow.
-
-**`CompositeValidator`** - A validator that chains multiple validators together in a workflow.
-- `__init__(self, name: str, validators: list[Validator])`
-- `validate(self, code: str) -> ValidationResult` - Validates the given code by running it through each validator in the pipeline.
-
----
-## `internal/models/validation/composites/inference.py`
-This module defines a composite validator for validating the correctness of prediction code.
-
-**`InferenceCodeValidator`** - A validator class that validates the correctness of prediction code.
-- `__init__(self, input_schema: Type[BaseModel], output_schema: Type[BaseModel], input_sample: List[Dict[str, Any]])`
-
----
-## `internal/models/validation/composites/training.py`
-This module defines a composite validator for validating the correctness of training code.
-
-**`TrainingCodeValidator`** - A validator class that validates the correctness of training code.
-- `__init__(self)`
-
----
-## `internal/models/validation/primitives/predict.py`
-This module defines the `PredictorValidator` class, which validates that a predictor behaves as expected.
-
-**`PredictorValidator`** - A validator class that checks that a predictor behaves as expected.
-- `__init__(self, input_schema: Type[BaseModel], output_schema: Type[BaseModel], sample: List[Dict[str, Any]]) -> None`
-- `validate(self, code: str, model_artifacts) -> ValidationResult` - Validates that the given code for a predictor behaves as expected.
-
----
-## `internal/models/validation/primitives/security.py`
-This module defines the SecurityValidator class, which is responsible for validating the security
-
-**`SecurityValidator`** - A validator class that checks the security of Python code using the Bandit tool.
-- `__init__(self)`
-- `validate(self, code: str) -> ValidationResult` - Validate the generated code for security vulnerabilities using the Bandit tool.
-
----
-## `internal/models/validation/primitives/syntax.py`
-This module defines the SyntaxValidator class, which is responsible for validating the syntax
-
-**`SyntaxValidator`** - A validator class that checks the syntax of Python code using the AST module.
-- `__init__(self)`
-- `validate(self, code: str) -> ValidationResult` - Validate Python code using AST.
-
----
-## `internal/models/validation/validator.py`
-This module defines the `Validator` abstract base class and the `ValidationResult` data class.
-
-**`ValidationResult`** - Represents the result of a validation.
-
-**`Validator`** - Abstract base class for validators.
-- `__init__(self, name: str)`
-- `validate(self, code: str) -> ValidationResult` - Validates the given code.
-
----
-## `internal/schemas/resolver.py`
-Module for schema generation and handling.
-
-**`SchemaResolver`** - A utility class for resolving input and output schemas for a given intent and dataset.
-- `__init__(self, provider: Provider, intent: str, input_schema: Type[BaseModel], output_schema: Type[BaseModel])`
-- `resolve(self, datasets: Dict[str, TabularConvertible]) -> Tuple[Type[BaseModel], Type[BaseModel]]` - Resolve the input and output schemas for a given intent and dataset.
+- `select_viable_model_types(data_layout: DataLayout, selected_frameworks: list[str] | None) -> list[str]` - Select viable model types using three-tier filtering.
+- `evaluate_on_sample(spark: SparkSession, sample_uri: str, model_artifacts_path: Path, model_type: str, metric: str, target_columns: list[str], group_column: str | None) -> float` - Evaluate model on sample (fast).
+- `compute_metric_hardcoded(y_true, y_pred, metric_name: str) -> float` - Compute metric using hardcoded sklearn implementations.
+- `compute_metric(y_true, y_pred, metric_name: str, group_ids) -> float` - Compute metric value.
 
 ---
 ## `main.py`
-Application entry point for using the plexe package as a conversational agent.
+Universal entry point for model-builder-v2.
 
 **Functions:**
-- `main()` - Launch the Plexe assistant with a web UI.
-
----
-## `model_builder.py`
-ModelBuilder for creating ML models through agentic workflows.
-
-**`ModelBuilder`** - Factory for creating ML models through agentic workflows.
-- `__init__(self, provider: str | ProviderConfig, verbose: bool, distributed: bool, working_dir: Optional[str])`
-- `build(self, intent: str, datasets: List[pd.DataFrame | DatasetGenerator], input_schema: Type[BaseModel] | Dict[str, type], output_schema: Type[BaseModel] | Dict[str, type], timeout: int, max_iterations: int, run_timeout: int, callbacks: List[Callback], enable_checkpointing: bool)` - Build a complete ML model using the agentic workflow.
+- `main(intent: str, data_refs: list[str], adapter_type: str, spark_mode: str, user_id: str, experiment_id: str, max_iterations: int, work_dir: Path, test_dataset_uri: str | None, enable_final_evaluation: bool, max_epochs: int | None, allowed_model_types: list[str] | None, is_retrain: bool, original_model_uri: str | None, original_experiment_id: str | None, auto_mode: bool, user_feedback: dict | None, enable_otel: bool, otel_endpoint: str | None, otel_headers: dict[str, str] | None, external_storage_uri: str | None, csv_delimiter: str, csv_header: bool)` - Main model building function.
 
 ---
 ## `models.py`
-This module defines the `Model` class, which represents a machine learning model.
+Simple dataclasses for model building workflow.
 
-**`Model`** - Represents a model that transforms inputs to outputs according to a specified intent.
-- `__init__(self, intent: str, input_schema: Type[BaseModel] | Dict[str, type], output_schema: Type[BaseModel] | Dict[str, type], distributed: bool)`
-- `build(self, datasets: List[pd.DataFrame | DatasetGenerator], provider: str | ProviderConfig, timeout: int, max_iterations: int, run_timeout: int, callbacks: List[Callback], verbose: bool, enable_checkpointing: bool) -> None` - Build the model using the provided dataset and optional data generation configuration.
-- `predict(self, x: Dict[str, Any], validate_input: bool, validate_output: bool) -> Dict[str, Any]` - Call the model with input x and return the output.
-- `get_state(self) -> ModelState` - Return the current state of the model.
-- `get_metadata(self) -> dict` - Return metadata about the model.
-- `get_metrics(self) -> dict` - Return metrics about the model.
-- `describe(self) -> ModelDescription` - Return a structured description of the model.
+**`DataLayout`** - Physical structure of dataset (not semantic meaning).
+
+**`Metric`** - Evaluation metric definition.
+
+**`BuildContext`** - Context passed through workflow phases.
+- `add_outer_loop_feedback(self, solution: Optional['Solution'], issue: str)` - Add feedback for outer loop retry.
+- `update(self)` - Convenience method to update multiple fields.
+- `to_dict(self) -> dict` - Serialize BuildContext to dict for checkpointing.
+- `from_dict(d: dict) -> 'BuildContext'` - Deserialize BuildContext from checkpoint dict.
+
+**`Baseline`** - Represents a baseline model result.
+
+**`Solution`** - Represents a solution in the search tree.
+- `is_leaf(self) -> bool` - Check if this is a leaf node in the search tree.
+- `debug_depth(self) -> int` - Number of consecutive buggy ancestors in lineage.
+- `is_successful(self) -> bool` - Check if execution succeeded.
+- `to_dict(self) -> dict` - Serialize solution to dict for checkpointing.
+- `from_dict(d: dict, all_solutions: dict[int, 'Solution']) -> 'Solution'` - Deserialize solution from checkpoint dict.
+
+**`Insight`** - Structured learning extracted from search experiments.
+
+**`Hypothesis`** - Strategic direction for next exploration.
+
+**`FeaturePlan`** - Feature engineering specification.
+
+**`ModelPlan`** - Model configuration specification (natural language directive).
+
+**`UnifiedPlan`** - Complete solution specification (features + model).
+
+**`CoreMetricsReport`** - Core performance metrics on test set.
+
+**`DiagnosticReport`** - Error analysis and failure pattern detection.
+
+**`RobustnessReport`** - Model reliability under stress conditions.
+
+**`ExplainabilityReport`** - Feature importance and model interpretability.
+
+**`BaselineComparisonReport`** - Model vs. baseline performance comparison.
+
+**`EvaluationReport`** - Final comprehensive evaluation with verdict and recommendations.
+
+**`TrainingError`** - Raised when training fails.
+
+**`ValidationError`** - Raised when validation fails.
 
 ---
-## `server.py`
-FastAPI server for the Plexe conversational agent.
+## `retrain.py`
+Model retraining functionality.
+
+**`RetrainingError`** - Raised when retraining fails.
 
 **Functions:**
-- `async root()` - Serve the main HTML page.
-- `async websocket_endpoint(websocket: WebSocket)` - WebSocket endpoint for real-time chat communication.
-- `async health_check()` - Health check endpoint.
+- `retrain_model(original_model_uri: str, train_dataset_uri: str, experiment_id: str, work_dir: Path, runner, config, on_checkpoint_saved) -> tuple[Solution, dict]` - Retrain existing model with new data using original training pipeline.
 
 ---
-## `templates/models/feature_transformer.tmpl.py`
-No description
+## `search/evolutionary_search_policy.py`
+PiEvolve-inspired evolutionary search policy with adaptive state analysis.
 
-**`FeatureTransformerImplementation`** - No description
-- `transform(self, inputs: pd.DataFrame) -> pd.DataFrame` - Given a DataFrame representing a raw dataset, applies feature transformations to the
-
----
-## `templates/models/predictor.tmpl.py`
-No description
-
-**`PredictorImplementation`** - No description
-- `__init__(self, artifacts: List[Artifact])`
-- `predict(self, inputs: dict) -> dict` - Given an input conforming to the input schema, return the model's prediction
+**`EvolutionarySearchPolicy`** - PiEvolve-inspired probabilistic action selection with adaptive search state analysis.
+- `__init__(self, num_drafts: int, debug_prob: float, max_debug_depth: int)`
+- `decide_next_solution(self, journal: SearchJournal, context: BuildContext, iteration: int, max_iterations: int) -> Solution | None` - PiEvolve-style probabilistic action selection based on search state.
+- `should_stop(self, journal: SearchJournal, iteration: int, max_iterations: int) -> bool` - Enhanced stopping criteria with intelligent early stopping.
 
 ---
-## `tools/code_analysis.py`
-Tools for analyzing and inspecting code.
+## `search/insight_store.py`
+Insight store for accumulating learnings from search.
+
+**`InsightStore`** - Simple store for insights extracted from experiments.
+- `__init__(self)`
+- `add(self, change: str, effect: str, context: str, confidence: str, supporting_evidence: list[int]) -> Insight` - Add new insight.
+- `update(self, insight_id: int) -> bool` - Update insight fields.
+- `get_all(self) -> list[Insight]` - Get all insights.
+- `to_dict(self) -> dict` - Serialize InsightStore to dict for checkpointing.
+- `from_dict(d: dict) -> 'InsightStore'` - Deserialize InsightStore from checkpoint dict.
+
+---
+## `search/journal.py`
+Search journal for tracking model search tree.
+
+**`SearchJournal`** - Tracks solution search tree.
+- `__init__(self, baseline: Baseline | None)`
+- `add_node(self, node: Solution) -> None` - Add a solution to the journal.
+- `draft_nodes(self) -> list[Solution]` - Get all root nodes (bootstrap solutions without parents).
+- `buggy_nodes(self) -> list[Solution]` - Get all buggy nodes that could be debugged.
+- `good_nodes(self) -> list[Solution]` - Get all non-buggy nodes with valid performance.
+- `best_node(self) -> Solution | None` - Get best performing solution.
+- `best_performance(self) -> float` - Get best performance achieved so far.
+- `get_history(self, limit: int) -> list[dict]` - Get recent search history for agent consumption.
+- `summarize(self) -> str` - Generate text summary of search progress.
+- `get_improvement_trend(self, window: int) -> float` - Calculate improvement trend over recent successful iterations.
+- `failure_rate(self) -> float` - Calculate overall failure rate.
+- `get_tree_depth(self) -> int` - Get maximum depth of the search tree.
+- `get_successful_improvements(self, limit: int) -> list[Solution]` - Get recent successful child nodes for learning.
+- `to_dict(self) -> dict` - Serialize SearchJournal to dict for checkpointing.
+- `from_dict(d: dict) -> 'SearchJournal'` - Deserialize SearchJournal from checkpoint dict.
+
+---
+## `search/policy.py`
+Search policy abstract base class.
+
+**`SearchPolicy`** - Search strategy for selecting which solution node to expand next.
+- `decide_next_solution(self, journal: 'SearchJournal', context: 'BuildContext', iteration: int, max_iterations: int) -> Optional['Solution']` - Select which solution node to expand in the next iteration.
+- `should_stop(self, journal: 'SearchJournal', iteration: int, max_iterations: int) -> bool` - Decide if search should terminate early.
+
+---
+## `search/tree_policy.py`
+Tree-search policy inspired by AIDE.
+
+**`TreeSearchPolicy`** - AIDE-inspired tree-search with draft/debug/improve stages.
+- `__init__(self, num_drafts: int, debug_prob: float, max_debug_depth: int)`
+- `decide_next_solution(self, journal: SearchJournal, context: BuildContext, iteration: int, max_iterations: int) -> Solution | None` - Decide which solution node to expand next.
+- `should_stop(self, journal: SearchJournal, iteration: int, max_iterations: int) -> bool` - Decide if search should terminate early.
+
+---
+## `templates/features/pipeline_fitter.py`
+Fit sklearn Pipeline on dataset.
 
 **Functions:**
-- `read_training_code(training_code_id: str) -> str` - Retrieves the training code from the registry for analysis. Use this tool to understand the
-- `get_feature_transformer_code() -> Optional[str]` - Get the feature transformation code that was used to transform the raw input dataset into the
+- `fit_pipeline(dataset_uri: str, pipeline: Pipeline, target_columns: list[str], group_column: str | None) -> Pipeline` - Fit sklearn Pipeline on the provided dataset.
 
 ---
-## `tools/context.py`
-Tools for providing context to agents for code generation tasks.
+## `templates/features/pipeline_runner.py`
+Apply fitted sklearn Pipeline to full dataset via Spark.
 
 **Functions:**
-- `get_inference_context_tool(llm_to_use: str) -> Callable` - Returns a tool function to get inference context with the model ID pre-filled.
+- `transform_dataset_via_spark(spark: SparkSession, dataset_uri: str, fitted_pipeline: Pipeline, output_uri: str, target_columns: list[str], pipeline_code: str, group_column: str | None) -> str` - Apply fitted sklearn Pipeline to full dataset using Spark UDFs.
 
 ---
-## `tools/conversation.py`
-Tools for conversational model definition and build initiation.
+## `templates/inference/catboost_predictor.py`
+Standard CatBoost predictor - NO Plexe dependencies.
 
-**Functions:**
-- `validate_dataset_files(file_paths: List[str]) -> Dict[str, Dict]` - Check if specified file paths can be read as datasets using pandas.
-- `initiate_model_build(intent: str, dataset_file_paths: List[str], input_schema: Optional[Dict], output_schema: Optional[Dict], n_solutions_to_try: int) -> Dict[str, str]` - Initiate a model build by loading datasets from file paths and starting the build process.
-
----
-## `tools/datasets.py`
-Tools for dataset manipulation, splitting, and registration.
-
-**Functions:**
-- `register_split_datasets(dataset_name: str, train_dataset: pd.DataFrame, validation_dataset: pd.DataFrame, test_dataset: pd.DataFrame, splitting_code: str) -> Dict[str, str]` - Register train, validation, and test datasets in the object registry after custom splitting.
-- `create_input_sample(n_samples: int) -> bool` - Create and register a synthetic sample input dataset that matches the model's input schema.
-- `drop_null_columns(dataset_name: str) -> str` - Drop all columns from the dataset that are completely null and register the modified dataset.
-- `get_dataset_preview(dataset_name: str) -> Dict[str, Any]` - Generate a concise preview of a dataset with statistical information to help agents understand the data.
-- `register_eda_report(dataset_name: str, overview: Dict[str, Any], feature_engineering_opportunities: Dict[str, Any], data_quality_challenges: Dict[str, Any], data_preprocessing_requirements: Dict[str, Any], feature_importance: Dict[str, Any], insights: List[str], recommendations: List[str]) -> str` - Register an exploratory data analysis (EDA) report for a dataset in the Object Registry.
-- `register_feature_engineering_report(dataset_name: str, overview: Dict[str, Any], feature_catalog: Dict[str, Any], feature_importance: Dict[str, Any], insights: List[str], recommendations: List[str]) -> str` - Register a feature engineering report for a transformed dataset. This tool registers a structured report with
-- `get_latest_datasets() -> Dict[str, str]` - Get the most recent version of each dataset in the pipeline. Automatically detects transformed
-- `get_dataset_for_splitting() -> str` - Get the most appropriate dataset for splitting. Returns transformed version if available,
-- `get_training_datasets() -> Dict[str, str]` - Get datasets ready for model training.
-- `get_test_dataset() -> str` - Get the name of the test dataset for final model evaluation.
-- `get_dataset_reports() -> Dict[str, Dict]` - Get all available data analysis reports, including EDA for raw datasets and feature engineering reports
+**`CatBoostPredictor`** - Standalone CatBoost predictor.
+- `__init__(self, model_dir: str)`
+- `predict(self, x: pd.DataFrame) -> pd.DataFrame` - Make predictions on input DataFrame.
 
 ---
-## `tools/evaluation.py`
-This module defines agent tools for evaluating the properties and performance of models.
+## `templates/inference/keras_predictor.py`
+Standard Keras predictor - NO Plexe dependencies.
 
-**Functions:**
-- `get_review_finalised_model(llm_to_use: str) -> Callable` - Returns a tool function to review finalized models with the model ID pre-filled.
-- `get_solution_performances() -> Dict[str, float]` - Returns the performance of all successfully trained solutions so far. The performances are returned as a dictionary
-
----
-## `tools/execution.py`
-Tools related to code execution, including running training code in isolated environments and
-
-**Functions:**
-- `get_executor_tool(distributed: bool) -> Callable` - Get the appropriate executor tool based on the distributed flag.
-- `apply_feature_transformer(dataset_name: str) -> Dict` - Applies a feature transformer to datasets and registers the transformed datasets. The name of the
-- `get_model_artifacts() -> List[str]` - Get all registered model artifact names.
+**`KerasPredictor`** - Standalone Keras predictor.
+- `__init__(self, model_dir: str)`
+- `predict(self, x: pd.DataFrame) -> pd.DataFrame` - Make predictions on input DataFrame.
 
 ---
-## `tools/metrics.py`
-Tools related to metrics selection and model review/metadata extraction.
+## `templates/inference/xgboost_predictor.py`
+Standard XGBoost predictor - NO Plexe dependencies.
 
-**Functions:**
-- `get_select_target_metric(llm_to_use: str) -> Callable` - Returns a tool function to select target metrics with the model ID pre-filled.
-
----
-## `tools/response_formatting.py`
-This module provides tools for forcing an agent to return its response in a specific format.
-
-**Functions:**
-- `format_final_orchestrator_agent_response(best_solution_id: str, performance_metric_name: str, performance_metric_value: float, performance_metric_comparison_method: str, model_review_output: Dict[str, str]) -> dict` - Returns a dictionary containing the exact fields that the agent must return in its final response. The purpose
-- `format_final_mle_agent_response(solution_id: str, execution_success: bool, performance_value: Optional[float], exception: Optional[str], model_artifact_names: Optional[List[str]]) -> dict` - Returns a dictionary containing the exact fields that the agent must return in its final response. The fields
-- `format_final_mlops_agent_response(inference_code_id: str) -> dict` - Returns a dictionary containing the exact fields that the agent must return in its final response.
+**`XGBoostPredictor`** - Standalone XGBoost predictor.
+- `__init__(self, model_dir: str)`
+- `predict(self, x: pd.DataFrame) -> pd.DataFrame` - Make predictions on input DataFrame.
 
 ---
-## `tools/schemas.py`
-Tools for schema inference, definition, and validation.
+## `templates/training/train_catboost.py`
+Hardcoded robust CatBoost training loop.
 
 **Functions:**
-- `register_global_schemas(input_schema: Dict[str, str], output_schema: Dict[str, str], reasoning: str) -> Dict[str, str]` - Register input and output schemas that should be used by all models built for all solutions.
-- `get_dataset_schema(dataset_name: str) -> Dict[str, Any]` - Extract the schema (column names and types) from a dataset. This is useful for understanding the structure
-- `get_global_schemas() -> Dict[str, Dict[str, str]]` - Get global input and output schemas that should apply to a model.
-- `register_solution_schemas(solution_id: str, input_schema: Dict[str, str], output_schema: Dict[str, str], reasoning: str) -> Dict[str, str]` - Register input and output schemas for a specific solution.
-- `get_solution_schemas(solution_id: str) -> Dict[str, Dict[str, str]]` - Get schemas for a specific solution, with fallback to global schemas.
+- `train_catboost(untrained_model_path: Path, train_uri: str, val_uri: str, output_dir: Path, target_column: str) -> dict` - Train CatBoost model directly (no Spark).
+- `main()` - No description
 
 ---
-## `tools/solutions.py`
-Tools for creating and managing Solution objects in the ML workflow.
+## `templates/training/train_keras.py`
+Hardcoded robust Keras training loop.
 
 **Functions:**
-- `get_solution_creation_tool(max_solutions: int)` - Returns a tool function to create a new Solution object with a plan.
-- `get_solution_plan_by_id(solution_id: str) -> str` - Retrieves a model solution plan by its ID.
-- `list_solutions() -> List[str]` - Lists all Solution IDs currently available. Use this tool to see all available solutions if you run into
+- `train_keras(untrained_model_path: Path, train_uri: str, val_uri: str, output_dir: Path, target_column: str, epochs: int, batch_size: int) -> dict` - Train Keras model directly.
 
 ---
-## `tools/testing.py`
-Tools for model testing and evaluation.
+## `templates/training/train_xgboost.py`
+Hardcoded robust XGBoost training loop.
 
 **Functions:**
-- `register_testing_code(solution_id: str, testing_code: str) -> str` - Register the testing/evaluation code in the object registry and update the Solution object. The testing code
-- `register_evaluation_report(solution_id: str, model_performance_summary: Dict, detailed_metrics: Dict, quality_analysis: Dict, recommendations: List[str], testing_insights: List[str]) -> str` - Register comprehensive evaluation report in the object registry and link to Solution.
+- `train_xgboost(untrained_model_path: Path, train_uri: str, val_uri: str, output_dir: Path, target_column: str, group_column: str | None) -> dict` - Train XGBoost model directly (no Spark).
+- `main()` - No description
 
 ---
-## `tools/training.py`
-Tools related to code generation, including solution planning, training code,
+## `tools/submission.py`
+Submission tools for agents.
 
 **Functions:**
-- `register_best_solution(best_solution_id: str) -> str` - Register the solution with the best performance as the final selected solution in the object
-- `get_training_code_generation_tool(llm_to_use: str) -> Callable` - Returns a tool function to generate training code with the model ID pre-filled.
-- `get_training_code_fixing_tool(llm_to_use: str) -> Callable` - Returns a tool function to fix training code with the model ID pre-filled.
+- `get_save_pipeline_fn(context: BuildContext, sample_df: pd.DataFrame)` - Factory: Returns pipeline submission function.
+- `get_save_pipeline_code_tool(context: BuildContext, train_sample_df: pd.DataFrame, val_sample_df: pd.DataFrame)` - Factory: Returns pipeline code submission tool.
+- `get_save_model_fn(context: BuildContext, model_type: str, max_epochs: int)` - Factory: Returns model submission function.
+- `get_submit_metric_choice_tool(context: BuildContext)` - Factory: Returns metric choice submission tool for MetricSelectorAgent.
+- `get_register_statistical_profile_tool(context: BuildContext)` - Factory: Returns statistical profile submission tool.
+- `get_register_layout_tool(context: BuildContext)` - Factory: Returns layout detection submission tool.
+- `get_register_eda_report_tool(context: BuildContext)` - Factory: Returns EDA report submission tool.
+- `get_save_split_uris_tool(context: BuildContext)` - Factory: Returns split URI submission tool.
+- `get_save_sample_uris_tool(context: BuildContext)` - Factory: Returns sample URIs submission tool.
+- `get_save_metric_implementation_fn(context: BuildContext)` - Factory: Returns metric implementation submission function.
+- `get_validate_baseline_predictor_tool(context: BuildContext, val_sample_df)` - Factory: Returns baseline predictor validation tool.
+- `get_save_baseline_code_tool(context: BuildContext, val_sample_df)` - Factory: Returns baseline code saving tool.
+- `get_evaluate_baseline_performance_tool(context: BuildContext, val_sample_df)` - Factory: Returns baseline performance evaluation tool.
+- `get_save_hypothesis_tool(context: BuildContext, expand_node_id: int)` - Factory: Returns hypothesis submission tool for HypothesiserAgent.
+- `get_save_plan_tool(context: BuildContext, hypothesis: 'Hypothesis', allowed_model_types: list[str] | None)` - Factory: Returns plan submission tool for PlannerAgent.
+- `get_save_insight_tool(insight_store: InsightStore)` - Factory: Returns insight submission tool for InsightExtractorAgent.
+- `get_register_core_metrics_tool(context: BuildContext)` - Factory: Returns core metrics submission tool for ModelEvaluatorAgent.
+- `get_register_diagnostic_report_tool(context: BuildContext)` - Factory: Returns diagnostic report submission tool for ModelEvaluatorAgent.
+- `get_register_robustness_report_tool(context: BuildContext)` - Factory: Returns robustness report submission tool for ModelEvaluatorAgent.
+- `get_register_explainability_report_tool(context: BuildContext)` - Factory: Returns explainability report submission tool for ModelEvaluatorAgent.
+- `get_register_baseline_comparison_tool(context: BuildContext)` - Factory: Returns baseline comparison submission tool for ModelEvaluatorAgent.
+- `get_register_final_evaluation_tool(context: BuildContext)` - Factory: Returns final evaluation submission tool for ModelEvaluatorAgent.
 
 ---
-## `tools/validation.py`
-Tools related to code validation, including syntax and security checks.
+## `utils/dashboard/discovery.py`
+Experiment discovery and metadata extraction for dashboard.
+
+**`ExperimentMetadata`** - Metadata for a discovered experiment.
 
 **Functions:**
-- `validate_training_code(training_code: str) -> Dict` - Validates training code for syntax and security issues.
-- `validate_inference_code(solution_id: str, inference_code: str) -> Dict` - Validates inference code for syntax, security, and correctness, and updates the Solution object.
-- `validate_feature_transformations(transformation_code: str) -> Dict` - Validates feature transformation code for syntax correctness and implementation
+- `discover_experiments(workdir: Path) -> list[ExperimentMetadata]` - Discover all experiments in workdir.
+- `load_experiment_checkpoints(experiment_path: Path) -> dict[str, dict]` - Load all checkpoints for an experiment.
+
+---
+## `utils/dashboard/tabs/baselines.py`
+Baselines tab: Heuristic baseline info.
+
+**Functions:**
+- `render_baselines(checkpoints, exp_path)` - Render baselines tab.
+
+---
+## `utils/dashboard/tabs/data_preparation.py`
+Data Preparation tab: Splits, sample sizes, data preview.
+
+**Functions:**
+- `render_data_preparation(checkpoints, exp_path)` - Render data preparation tab.
+
+---
+## `utils/dashboard/tabs/data_understanding.py`
+Data Understanding tab: Layout, stats, task analysis, metric.
+
+**Functions:**
+- `render_data_understanding(checkpoints, exp_path)` - Render data understanding tab.
+
+---
+## `utils/dashboard/tabs/evaluation.py`
+Evaluation tab: Final test metrics, baseline comparison, diagnostics.
+
+**Functions:**
+- `render_evaluation(checkpoints, exp_path)` - Render evaluation tab.
+
+---
+## `utils/dashboard/tabs/model_package.py`
+Model Package tab: File structure, metadata.
+
+**Functions:**
+- `render_model_package(exp_path)` - Render model package tab.
+
+---
+## `utils/dashboard/tabs/overview.py`
+Overview tab: Phase progress, timeline, key metrics.
+
+**Functions:**
+- `render_overview(exp_meta, checkpoints)` - Render overview tab.
+
+---
+## `utils/dashboard/tabs/search_tree.py`
+Search Tree tab: Tree visualization, performance chart, insights.
+
+**Functions:**
+- `render_search_tree(checkpoints, exp_path)` - Render search tree tab.
+
+---
+## `utils/dashboard/theme.py`
+Custom theme and styling for dashboard.
+
+**Functions:**
+- `apply_custom_theme()` - Apply custom CSS for dense, professional layout.
+
+---
+## `utils/dashboard/utils.py`
+Utility functions for dashboard data loading.
+
+**Functions:**
+- `load_report(exp_path: Path, report_name: str) -> dict | None` - Load YAML report from DirNames.BUILD_DIR/reports/.
+- `load_code_file(file_path: Path) -> str | None` - Load Python code file.
+- `load_parquet_sample(uri: str, limit: int) -> pd.DataFrame | None` - Load first N rows from parquet file.
+- `get_parquet_row_count(uri: str) -> int | None` - Get row count from parquet file.
+- `load_json_file(file_path: Path) -> dict | None` - Load JSON file.
+
+---
+## `utils/reporting.py`
+Utilities for saving agent reports to disk.
+
+**Functions:**
+- `save_report(work_dir: Path, report_name: str, content: Any) -> Path` - Save agent report to workdir/DirNames.BUILD_DIR/reports/ as YAML.
+
+---
+## `utils/s3.py`
+S3 utilities for downloading datasets.
+
+**Functions:**
+- `download_s3_uri(s3_uri: str, local_dir: Path | None) -> str` - Download S3 URI to local directory.
+
+---
+## `utils/tracing.py`
+OpenTelemetry tracing decorators for agents and tools.
+
+**Functions:**
+- `setup_opentelemetry(config: Config)` - Initialize OpenTelemetry tracing with backend-agnostic configuration.
+- `agent_span(name: str)` - Wrap an agent call in a named span for observability.
+- `tool_span(fn) -> Callable` - Wrap a tool call in a named span with tool metadata, including inputs and outputs.
+
+---
+## `validation/validators.py`
+Validation functions for pipelines, models, and other agent outputs.
+
+**Functions:**
+- `validate_sklearn_pipeline(pipeline: Pipeline, sample_df: pd.DataFrame, target_columns: list[str]) -> tuple[bool, str]` - Validate that an sklearn Pipeline is well-formed and functional.
+- `validate_pipeline_consistency(pipeline: Pipeline, train_sample: pd.DataFrame, val_sample: pd.DataFrame, target_columns: list[str]) -> tuple[bool, str]` - Validate pipeline produces consistent output shape on train/val samples.
+- `validate_xgboost_params(params: dict[str, Any]) -> tuple[bool, str]` - Validate XGBoost hyperparameters.
+- `validate_catboost_params(params: dict[str, Any]) -> tuple[bool, str]` - Validate CatBoost hyperparameters.
+- `validate_model_definition(model_type: str, definition: dict[str, Any]) -> tuple[bool, str]` - Validate model definition based on model type.
+- `validate_metric_function_object(func) -> tuple[bool, str]` - Validate metric computation function object.
+- `validate_dataset_splits(spark, train_uri: str, val_uri: str, test_uri: str | None, expected_ratios: dict[str, float]) -> tuple[bool, str]` - Validate that dataset splits were created correctly.
+- `validate_keras_model(model: Any, task_analysis: dict) -> tuple[bool, str]` - Validate Keras 3 model structure.
+- `validate_keras_optimizer(optimizer: Any) -> tuple[bool, str]` - Validate Keras 3 optimizer.
+- `validate_keras_loss(loss: Any) -> tuple[bool, str]` - Validate Keras 3 loss function.
+
+---
+## `viz.py`
+Streamlit dashboard for model-builder-v2.
+
+**Functions:**
+- `main()` - No description
+
+---
+## `workflow.py`
+Main workflow orchestrator.
+
+**Functions:**
+- `build_model(spark: SparkSession, train_dataset_uri: str, test_dataset_uri: str | None, user_id: str, intent: str, experiment_id: str, work_dir: Path, runner: TrainingRunner, search_policy: SearchPolicy, config: Config, adapter, enable_final_evaluation: bool, on_checkpoint_saved: Callable[[str, Path, Path], None] | None, pause_points: list[str] | None, on_pause: Callable[[str], None] | None, user_feedback: dict | None) -> tuple[Solution, dict, EvaluationReport | None] | None` - Main workflow orchestrator.
+- `sanitize_dataset_column_names(spark: SparkSession, dataset_uri: str, context: BuildContext) -> str` - Sanitize column names by replacing special characters with underscores.
+- `analyze_data(spark: SparkSession, dataset_uri: str, context: BuildContext, config: Config, on_checkpoint_saved: Callable[[str, Path, Path], None] | None)` - Phase 1: Layout detection + Statistical + ML task analysis + metric selection.
+- `prepare_data(spark: SparkSession, training_dataset_uri: str, test_dataset_uri: str | None, context: BuildContext, config: Config, adapter, generate_test_set: bool, on_checkpoint_saved: Callable[[str, Path, Path], None] | None)` - Phase 2: Split dataset and extract sample.
+- `build_baselines(spark: SparkSession, context: BuildContext, config: Config, on_checkpoint_saved: Callable[[str, Path, Path], None] | None)` - Phase 3: Build baseline models.
+- `search_models(spark: SparkSession, context: BuildContext, runner: TrainingRunner, search_policy: SearchPolicy, config: Config, adapter, on_checkpoint_saved: Callable[[str, Path, Path], None] | None, restored_journal: SearchJournal | None, restored_insight_store: InsightStore | None) -> Solution | None` - Phase 4: Iterative tree-search for best model.
+- `retrain_on_full_dataset(spark: SparkSession, best_solution: Solution, context: BuildContext, runner: TrainingRunner, config: Config) -> Solution` - Retrain best solution on FULL dataset.
+- `evaluate_final(spark: SparkSession, context: BuildContext, solution: Solution, config: Config, on_checkpoint_saved: Callable[[str, Path, Path], None] | None) -> dict` - Phase 5: Final evaluation on test set sample.
+- `package_final_model(spark: SparkSession, context: BuildContext, solution: Solution, final_metrics: dict, on_checkpoint_saved: Callable[[str, Path, Path], None] | None) -> Path` - Package all final deliverables into a unified directory.
 
 ---
