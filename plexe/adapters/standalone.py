@@ -42,7 +42,6 @@ class StandaloneAdapter(WorkflowAdapter):
 
     Databricks Support:
     - Databricks mode IS supported when using S3 datasets with --external-storage-uri
-    - For Plexe platform integration (DynamoDB tracking, automatic intermediate bucket), use PlexePlatformAdapter
     """
 
     def __init__(self, config, external_storage_uri: str | None = None, user_id: str | None = None):

@@ -62,7 +62,7 @@ def main(
     Args:
         intent: ML task description
         data_refs: Dataset references for adapter.prepare_workspace()
-        adapter_type: Adapter type ("standalone" or "plexe")
+        adapter_type: Adapter type ("standalone")
         spark_mode: Spark backend ("local" or "databricks")
         user_id: User identifier
         experiment_id: Experiment identifier
@@ -96,14 +96,6 @@ def main(
     adapter = None
 
     try:
-        # Backward compatibility: map deprecated adapter names to new names
-        # TODO: remove this mapping in future versions
-        if adapter_type == "aws":
-            logger.warning("adapter_type='aws' is deprecated, use 'plexe' instead")
-            adapter_type = "plexe"
-        elif adapter_type == "local":
-            logger.warning("adapter_type='local' is deprecated, use 'standalone' instead")
-            adapter_type = "standalone"
 
         # Load config from YAML file (if CONFIG_FILE env var set) + apply env var overrides
         config = get_config()
@@ -141,19 +133,12 @@ def main(
             logger.info("Configuration: using defaults + environment variables")
 
         # Create adapter
-        if adapter_type == "plexe":
-            from plexe.adapters.plexe_platform import PlexePlatformAdapter
-            from plexe_commons.repositories.experiment_store import ExperimentStore
-
-            experiment_store = ExperimentStore()
-            adapter = PlexePlatformAdapter(experiment_id, experiment_store, config)
-            experiment_store.update_experiment_status(experiment_id, status="processing")
-        elif adapter_type == "standalone":
+        if adapter_type == "standalone":
             from plexe.adapters.standalone import StandaloneAdapter
 
             adapter = StandaloneAdapter(config, external_storage_uri=external_storage_uri, user_id=user_id)
         else:
-            raise ValueError(f"Unknown adapter_type: {adapter_type}. Use 'standalone' or 'plexe'.")
+            raise ValueError(f"Unknown adapter_type: {adapter_type}. Use 'standalone'.")
 
         # Setup environment (adapter can populate config.otel_headers with secrets)
         adapter.setup_environment()
@@ -372,8 +357,7 @@ if __name__ == "__main__":
     if args.spark_mode:
         spark_mode = args.spark_mode
     else:
-        # Smart defaults: plexe adapter → databricks, standalone adapter → local pyspark
-        spark_mode = "databricks" if adapter_type in ["plexe", "aws"] else "local"
+        spark_mode = "local"
 
     # Auto-enable evaluation if test dataset provided
     enable_final_evaluation = args.enable_final_evaluation or (args.test_dataset_uri is not None)

@@ -1,6 +1,6 @@
 # Code Index: plexe
 
-> Generated on 2026-02-06 20:31:14
+> Generated on 2026-02-06 21:00:01
 
 Code structure and public interface documentation for the **plexe** package.
 
@@ -19,27 +19,6 @@ Base adapter interface for environment-specific infrastructure.
 - `get_samples_output_location(self, dataset_uri: str, experiment_id: str, work_dir: Path) -> str` - Determine where dataset samples should be written (follows same logic as splits).
 - `get_transformed_output_location(self, dataset_uri: str, experiment_id: str, work_dir: Path) -> str` - Determine where transformed datasets should be written (follows same logic as splits).
 - `ensure_samples_local(self, sample_uris: list[str], work_dir: Path) -> list[str]` - Ensure samples are available locally (download from S3 if needed).
-
----
-## `adapters/plexe_platform.py`
-Plexe Platform adapter for model-builder-v2.
-
-**`PlexePlatformAdapter`** - Plexe Platform adapter for full cloud integration.
-- `__init__(self, experiment_id: str, experiment_store: ExperimentStore, config)`
-- `setup_environment(self)` - Load API keys from AWS Secrets Manager.
-- `prepare_workspace(self, experiment_id: str, data_refs: list[str], work_dir: Path) -> tuple[str, str]` - Prepare workspace and normalize dataset format.
-- `on_checkpoint(self, phase_name: str, checkpoint_path: Path, work_dir: Path)` - Upload checkpoint and workdir to S3, update DynamoDB.
-- `on_completion(self, experiment_id: str, work_dir: Path, final_metrics: dict, evaluation_report)` - Upload final model to S3 and mark experiment as completed in DynamoDB.
-- `on_failure(self, experiment_id: str, error: Exception)` - Mark experiment as failed in DynamoDB.
-- `prepare_original_model(self, model_reference: str, work_dir: Path) -> str` - Download original model from S3 for retraining.
-- `on_pause(self, phase_name: str)` - Update experiment status to paused in DynamoDB.
-- `get_splits_output_location(self, dataset_uri: str, experiment_id: str, work_dir: Path) -> str` - No description
-- `get_samples_output_location(self, dataset_uri: str, experiment_id: str, work_dir: Path) -> str` - No description
-- `get_transformed_output_location(self, dataset_uri: str, experiment_id: str, work_dir: Path) -> str` - No description
-- `ensure_samples_local(self, sample_uris: list[str], work_dir: Path) -> list[str]` - Download S3 samples to local if needed (handles Spark parquet directories).
-
-**Functions:**
-- `convert_floats_to_decimal(obj)` - Recursively convert floats to Decimals for DynamoDB compatibility.
 
 ---
 ## `adapters/standalone.py`
