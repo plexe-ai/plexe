@@ -17,7 +17,7 @@ os.environ["KERAS_BACKEND"] = "tensorflow"
 import keras
 import pandas as pd
 
-from source.utils.s3 import download_s3_uri
+from plexe.utils.s3 import download_s3_uri
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] %(message)s", stream=sys.stdout)
 logger = logging.getLogger(__name__)

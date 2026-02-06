@@ -2,7 +2,7 @@
 
 import streamlit as st
 
-from source.utils.dashboard.utils import load_parquet_sample, get_parquet_row_count
+from plexe.utils.dashboard.utils import load_parquet_sample, get_parquet_row_count
 
 
 def render_data_preparation(checkpoints, exp_path):

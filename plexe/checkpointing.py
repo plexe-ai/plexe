@@ -19,9 +19,9 @@ from pathlib import Path
 
 import cloudpickle
 
-from source.models import BuildContext
-from source.search.journal import SearchJournal
-from source.search.insight_store import InsightStore
+from plexe.models import BuildContext
+from plexe.search.journal import SearchJournal
+from plexe.search.insight_store import InsightStore
 
 logger = logging.getLogger(__name__)
 

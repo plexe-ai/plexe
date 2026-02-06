@@ -29,34 +29,34 @@ import pandas as pd
 import yaml
 from pyspark.sql import SparkSession
 
-from source.config import Config
-from source.constants import DirNames, PhaseNames
-from source.models import BuildContext, Solution, Baseline, Hypothesis, DataLayout, EvaluationReport
-from source.execution.training.runner import TrainingRunner
-from source.checkpointing import save_checkpoint, load_checkpoint
-from source.search.journal import SearchJournal
-from source.search.policy import SearchPolicy
-from source.search.insight_store import InsightStore
+from plexe.config import Config
+from plexe.constants import DirNames, PhaseNames
+from plexe.models import BuildContext, Solution, Baseline, Hypothesis, DataLayout, EvaluationReport
+from plexe.execution.training.runner import TrainingRunner
+from plexe.checkpointing import save_checkpoint, load_checkpoint
+from plexe.search.journal import SearchJournal
+from plexe.search.policy import SearchPolicy
+from plexe.search.insight_store import InsightStore
 
-from source.agents.hypothesiser import HypothesiserAgent
-from source.agents.planner import PlannerAgent
-from source.agents.insight_extractor import InsightExtractorAgent
-from source.agents.layout_detector import LayoutDetectionAgent
-from source.agents.statistical_analyser import StatisticalAnalyserAgent
-from source.agents.ml_task_analyser import MLTaskAnalyserAgent
-from source.agents.metric_selector import MetricSelectorAgent
-from source.agents.metric_implementer import MetricImplementationAgent
-from source.agents.dataset_splitter import DatasetSplitterAgent
-from source.agents.sampler import SamplingAgent
-from source.agents.baseline_builder import BaselineBuilderAgent
-from source.agents.feature_processor import FeatureProcessorAgent
-from source.agents.model_definer import ModelDefinerAgent
-from source.agents.model_evaluator import ModelEvaluatorAgent
-from source.utils.tracing import tracer
-from source.utils.reporting import save_report
-from source.templates.features.pipeline_fitter import fit_pipeline
-from source.templates.features.pipeline_runner import transform_dataset_via_spark
-from source.helpers import evaluate_on_sample, select_viable_model_types
+from plexe.agents.hypothesiser import HypothesiserAgent
+from plexe.agents.planner import PlannerAgent
+from plexe.agents.insight_extractor import InsightExtractorAgent
+from plexe.agents.layout_detector import LayoutDetectionAgent
+from plexe.agents.statistical_analyser import StatisticalAnalyserAgent
+from plexe.agents.ml_task_analyser import MLTaskAnalyserAgent
+from plexe.agents.metric_selector import MetricSelectorAgent
+from plexe.agents.metric_implementer import MetricImplementationAgent
+from plexe.agents.dataset_splitter import DatasetSplitterAgent
+from plexe.agents.sampler import SamplingAgent
+from plexe.agents.baseline_builder import BaselineBuilderAgent
+from plexe.agents.feature_processor import FeatureProcessorAgent
+from plexe.agents.model_definer import ModelDefinerAgent
+from plexe.agents.model_evaluator import ModelEvaluatorAgent
+from plexe.utils.tracing import tracer
+from plexe.utils.reporting import save_report
+from plexe.templates.features.pipeline_fitter import fit_pipeline
+from plexe.templates.features.pipeline_runner import transform_dataset_via_spark
+from plexe.helpers import evaluate_on_sample, select_viable_model_types
 
 logger = logging.getLogger(__name__)
 
@@ -627,7 +627,7 @@ def analyze_data(
     save_report(context.work_dir, "03_metric_selection", context.scratch.get("_metric_selection", {}))
 
     # Step 4: Metric Implementation (only if custom metric)
-    from source.config import StandardMetric
+    from plexe.config import StandardMetric
 
     # Check if metric is standard (hardcoded) or custom (needs generation)
     standard_metric_values = [m.value for m in StandardMetric]

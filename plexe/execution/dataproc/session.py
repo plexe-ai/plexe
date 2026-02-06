@@ -32,7 +32,7 @@ def get_or_create_spark_session(config=None) -> SparkSession:
 
     # Import Config here to avoid circular dependency
     if config is None:
-        from source.config import Config
+        from plexe.config import Config
 
         config = Config()
 

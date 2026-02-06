@@ -14,8 +14,8 @@ from typing import Any
 import joblib
 from sklearn.pipeline import Pipeline
 
-from source.execution.training.runner import TrainingRunner
-from source.models import TrainingError
+from plexe.execution.training.runner import TrainingRunner
+from plexe.models import TrainingError
 
 logger = logging.getLogger(__name__)
 

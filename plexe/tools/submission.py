@@ -13,11 +13,11 @@ from plexe_commons.agents.utils.tooling import agentinspectable
 from sklearn.pipeline import Pipeline
 from smolagents import tool
 
-from source.constants import DirNames
-from source.models import BuildContext, Metric, Hypothesis, UnifiedPlan
-from source.search.insight_store import InsightStore
-from source.utils.tracing import tool_span
-from source.validation.validators import validate_sklearn_pipeline, validate_pipeline_consistency
+from plexe.constants import DirNames
+from plexe.models import BuildContext, Metric, Hypothesis, UnifiedPlan
+from plexe.search.insight_store import InsightStore
+from plexe.utils.tracing import tool_span
+from plexe.validation.validators import validate_sklearn_pipeline, validate_pipeline_consistency
 
 logger = logging.getLogger(__name__)
 
@@ -197,7 +197,7 @@ def get_save_model_fn(context: BuildContext, model_type: str, max_epochs: int = 
             Raises:
                 ValueError: If validation fails
             """
-            from source.validation.validators import validate_keras_model, validate_keras_optimizer, validate_keras_loss
+            from plexe.validation.validators import validate_keras_model, validate_keras_optimizer, validate_keras_loss
 
             # Validate model
             is_valid, error_msg = validate_keras_model(model, context.task_analysis)
@@ -530,7 +530,7 @@ def get_register_layout_tool(context: BuildContext):
         Raises:
             ValueError: If validation fails
         """
-        from source.models import DataLayout
+        from plexe.models import DataLayout
 
         # Validate data_layout
         valid_layouts = [layout.value for layout in DataLayout]
@@ -837,7 +837,7 @@ def get_save_metric_implementation_fn(context: BuildContext):
         Raises:
             ValueError: If function validation fails
         """
-        from source.validation.validators import validate_metric_function_object
+        from plexe.validation.validators import validate_metric_function_object
 
         # Validate function
         is_valid, error_msg = validate_metric_function_object(compute_metric_function)
@@ -890,7 +890,7 @@ def get_validate_baseline_predictor_tool(context: BuildContext, val_sample_df):
             ValueError: If validation or metric computation fails
         """
         import numpy as np
-        from source.helpers import compute_metric
+        from plexe.helpers import compute_metric
 
         # Check class name matches template
         if type(predictor).__name__ != "HeuristicBaselinePredictor":
@@ -1050,7 +1050,7 @@ def get_evaluate_baseline_performance_tool(context: BuildContext, val_sample_df)
         Returns:
             String with performance metric value
         """
-        from source.helpers import compute_metric
+        from plexe.helpers import compute_metric
 
         # Check prerequisites
         if context.baseline_predictor is None:
@@ -1220,8 +1220,8 @@ def get_save_plan_tool(context: BuildContext, hypothesis: "Hypothesis", allowed_
         Raises:
             ValueError: If validation fails
         """
-        from source.models import FeaturePlan, ModelPlan
-        from source.config import ModelType
+        from plexe.models import FeaturePlan, ModelPlan
+        from plexe.config import ModelType
 
         # Validate feature_strategy
         valid_strategies = ["reuse_parent", "new", "modify_parent"]
@@ -1372,7 +1372,7 @@ def get_register_core_metrics_tool(context: BuildContext):
         Returns:
             Confirmation message
         """
-        from source.models import CoreMetricsReport
+        from plexe.models import CoreMetricsReport
 
         report = CoreMetricsReport(
             task_type=task_type,
@@ -1427,7 +1427,7 @@ def get_register_diagnostic_report_tool(context: BuildContext):
         Returns:
             Confirmation message
         """
-        from source.models import DiagnosticReport
+        from plexe.models import DiagnosticReport
 
         report = DiagnosticReport(
             worst_predictions=worst_predictions,
@@ -1480,7 +1480,7 @@ def get_register_robustness_report_tool(context: BuildContext):
         Raises:
             ValueError: If grade is invalid
         """
-        from source.models import RobustnessReport
+        from plexe.models import RobustnessReport
 
         valid_grades = ["A", "B", "C", "D", "F"]
         if robustness_grade not in valid_grades:
@@ -1534,7 +1534,7 @@ def get_register_explainability_report_tool(context: BuildContext):
         Returns:
             Confirmation message
         """
-        from source.models import ExplainabilityReport
+        from plexe.models import ExplainabilityReport
 
         report = ExplainabilityReport(
             feature_importance=feature_importance,
@@ -1590,7 +1590,7 @@ def get_register_baseline_comparison_tool(context: BuildContext):
         Returns:
             Confirmation message
         """
-        from source.models import BaselineComparisonReport
+        from plexe.models import BaselineComparisonReport
 
         report = BaselineComparisonReport(
             baseline_name=baseline_name,
@@ -1648,7 +1648,7 @@ def get_register_final_evaluation_tool(context: BuildContext):
         Raises:
             ValueError: If verdict or priorities are invalid
         """
-        from source.models import EvaluationReport
+        from plexe.models import EvaluationReport
 
         valid_verdicts = ["PASS", "CONDITIONAL_PASS", "FAIL"]
         if verdict not in valid_verdicts:

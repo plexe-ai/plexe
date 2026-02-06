@@ -12,8 +12,8 @@ import pandas as pd
 from pyspark.sql import SparkSession
 from sklearn.metrics import accuracy_score, f1_score, mean_squared_error, r2_score, ndcg_score
 
-from source.config import ModelType, StandardMetric, DEFAULT_MODEL_TYPES, TASK_COMPATIBLE_MODELS
-from source.models import DataLayout
+from plexe.config import ModelType, StandardMetric, DEFAULT_MODEL_TYPES, TASK_COMPATIBLE_MODELS
+from plexe.models import DataLayout
 
 logger = logging.getLogger(__name__)
 
@@ -110,19 +110,19 @@ def evaluate_on_sample(
 
     # Load Predictor
     if model_type == ModelType.XGBOOST:
-        from source.templates.inference.xgboost_predictor import XGBoostPredictor
+        from plexe.templates.inference.xgboost_predictor import XGBoostPredictor
 
         predictor = XGBoostPredictor(str(model_artifacts_path))
     elif model_type == ModelType.CATBOOST:
-        from source.templates.inference.catboost_predictor import CatBoostPredictor
+        from plexe.templates.inference.catboost_predictor import CatBoostPredictor
 
         predictor = CatBoostPredictor(str(model_artifacts_path))
     elif model_type == ModelType.KERAS:
-        from source.templates.inference.keras_predictor import KerasPredictor
+        from plexe.templates.inference.keras_predictor import KerasPredictor
 
         predictor = KerasPredictor(str(model_artifacts_path))
     else:
-        from source.templates.inference.pytorch_predictor import PyTorchPredictor
+        from plexe.templates.inference.pytorch_predictor import PyTorchPredictor
 
         predictor = PyTorchPredictor(str(model_artifacts_path))
 

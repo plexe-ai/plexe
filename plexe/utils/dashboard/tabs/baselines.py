@@ -2,8 +2,8 @@
 
 import streamlit as st
 
-from source.constants import DirNames
-from source.utils.dashboard.utils import load_code_file
+from plexe.constants import DirNames
+from plexe.utils.dashboard.utils import load_code_file
 
 
 def render_baselines(checkpoints, exp_path):

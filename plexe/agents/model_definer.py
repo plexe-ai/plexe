@@ -10,12 +10,12 @@ from typing import Any
 from plexe_commons.usage_tracking.llm.litellm_wrapper import TrackedLiteLLMModel
 from smolagents import CodeAgent
 
-from source.config import Config, ModelType
-from source.constants import ScratchKeys
-from source.models import BuildContext
-from source.tools.submission import get_save_model_fn
-from source.utils.tracing import agent_span
-from source.config import get_routing_for_model
+from plexe.config import Config, ModelType
+from plexe.constants import ScratchKeys
+from plexe.models import BuildContext
+from plexe.tools.submission import get_save_model_fn
+from plexe.utils.tracing import agent_span
+from plexe.config import get_routing_for_model
 
 logger = logging.getLogger(__name__)
 
@@ -146,7 +146,7 @@ class ModelDefinerAgent:
         """Build instructions for implementing the model plan."""
 
         # Check for user feedback
-        from source.agents.utils import format_user_feedback_for_prompt
+        from plexe.agents.utils import format_user_feedback_for_prompt
 
         feedback_section = format_user_feedback_for_prompt(self.context.scratch.get("_user_feedback"))
 

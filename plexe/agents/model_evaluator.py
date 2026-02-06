@@ -12,9 +12,9 @@ from plexe_commons.usage_tracking.llm.litellm_wrapper import TrackedLiteLLMModel
 from pyspark.sql import SparkSession
 from smolagents import CodeAgent
 
-from source.models import BuildContext, Solution, EvaluationReport
-from source.config import Config
-from source.tools.submission import (
+from plexe.models import BuildContext, Solution, EvaluationReport
+from plexe.config import Config
+from plexe.tools.submission import (
     get_register_core_metrics_tool,
     get_register_diagnostic_report_tool,
     get_register_robustness_report_tool,
@@ -22,8 +22,8 @@ from source.tools.submission import (
     get_register_baseline_comparison_tool,
     get_register_final_evaluation_tool,
 )
-from source.utils.tracing import agent_span
-from source.config import get_routing_for_model
+from plexe.utils.tracing import agent_span
+from plexe.config import get_routing_for_model
 
 logger = logging.getLogger(__name__)
 

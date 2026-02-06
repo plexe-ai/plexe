@@ -10,7 +10,7 @@ from typing import Any
 import numpy as np
 import yaml
 
-from source.constants import DirNames
+from plexe.constants import DirNames
 
 logger = logging.getLogger(__name__)
 

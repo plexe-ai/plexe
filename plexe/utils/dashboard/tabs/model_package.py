@@ -3,7 +3,7 @@
 import streamlit as st
 import yaml
 
-from source.utils.dashboard.utils import load_code_file, load_json_file
+from plexe.utils.dashboard.utils import load_code_file, load_json_file
 
 
 def render_model_package(exp_path):

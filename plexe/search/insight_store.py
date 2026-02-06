@@ -7,7 +7,7 @@ Simple CRUD store for insights extracted during model search.
 import logging
 from datetime import datetime
 
-from source.models import Insight
+from plexe.models import Insight
 
 logger = logging.getLogger(__name__)
 
@@ -110,7 +110,7 @@ class InsightStore:
     @staticmethod
     def from_dict(d: dict) -> "InsightStore":
         """Deserialize InsightStore from checkpoint dict."""
-        from source.models import Insight
+        from plexe.models import Insight
 
         store = InsightStore()
         store._next_id = d.get("_next_id", 0)

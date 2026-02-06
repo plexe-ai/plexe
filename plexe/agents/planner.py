@@ -9,12 +9,12 @@ import logging
 from plexe_commons.usage_tracking.llm.litellm_wrapper import TrackedLiteLLMModel
 from smolagents import CodeAgent
 
-from source.models import BuildContext, Hypothesis, UnifiedPlan
-from source.config import Config
-from source.tools.submission import get_save_plan_tool
-from source.utils.tracing import agent_span
-from source.config import get_routing_for_model
-from source.search.journal import SearchJournal
+from plexe.models import BuildContext, Hypothesis, UnifiedPlan
+from plexe.config import Config
+from plexe.tools.submission import get_save_plan_tool
+from plexe.utils.tracing import agent_span
+from plexe.config import get_routing_for_model
+from plexe.search.journal import SearchJournal
 
 logger = logging.getLogger(__name__)
 
@@ -56,7 +56,7 @@ class PlannerAgent:
         """Build CodeAgent with plan submission tool."""
 
         # Check for user feedback
-        from source.agents.utils import format_user_feedback_for_prompt
+        from plexe.agents.utils import format_user_feedback_for_prompt
 
         feedback_section = format_user_feedback_for_prompt(self.context.scratch.get("_user_feedback"))
 

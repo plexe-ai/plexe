@@ -7,8 +7,8 @@ from pathlib import Path
 
 import streamlit as st
 
-from source.utils.dashboard.discovery import discover_experiments, load_experiment_checkpoints
-from source.utils.dashboard.theme import apply_custom_theme
+from plexe.utils.dashboard.discovery import discover_experiments, load_experiment_checkpoints
+from plexe.utils.dashboard.theme import apply_custom_theme
 
 # Page config
 st.set_page_config(
@@ -135,37 +135,37 @@ try:
 
     # Tab content (import from separate modules)
     with tab1:
-        from source.utils.dashboard.tabs.overview import render_overview
+        from plexe.utils.dashboard.tabs.overview import render_overview
 
         render_overview(exp_meta, checkpoints)
 
     with tab2:
-        from source.utils.dashboard.tabs.data_understanding import render_data_understanding
+        from plexe.utils.dashboard.tabs.data_understanding import render_data_understanding
 
         render_data_understanding(checkpoints, exp_path)
 
     with tab3:
-        from source.utils.dashboard.tabs.data_preparation import render_data_preparation
+        from plexe.utils.dashboard.tabs.data_preparation import render_data_preparation
 
         render_data_preparation(checkpoints, exp_path)
 
     with tab4:
-        from source.utils.dashboard.tabs.baselines import render_baselines
+        from plexe.utils.dashboard.tabs.baselines import render_baselines
 
         render_baselines(checkpoints, exp_path)
 
     with tab5:
-        from source.utils.dashboard.tabs.search_tree import render_search_tree
+        from plexe.utils.dashboard.tabs.search_tree import render_search_tree
 
         render_search_tree(checkpoints, exp_path)
 
     with tab6:
-        from source.utils.dashboard.tabs.evaluation import render_evaluation
+        from plexe.utils.dashboard.tabs.evaluation import render_evaluation
 
         render_evaluation(checkpoints, exp_path)
 
     with tab7:
-        from source.utils.dashboard.tabs.model_package import render_model_package
+        from plexe.utils.dashboard.tabs.model_package import render_model_package
 
         render_model_package(exp_path)
 

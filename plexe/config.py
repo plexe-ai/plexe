@@ -16,7 +16,7 @@ from typing import Any
 from pydantic import BaseModel, Field, field_validator, model_validator, AliasChoices
 from pydantic_settings import BaseSettings, SettingsConfigDict, PydanticBaseSettingsSource
 
-from source.models import DataLayout
+from plexe.models import DataLayout
 
 
 # configure warnings

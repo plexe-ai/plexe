@@ -330,7 +330,7 @@ class Solution:
         Handles circular parent/child references by storing solution IDs.
         Skips unpicklable objects (pipeline, model) - these are saved separately to disk.
         """
-        from source.checkpointing import pickle_to_base64
+        from plexe.checkpointing import pickle_to_base64
 
         return {
             "solution_id": self.solution_id,
@@ -364,7 +364,7 @@ class Solution:
         Returns:
             Solution instance (parent/children will be None initially, linked in second pass)
         """
-        from source.checkpointing import base64_to_pickle
+        from plexe.checkpointing import base64_to_pickle
 
         # Reconstruct plan if present
         plan = UnifiedPlan.from_dict(d["plan"]) if d.get("plan") else None

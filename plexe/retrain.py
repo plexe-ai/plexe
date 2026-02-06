@@ -17,10 +17,10 @@ import yaml
 from sklearn.model_selection import train_test_split
 from xgboost import XGBClassifier, XGBRegressor
 
-from source.constants import DirNames
-from source.models import Solution
-from source.templates.features.pipeline_fitter import fit_pipeline
-from source.utils.s3 import download_s3_uri
+from plexe.constants import DirNames
+from plexe.models import Solution
+from plexe.templates.features.pipeline_fitter import fit_pipeline
+from plexe.utils.s3 import download_s3_uri
 
 logger = logging.getLogger(__name__)
 

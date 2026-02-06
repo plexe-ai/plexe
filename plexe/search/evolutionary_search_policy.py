@@ -13,10 +13,10 @@ import random
 
 import numpy as np
 
-from source.constants import SearchDefaults
-from source.models import BuildContext, Solution
-from source.search.journal import SearchJournal
-from source.search.policy import SearchPolicy
+from plexe.constants import SearchDefaults
+from plexe.models import BuildContext, Solution
+from plexe.search.journal import SearchJournal
+from plexe.search.policy import SearchPolicy
 
 logger = logging.getLogger(__name__)
 

@@ -8,8 +8,8 @@ from abc import ABC, abstractmethod
 from typing import TYPE_CHECKING, Optional
 
 if TYPE_CHECKING:
-    from source.models import BuildContext, Solution
-    from source.search.journal import SearchJournal
+    from plexe.models import BuildContext, Solution
+    from plexe.search.journal import SearchJournal
 
 
 class SearchPolicy(ABC):

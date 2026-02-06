@@ -10,7 +10,7 @@ from textwrap import shorten
 import pandas as pd
 from sklearn.pipeline import Pipeline
 
-from source.utils.s3 import download_s3_uri
+from plexe.utils.s3 import download_s3_uri
 
 logger = logging.getLogger(__name__)
 

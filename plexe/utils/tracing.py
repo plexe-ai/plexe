@@ -15,7 +15,7 @@ from opentelemetry.sdk.trace import TracerProvider
 from opentelemetry.sdk.trace.export import SimpleSpanProcessor
 from smolagents import Tool
 
-from source.config import Config
+from plexe.config import Config
 
 logger = logging.getLogger(__name__)
 

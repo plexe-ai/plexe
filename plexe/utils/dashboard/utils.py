@@ -6,7 +6,7 @@ from pathlib import Path
 import pandas as pd
 import yaml
 
-from source.constants import DirNames
+from plexe.constants import DirNames
 
 
 def load_report(exp_path: Path, report_name: str) -> dict | None:

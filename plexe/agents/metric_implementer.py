@@ -9,11 +9,11 @@ import logging
 from plexe_commons.usage_tracking.llm.litellm_wrapper import TrackedLiteLLMModel
 from smolagents import CodeAgent
 
-from source.models import BuildContext
-from source.config import Config
-from source.tools.submission import get_save_metric_implementation_fn
-from source.utils.tracing import agent_span
-from source.config import get_routing_for_model
+from plexe.models import BuildContext
+from plexe.config import Config
+from plexe.tools.submission import get_save_metric_implementation_fn
+from plexe.utils.tracing import agent_span
+from plexe.config import get_routing_for_model
 
 logger = logging.getLogger(__name__)
 

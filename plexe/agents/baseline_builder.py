@@ -10,11 +10,11 @@ from plexe_commons.usage_tracking.llm.litellm_wrapper import TrackedLiteLLMModel
 from pyspark.sql import SparkSession
 from smolagents import CodeAgent
 
-from source.config import Config, get_routing_for_model
-from source.constants import DirNames
-from source.models import BuildContext, Baseline
-from source.utils.tracing import agent_span
-from source.tools.submission import (
+from plexe.config import Config, get_routing_for_model
+from plexe.constants import DirNames
+from plexe.models import BuildContext, Baseline
+from plexe.utils.tracing import agent_span
+from plexe.tools.submission import (
     get_validate_baseline_predictor_tool,
     get_save_baseline_code_tool,
 )
@@ -46,7 +46,7 @@ class BaselineBuilderAgent:
     def _build_agent(self, val_sample_df) -> CodeAgent:
         """Build CodeAgent with baseline tools."""
         # Check for user feedback
-        from source.agents.utils import format_user_feedback_for_prompt
+        from plexe.agents.utils import format_user_feedback_for_prompt
 
         feedback_section = format_user_feedback_for_prompt(self.context.scratch.get("_user_feedback"))
 
@@ -222,7 +222,7 @@ class BaselineBuilderAgent:
         Returns:
             Performance metric value
         """
-        from source.helpers import compute_metric
+        from plexe.helpers import compute_metric
 
         # Separate features from target
         target_cols = self.context.output_targets

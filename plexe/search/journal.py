@@ -6,7 +6,7 @@ Maintains tree structure of solutions with draft/debug/improve relationships.
 
 import logging
 
-from source.models import Baseline, Solution
+from plexe.models import Baseline, Solution
 
 logger = logging.getLogger(__name__)
 
@@ -282,7 +282,7 @@ class SearchJournal:
 
         Reconstructs Solution tree with parent/child links.
         """
-        from source.models import Baseline, Solution
+        from plexe.models import Baseline, Solution
 
         # Recreate baseline
         baseline = Baseline.from_dict(d["baseline"]) if d.get("baseline") else None

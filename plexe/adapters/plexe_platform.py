@@ -16,10 +16,10 @@ from pathlib import Path
 
 import boto3
 
-from source.adapters.base import WorkflowAdapter
-from source.constants import DirNames
-from source.execution.dataproc.dataset_io import DatasetNormalizer
-from source.execution.dataproc.session import get_or_create_spark_session
+from plexe.adapters.base import WorkflowAdapter
+from plexe.constants import DirNames
+from plexe.execution.dataproc.dataset_io import DatasetNormalizer
+from plexe.execution.dataproc.session import get_or_create_spark_session
 from plexe_commons.repositories.experiment_store import ExperimentStore
 
 logger = logging.getLogger(__name__)

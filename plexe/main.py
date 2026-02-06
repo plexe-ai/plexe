@@ -2,7 +2,7 @@
 Universal entry point for model-builder-v2.
 
 Can be called:
-- As a Python function: from source.main import main; main(...)
+- As a Python function: from plexe.main import main; main(...)
 - Via CLI: python -m source.main --train-dataset-uri data.parquet --intent "..."
 - From ECS: start.sh reads EXPERIMENT_DATA and calls with CLI args
 """
@@ -19,14 +19,14 @@ import logging
 import sys
 from pathlib import Path
 
-from source.config import setup_logging, setup_litellm, get_config
-from source.constants import DirNames, PhaseNames
-from source.execution.dataproc.session import get_or_create_spark_session, stop_spark_session
-from source.execution.training.local_runner import LocalProcessRunner
-from source.search.tree_policy import TreeSearchPolicy
-from source.utils.tracing import setup_opentelemetry
-from source.workflow import build_model
-from source.retrain import retrain_model
+from plexe.config import setup_logging, setup_litellm, get_config
+from plexe.constants import DirNames, PhaseNames
+from plexe.execution.dataproc.session import get_or_create_spark_session, stop_spark_session
+from plexe.execution.training.local_runner import LocalProcessRunner
+from plexe.search.tree_policy import TreeSearchPolicy
+from plexe.utils.tracing import setup_opentelemetry
+from plexe.workflow import build_model
+from plexe.retrain import retrain_model
 
 logger = logging.getLogger(__name__)
 
@@ -142,14 +142,14 @@ def main(
 
         # Create adapter
         if adapter_type == "plexe":
-            from source.adapters.plexe_platform import PlexePlatformAdapter
+            from plexe.adapters.plexe_platform import PlexePlatformAdapter
             from plexe_commons.repositories.experiment_store import ExperimentStore
 
             experiment_store = ExperimentStore()
             adapter = PlexePlatformAdapter(experiment_id, experiment_store, config)
             experiment_store.update_experiment_status(experiment_id, status="processing")
         elif adapter_type == "standalone":
-            from source.adapters.standalone import StandaloneAdapter
+            from plexe.adapters.standalone import StandaloneAdapter
 
             adapter = StandaloneAdapter(config, external_storage_uri=external_storage_uri, user_id=user_id)
         else:

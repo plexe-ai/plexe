@@ -10,11 +10,11 @@ from plexe_commons.usage_tracking.llm.litellm_wrapper import TrackedLiteLLMModel
 from pyspark.sql import SparkSession
 from smolagents import CodeAgent
 
-from source.models import BuildContext
-from source.config import Config
-from source.tools.submission import get_register_eda_report_tool
-from source.utils.tracing import agent_span
-from source.config import get_routing_for_model
+from plexe.models import BuildContext
+from plexe.config import Config
+from plexe.tools.submission import get_register_eda_report_tool
+from plexe.utils.tracing import agent_span
+from plexe.config import get_routing_for_model
 
 logger = logging.getLogger(__name__)
 
@@ -44,7 +44,7 @@ class MLTaskAnalyserAgent:
     def _build_agent(self) -> CodeAgent:
         """Build CodeAgent with structured submission tool."""
         # Check for user feedback
-        from source.agents.utils import format_user_feedback_for_prompt
+        from plexe.agents.utils import format_user_feedback_for_prompt
 
         feedback_section = format_user_feedback_for_prompt(self.context.scratch.get("_user_feedback"))
 

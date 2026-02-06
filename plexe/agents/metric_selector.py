@@ -9,11 +9,11 @@ import logging
 from plexe_commons.usage_tracking.llm.litellm_wrapper import TrackedLiteLLMModel
 from smolagents import CodeAgent
 
-from source.models import BuildContext, Metric
-from source.config import Config, StandardMetric
-from source.utils.tracing import agent_span
-from source.config import get_routing_for_model
-from source.tools.submission import get_submit_metric_choice_tool
+from plexe.models import BuildContext, Metric
+from plexe.config import Config, StandardMetric
+from plexe.utils.tracing import agent_span
+from plexe.config import get_routing_for_model
+from plexe.tools.submission import get_submit_metric_choice_tool
 
 logger = logging.getLogger(__name__)
 
@@ -33,7 +33,7 @@ class MetricSelectorAgent:
     def _build_agent(self) -> CodeAgent:
         """Build CodeAgent with metric submission tool."""
         # Check for user feedback
-        from source.agents.utils import format_user_feedback_for_prompt
+        from plexe.agents.utils import format_user_feedback_for_prompt
 
         feedback_section = format_user_feedback_for_prompt(self.context.scratch.get("_user_feedback"))
 

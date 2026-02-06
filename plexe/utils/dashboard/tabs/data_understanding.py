@@ -3,7 +3,7 @@
 import plotly.graph_objects as go
 import streamlit as st
 
-from source.utils.dashboard.utils import load_report
+from plexe.utils.dashboard.utils import load_report
 
 
 def render_data_understanding(checkpoints, exp_path):

@@ -11,7 +11,7 @@ from typing import Any
 import pandas as pd
 from sklearn.pipeline import Pipeline
 
-from source.config import ModelType
+from plexe.config import ModelType
 
 logger = logging.getLogger(__name__)
 

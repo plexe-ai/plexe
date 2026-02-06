@@ -3,8 +3,8 @@
 import plotly.graph_objects as go
 import streamlit as st
 
-from source.constants import DirNames
-from source.utils.dashboard.utils import load_code_file
+from plexe.constants import DirNames
+from plexe.utils.dashboard.utils import load_code_file
 
 
 def render_search_tree(checkpoints, exp_path):
