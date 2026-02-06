@@ -4,13 +4,17 @@ Model Evaluator Agent for comprehensive ML model evaluation.
 Performs multi-phase evaluation through focused coding tasks that compose into a complete EvaluationReport.
 """
 
+from __future__ import annotations
+
 import logging
-from typing import Any
+from typing import Any, TYPE_CHECKING
 
 import pandas as pd
 from plexe_commons.usage_tracking.llm.litellm_wrapper import TrackedLiteLLMModel
-from pyspark.sql import SparkSession
 from smolagents import CodeAgent
+
+if TYPE_CHECKING:
+    from pyspark.sql import SparkSession
 
 from plexe.models import BuildContext, Solution, EvaluationReport
 from plexe.config import Config

@@ -4,14 +4,19 @@ Apply fitted sklearn Pipeline to full dataset via Spark.
 Uses mapInPandas to distribute transformation across Spark partitions.
 """
 
+from __future__ import annotations
+
 import logging
 from collections.abc import Iterator
 from textwrap import shorten
+from typing import TYPE_CHECKING
 
 import cloudpickle
 import pandas as pd
-from pyspark.sql import SparkSession
 from sklearn.pipeline import Pipeline
+
+if TYPE_CHECKING:
+    from pyspark.sql import SparkSession
 
 logger = logging.getLogger(__name__)
 

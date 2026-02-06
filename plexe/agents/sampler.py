@@ -4,12 +4,17 @@ Sampling Agent.
 Generates PySpark code for intelligent dataset sampling.
 """
 
+from __future__ import annotations
+
 import logging
 from pathlib import Path
+from typing import TYPE_CHECKING
 
 from plexe_commons.usage_tracking.llm.litellm_wrapper import TrackedLiteLLMModel
-from pyspark.sql import SparkSession
 from smolagents import CodeAgent
+
+if TYPE_CHECKING:
+    from pyspark.sql import SparkSession
 
 from plexe.models import BuildContext
 from plexe.config import Config

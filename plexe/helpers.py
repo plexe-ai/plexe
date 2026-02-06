@@ -4,13 +4,18 @@ Helper functions for workflow.
 Deterministic utilities for data operations and evaluation.
 """
 
+from __future__ import annotations
+
 import logging
 from pathlib import Path
+from typing import TYPE_CHECKING
 
 import numpy as np
 import pandas as pd
-from pyspark.sql import SparkSession
 from sklearn.metrics import accuracy_score, f1_score, mean_squared_error, r2_score, ndcg_score
+
+if TYPE_CHECKING:
+    from pyspark.sql import SparkSession
 
 from plexe.config import ModelType, StandardMetric, DEFAULT_MODEL_TYPES, TASK_COMPATIBLE_MODELS
 from plexe.models import DataLayout

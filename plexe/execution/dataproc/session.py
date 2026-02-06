@@ -2,8 +2,13 @@
 Spark session management with singleton pattern.
 """
 
+from __future__ import annotations
+
 import logging
-from pyspark.sql import SparkSession
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from pyspark.sql import SparkSession
 
 logger = logging.getLogger(__name__)
 
@@ -65,6 +70,8 @@ def _create_local_spark(config) -> SparkSession:
     """
     import os
 
+    from pyspark.sql import SparkSession
+
     master_url = f"local[{config.spark_local_cores}]"
     driver_memory = config.spark_driver_memory
 
@@ -75,7 +82,7 @@ def _create_local_spark(config) -> SparkSession:
 
     try:
         builder = (
-            SparkSession.builder.appName("model-builder-v2")
+            SparkSession.builder.appName("plexe")
             .master(master_url)
             .config("spark.driver.memory", driver_memory)
             .config("spark.sql.execution.arrow.pyspark.enabled", "true")
@@ -146,7 +153,7 @@ def _create_databricks_spark(config) -> SparkSession:
         an isolated Spark session with its own context, temp tables, and metadata.
         Multiple concurrent sessions share underlying compute resources (Databricks-managed)
         but are logically isolated via Lakeguard secure containers. This means:
-        - Multiple model-builder-v2 instances can safely run in parallel
+        - Multiple plexe instances can safely run in parallel
         - Each gets its own isolated execution environment
         - No cross-session interference or data leakage
 
@@ -168,8 +175,7 @@ def _create_databricks_spark(config) -> SparkSession:
     except ImportError:
         raise RuntimeError(
             "databricks-connect is not installed.\n\n"
-            "This Docker image uses PySpark (local mode).\n"
-            "To use Databricks Connect, build with: make build-databricks\n"
+            "To use Databricks Connect, install with: pip install plexe[databricks]\n"
         )
 
     try:

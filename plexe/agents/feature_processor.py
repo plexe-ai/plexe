@@ -4,12 +4,16 @@ Feature Processor Agent.
 Designs sklearn Pipeline for feature engineering based on plan specification.
 """
 
+from __future__ import annotations
+
 import logging
-from typing import Any
+from typing import Any, TYPE_CHECKING
 
 from plexe_commons.usage_tracking.llm.litellm_wrapper import TrackedLiteLLMModel
-from pyspark.sql import SparkSession
 from smolagents import CodeAgent
+
+if TYPE_CHECKING:
+    from pyspark.sql import SparkSession
 from sklearn.pipeline import Pipeline
 
 from plexe.constants import ScratchKeys

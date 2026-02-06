@@ -4,11 +4,16 @@ Baseline Builder Agent.
 Builds simple heuristic baseline predictors (code-based, no pickling).
 """
 
+from __future__ import annotations
+
 import logging
+from typing import TYPE_CHECKING
 
 from plexe_commons.usage_tracking.llm.litellm_wrapper import TrackedLiteLLMModel
-from pyspark.sql import SparkSession
 from smolagents import CodeAgent
+
+if TYPE_CHECKING:
+    from pyspark.sql import SparkSession
 
 from plexe.config import Config, get_routing_for_model
 from plexe.constants import DirNames

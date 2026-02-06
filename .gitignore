@@ -200,3 +200,4 @@ experiments/
 notebooks/
 
 **/.claude/settings.local.json
+config.yaml

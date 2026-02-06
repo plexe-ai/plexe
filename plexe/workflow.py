@@ -10,6 +10,8 @@ Coordinates 6-phase sequential ML model building pipeline:
 6. Packaging (consolidate all deliverables)
 """
 
+from __future__ import annotations
+
 import copy
 import importlib.util
 import json
@@ -18,16 +20,18 @@ import shutil
 import sys
 import tarfile
 import time
+from collections.abc import Callable
 from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime, timezone
 from pathlib import Path
-from collections.abc import Callable
-
+from typing import TYPE_CHECKING
 
 import cloudpickle
 import pandas as pd
 import yaml
-from pyspark.sql import SparkSession
+
+if TYPE_CHECKING:
+    from pyspark.sql import SparkSession
 
 from plexe.config import Config
 from plexe.constants import DirNames, PhaseNames

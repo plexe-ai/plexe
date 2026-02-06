@@ -1,0 +1,297 @@
+# ============================================================
+# Plexe Configuration Template (AUTO-GENERATED)
+# ============================================================
+#
+# This file shows all available configuration options.
+# Uncomment and modify values to override defaults.
+# All fields are optional - only specify what you want to change.
+#
+# Generated from: plexe/config.py (Config Pydantic model)
+# To regenerate: python scripts/generate_config_template.py > config.yaml.template
+
+# ------------------------------------------------------------
+# Search Settings
+# ------------------------------------------------------------
+
+# Maximum hypothesis rounds in model search (each creates ~3 variants)
+# Type: integer
+# Default: 10
+# max_search_iterations: 10
+
+# Maximum variants to execute concurrently (controls resource usage)
+# Type: integer
+# Default: 3
+# max_parallel_variants: 3
+
+# ------------------------------------------------------------
+# Training Settings
+# ------------------------------------------------------------
+
+# Timeout for training runs (seconds)
+# Type: integer
+# Default: 1800
+# training_timeout: 1800
+
+# Default epochs for Keras training
+# Type: integer
+# Default: 50
+# keras_default_epochs: 50
+
+# Default batch size for Keras training
+# Type: integer
+# Default: 32
+# keras_default_batch_size: 32
+
+# ------------------------------------------------------------
+# LLM Settings (per agent role)
+# ------------------------------------------------------------
+
+# LLM for statistical profiling agent
+# Type: string
+# Default: "anthropic/claude-sonnet-4-5-20250929"
+# statistical_analysis_llm: "anthropic/claude-sonnet-4-5-20250929"
+
+# LLM for ML task analysis agent
+# Type: string
+# Default: "anthropic/claude-sonnet-4-5-20250929"
+# ml_task_analysis_llm: "anthropic/claude-sonnet-4-5-20250929"
+
+# LLM for metric selection agent
+# Type: string
+# Default: "anthropic/claude-sonnet-4-5-20250929"
+# metric_selection_llm: "anthropic/claude-sonnet-4-5-20250929"
+
+# LLM for dataset splitting agent
+# Type: string
+# Default: "anthropic/claude-sonnet-4-5-20250929"
+# dataset_splitting_llm: "anthropic/claude-sonnet-4-5-20250929"
+
+# LLM for baseline builder agent
+# Type: string
+# Default: "anthropic/claude-sonnet-4-5-20250929"
+# baseline_builder_llm: "anthropic/claude-sonnet-4-5-20250929"
+
+# LLM for feature engineering agent
+# Type: string
+# Default: "anthropic/claude-sonnet-4-5-20250929"
+# feature_processor_llm: "anthropic/claude-sonnet-4-5-20250929"
+
+# LLM for model definition agent
+# Type: string
+# Default: "anthropic/claude-sonnet-4-5-20250929"
+# model_definer_llm: "anthropic/claude-sonnet-4-5-20250929"
+
+# LLM for model evaluation agent
+# Type: string
+# Default: "anthropic/claude-sonnet-4-5-20250929"
+# evaluation_llm: "anthropic/claude-sonnet-4-5-20250929"
+
+# LLM for hypothesiser agent
+# Type: string
+# Default: "openai/gpt-5-mini"
+# hypothesiser_llm: "openai/gpt-5-mini"
+
+# LLM for planner agent
+# Type: string
+# Default: "openai/gpt-5-mini"
+# planner_llm: "openai/gpt-5-mini"
+
+# LLM for insight extractor agent
+# Type: string
+# Default: "openai/gpt-5-mini"
+# insight_extractor_llm: "openai/gpt-5-mini"
+
+# ------------------------------------------------------------
+# Logging & Agent Settings
+# ------------------------------------------------------------
+
+# Python logging level (DEBUG, INFO, WARNING, ERROR)
+# Type: string
+# Default: "INFO"
+# log_level: "INFO"
+
+# Smolagents verbosity level (0=silent, 1=normal, 2=verbose)
+# Type: integer
+# Default: 1
+# agent_verbosity_level: 1
+
+# ------------------------------------------------------------
+# OpenTelemetry Tracing
+# ------------------------------------------------------------
+
+# Enable OpenTelemetry tracing
+# Type: boolean
+# Default: false
+# enable_otel: false
+
+# OTLP endpoint URL (e.g., https://cloud.langfuse.com/api/public/otel)
+# Type: string | null
+# Default: null
+# otel_endpoint: null
+
+# Authentication headers for OTLP endpoint
+# Type: object
+# Default: null
+# otel_headers: null
+
+# ------------------------------------------------------------
+# Evaluation Settings
+# ------------------------------------------------------------
+
+# Minimum improvement over baseline (1.1 = 10% better)
+# Type: number
+# Default: 1.1
+# performance_threshold: 1.1
+
+# ------------------------------------------------------------
+# Sampling Settings
+# ------------------------------------------------------------
+
+# Training sample size for fast search iterations
+# Type: integer
+# Default: 30000
+# train_sample_size: 30000
+
+# Validation sample size for fast search iterations
+# Type: integer
+# Default: 10000
+# val_sample_size: 10000
+
+# ------------------------------------------------------------
+# Code Generation
+# ------------------------------------------------------------
+
+# Standard library modules allowed for agent code generation
+# Type: array
+# Default: null
+# allowed_base_imports: null
+
+# ------------------------------------------------------------
+# Model Constraints
+# ------------------------------------------------------------
+
+# Restrict to specific model types (null = all allowed)
+# Type: array | null
+# Default: null
+# allowed_model_types: null
+
+# ------------------------------------------------------------
+# Spark Execution
+# ------------------------------------------------------------
+
+# Spark backend: 'local' (PySpark) or 'databricks'
+# Type: string
+# Default: "local"
+# spark_mode: "local"
+
+# Number of Spark worker threads (local mode only)
+# Type: integer
+# Default: 8
+# spark_local_cores: 8
+
+# Spark driver memory (local mode only)
+# Type: string
+# Default: "8g"
+# spark_driver_memory: "8g"
+
+# ------------------------------------------------------------
+# Databricks Settings
+# ------------------------------------------------------------
+
+# Use Databricks serverless compute
+# Type: boolean
+# Default: false
+# databricks_use_serverless: false
+
+# Databricks cluster ID (if specified)
+# Type: string | null
+# Default: null
+# databricks_cluster_id: null
+
+# Databricks workspace URL
+# Type: string | null
+# Default: null
+# databricks_host: null
+
+# Databricks access token
+# Type: string | null
+# Default: null
+# databricks_token: null
+
+# Databricks config profile name
+# Type: string | null
+# Default: null
+# databricks_profile: null
+
+# ------------------------------------------------------------
+# Dataset Format
+# ------------------------------------------------------------
+
+# CSV delimiter character
+# Type: string
+# Default: ","
+# csv_delimiter: ","
+
+# Whether CSV files have header row
+# Type: boolean
+# Default: true
+# csv_header: true
+
+# ------------------------------------------------------------
+# Runtime Overrides
+# ------------------------------------------------------------
+
+# User identifier (set at runtime)
+# Type: string | null
+# Default: null
+# user_id: null
+
+# Experiment identifier (set at runtime)
+# Type: string | null
+# Default: null
+# experiment_id: null
+
+# ------------------------------------------------------------
+# LiteLLM Global Settings
+# ------------------------------------------------------------
+
+# Enable SSL certificate verification for LiteLLM
+# Type: boolean
+# Default: true
+# litellm_ssl_verify: true
+
+# Drop unsupported parameters instead of raising errors
+# Type: boolean
+# Default: false
+# litellm_drop_params: false
+
+# ------------------------------------------------------------
+# LiteLLM Routing
+# ------------------------------------------------------------
+
+# Per-model LiteLLM routing configuration
+# Type: RoutingConfig (object)
+# Default: null
+#
+# routing_config:
+#   default:
+#     api_base: null
+#     headers: {}
+#   providers:
+#     my-proxy:
+#       api_base: "https://proxy.example.com/v1"
+#       headers:
+#         authorization: "${PROXY_TOKEN}"
+#   models:
+#     anthropic/claude-sonnet-4-5-20250929: my-proxy
+
+# ============================================================
+# Example: Minimal Config for Quick Testing
+# ============================================================
+#
+# Uncomment these for quick local testing:
+#
+# agent_verbosity_level: 1
+# max_search_iterations: 5
+# train_sample_size: 10000
+# val_sample_size: 3000

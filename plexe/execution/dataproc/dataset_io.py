@@ -1,14 +1,19 @@
 """
 Dataset I/O with format detection and normalization.
 
-Provides format-agnostic dataset reading for model-builder-v2.
+Provides format-agnostic dataset reading for plexe.
 All format-specific logic is isolated here.
 """
 
+from __future__ import annotations
+
+import logging
 from enum import Enum
 from pathlib import Path
-from pyspark.sql import SparkSession, DataFrame
-import logging
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from pyspark.sql import DataFrame, SparkSession
 
 logger = logging.getLogger(__name__)
 
