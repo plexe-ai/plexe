@@ -17,9 +17,9 @@ Build machine learning models using natural language.
 
 <br>
 
-**plexe** lets you create machine learning models by describing them in plain language. Simply explain what you want, 
-and the AI-powered system builds a fully functional model through an automated agentic approach. Also available as a 
-[managed cloud service](https://plexe.ai).
+**plexe** lets you create machine learning models by describing them in plain language. Simply explain what you want,
+provide a dataset, and the AI-powered system builds a fully functional model through an automated agentic approach.
+Also available as a [managed cloud service](https://plexe.ai).
 
 <br>
 
@@ -36,143 +36,136 @@ pip install plexe
 
 ### Using plexe
 
-You can use plexe as a Python library to build and train machine learning models:
+You can use plexe from the command line or as a Python library:
+
+```bash
+python -m plexe.main \
+    --train-dataset-uri data.parquet \
+    --intent "predict whether a passenger was transported" \
+    --max-iterations 5
+```
 
 ```python
-import plexe
+from plexe.main import main
+from pathlib import Path
 
-# Define the model
-model = plexe.Model(
-    intent="Predict sentiment from news articles",
-    input_schema={"headline": str, "content": str},
-    output_schema={"sentiment": str}
+best_solution, metrics, report = main(
+    intent="predict whether a passenger was transported",
+    data_refs=["train.parquet"],
+    max_iterations=5,
+    work_dir=Path("./workdir"),
 )
-
-# Build and train the model
-model.build(
-    datasets=[your_dataset],
-    provider="openai/gpt-4o-mini",
-    max_iterations=10
-)
-
-# Use the model
-prediction = model.predict({
-    "headline": "New breakthrough in renewable energy",
-    "content": "Scientists announced a major advancement..."
-})
-
-# Save for later use
-plexe.save_model(model, "sentiment-model")
-loaded_model = plexe.load_model("sentiment-model.tar.gz")
+print(f"Performance: {best_solution.performance:.4f}")
 ```
 
 ## 2. Features
 
-### 2.1. 💬 Natural Language Model Definition
-Define models using plain English descriptions:
-
-```python
-model = plexe.Model(
-    intent="Predict housing prices based on features like size, location, etc.",
-    input_schema={"square_feet": int, "bedrooms": int, "location": str},
-    output_schema={"price": float}
-)
-```
-
-### 2.2. 🤖 Multi-Agent Architecture
-The system uses a team of specialized AI agents to:
-- Analyze your requirements and data
-- Plan the optimal model solution
-- Generate and improve model code
-- Test and evaluate performance
+### 2.1. 🤖 Multi-Agent Architecture
+The system uses 14 specialized AI agents across a 6-phase workflow to:
+- Analyze your data and identify the ML task
+- Select the right evaluation metric
+- Search for the best model through hypothesis-driven iteration
+- Evaluate model performance and robustness
 - Package the model for deployment
 
-### 2.3. 🎯 Automated Model Building
-Build complete models with a single method call:
+### 2.2. 🎯 Automated Model Building
+Build complete models with a single call. Plexe supports **XGBoost**, **CatBoost**, and **Keras**:
 
 ```python
-model.build(
-    datasets=[dataset_a, dataset_b],
-    provider="openai/gpt-4o-mini",  # LLM provider
-    max_iterations=10,              # Max solutions to explore
-    timeout=1800                    # Optional time limit in seconds
+best_solution, metrics, report = main(
+    intent="predict house prices based on property features",
+    data_refs=["housing.parquet"],
+    max_iterations=10,                    # Search iterations
+    allowed_model_types=["xgboost"],      # Or let plexe choose
+    enable_final_evaluation=True,         # Evaluate on held-out test set
 )
 ```
 
-### 2.4. 🚀 Distributed Training with Ray
+Run `python -m plexe.main --help` for all CLI options.
 
-Plexe supports distributed model training and evaluation with Ray for faster parallel processing:
+### 2.3. 🐳 Batteries-Included Docker Images
+Run plexe with everything pre-configured — PySpark, Java, and all dependencies included:
 
-```python
-from plexe import Model
+```bash
+docker build -t plexe .
 
-# Optional: Configure Ray cluster address if using remote Ray
-# from plexe import config
-# config.ray.address = "ray://10.1.2.3:10001"
-
-model = Model(
-    intent="Predict house prices based on various features",
-    distributed=True  # Enable distributed execution
-)
-
-model.build(
-    datasets=[df],
-    provider="openai/gpt-4o-mini"
-)
+docker run --rm \
+    -e OPENAI_API_KEY=$OPENAI_API_KEY \
+    -e ANTHROPIC_API_KEY=$ANTHROPIC_API_KEY \
+    -v $(pwd)/data:/data -v $(pwd)/workdir:/workdir \
+    plexe python -m plexe.main \
+        --train-dataset-uri /data/dataset.parquet \
+        --intent "predict customer churn" \
+        --work-dir /workdir
 ```
 
-Ray distributes your workload across available CPU cores, significantly speeding up model generation and evaluation when exploring multiple model variants.
+A Databricks Connect image is also available: `docker build --target databricks .`
 
-### 2.5. 🎲 Data Generation & Schema Inference
-Generate synthetic data or infer schemas automatically:
+### 2.4. ⚙️ YAML Configuration
+Customize LLM routing, search parameters, Spark settings, and more via a config file:
 
-```python
-# Generate synthetic data
-dataset = plexe.DatasetGenerator(
-    description="Example dataset with features and target",
-    provider="openai/gpt-4o-mini",
-    schema={"features": str, "target": int}
-)
-dataset.generate(500)  # Generate 500 samples
-
-# Infer schema from intent
-model = plexe.Model(intent="Predict customer churn based on usage patterns")
-model.build(provider="openai/gpt-4o-mini")  # Schema inferred automatically
+```yaml
+# config.yaml
+max_search_iterations: 5
+allowed_model_types: [xgboost, catboost]
+spark_driver_memory: "4g"
+hypothesiser_llm: "openai/o3-mini"
+feature_processor_llm: "anthropic/claude-sonnet-4-5-20250929"
 ```
 
-### 2.6. 🌐 Multi-Provider Support
-Use your preferred LLM provider, for example:
-```python
-model.build(provider="openai/gpt-4o-mini")          # OpenAI
-model.build(provider="anthropic/claude-3-opus")     # Anthropic
-model.build(provider="ollama/llama2")               # Ollama
-model.build(provider="huggingface/meta-llama/...")  # Hugging Face    
+```bash
+CONFIG_FILE=config.yaml python -m plexe.main ...
 ```
-See [LiteLLM providers](https://docs.litellm.ai/docs/providers) for instructions and available providers.
+
+See [`config.yaml.template`](config.yaml.template) for all available options.
+
+### 2.5. 🌐 Multi-Provider LLM Support
+Plexe uses LLMs via [LiteLLM](https://docs.litellm.ai/docs/providers), so you can use any supported provider:
+
+```yaml
+# Route different agents to different providers
+hypothesiser_llm: "openai/o3-mini"
+feature_processor_llm: "anthropic/claude-sonnet-4-5-20250929"
+model_definer_llm: "ollama/llama3"
+```
 
 > [!NOTE]
 > Plexe *should* work with most LiteLLM providers, but we actively test only with `openai/*` and `anthropic/*`
 > models. If you encounter issues with other providers, please let us know.
 
+### 2.6. 📊 Experiment Dashboard
+Visualize experiment results, search trees, and evaluation reports with the built-in Streamlit dashboard:
+
+```bash
+python -m plexe.viz --work-dir ./workdir
+```
+
+### 2.7. 🔌 Extensibility
+Connect plexe to custom storage, tracking, and deployment infrastructure via the `WorkflowIntegration` interface:
+
+```python
+main(intent="...", data_refs=[...], integration=MyCustomIntegration())
+```
+
+See [`plexe/integrations/base.py`](plexe/integrations/base.py) for the full interface.
 
 ## 3. Installation
 
 ### 3.1. Installation Options
 ```bash
-pip install plexe                  # Standard installation, minimal dependencies
-pip install plexe[transformers]    # Support for transformers, tokenizers, etc
-pip install plexe[chatui]          # Local chat UI for model interaction
-pip install plexe[all]             # All optional dependencies
+pip install plexe                    # Core (XGBoost, CatBoost, Keras, scikit-learn)
+pip install plexe[pyspark]           # + Local PySpark execution
+pip install plexe[aws]               # + S3 storage support (boto3)
 ```
+
+Requires Python >= 3.10, < 3.13.
 
 ### 3.2. API Keys
 ```bash
-# Set your preferred provider's API key
 export OPENAI_API_KEY=<your-key>
 export ANTHROPIC_API_KEY=<your-key>
-export GEMINI_API_KEY=<your-key>
 ```
-See [LiteLLM providers](https://docs.litellm.ai/docs/providers) for environment variable names.
+See [LiteLLM providers](https://docs.litellm.ai/docs/providers) for all supported providers.
 
 ## 4. Documentation
 For full documentation, visit [docs.plexe.ai](https://docs.plexe.ai).
@@ -194,3 +187,4 @@ If you use Plexe in your research, please cite it as follows:
   publisher = {GitHub},
   howpublished = {\url{https://github.com/plexe-ai/plexe}},
 }
+```
