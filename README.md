@@ -85,6 +85,20 @@ best_solution, metrics, report = main(
 
 Run `python -m plexe.main --help` for all CLI options.
 
+The output is a self-contained model package at `work_dir/model/` (also archived as `model.tar.gz`).
+The package has no dependency on `plexe` — build the model with plexe, deploy it anywhere:
+
+```
+model/
+├── artifacts/          # Trained model + feature pipeline (pickle)
+├── src/                # Inference predictor, pipeline code, training template
+├── schemas/            # Input/output JSON schemas
+├── config/             # Hyperparameters
+├── evaluation/         # Metrics and detailed analysis reports
+├── model.yaml          # Model metadata
+└── README.md           # Usage instructions with example code
+```
+
 ### 2.3. 🐳 Batteries-Included Docker Images
 Run plexe with everything pre-configured — PySpark, Java, and all dependencies included.
 A `Makefile` is provided for common workflows:
