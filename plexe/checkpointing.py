@@ -1,5 +1,5 @@
 """
-Checkpointing functionality for model-builder-v2.
+Checkpointing functionality for plexe.
 
 Provides serialization/deserialization of workflow state to enable:
 1. Fault tolerance - resume from last completed phase on failure
@@ -101,7 +101,7 @@ def save_checkpoint(
             "experiment_id": experiment_id,
             "phase": phase_name,
             "timestamp": datetime.now(timezone.utc).isoformat(),
-            "version": "model-builder-v2-v1",
+            "version": "plexe-v1",
             "context": context.to_dict() if hasattr(context, "to_dict") else {},
             "user_feedback": user_feedback,  # Persist feedback for offline editing and audit trails
             "search_journal": (

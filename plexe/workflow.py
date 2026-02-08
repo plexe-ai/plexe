@@ -1983,7 +1983,7 @@ Refer to `evaluation/reports/evaluation.json` for detailed analysis.
             "created_at": datetime.now(timezone.utc).isoformat(),
             "experiment_id": context.experiment_id,
             "user_id": context.user_id,
-            "trained_by": "model-builder-v2",
+            "trained_by": "plexe",
         },
     }
 

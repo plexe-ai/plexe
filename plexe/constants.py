@@ -1,5 +1,5 @@
 """
-Constants for model-builder-v2.
+Constants for plexe.
 
 Centralizes magic strings and configuration values.
 """

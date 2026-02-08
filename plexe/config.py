@@ -1,5 +1,5 @@
 """
-Configuration for model-builder-v2.
+Configuration for plexe.
 
 Provides Config Pydantic model, constants, and logging setup.
 """
@@ -485,7 +485,7 @@ def get_routing_for_model(config: RoutingConfig | None, model_id: str) -> tuple[
 
 def setup_logging(config: Config) -> logging.Logger:
     """
-    Configure logging for the model-builder-v2 package.
+    Configure logging for the plexe package.
 
     Args:
         config: Configuration object

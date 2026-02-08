@@ -1,5 +1,5 @@
 """
-Streamlit dashboard for model-builder-v2.
+Streamlit dashboard for plexe.
 
 Usage:
     python -m source.viz --work-dir ./workdir

@@ -1,1 +1,1 @@
-"""Streamlit dashboard for model-builder-v2."""
+"""Streamlit dashboard for plexe."""

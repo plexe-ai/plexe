@@ -1,10 +1,9 @@
 """
-Universal entry point for model-builder-v2.
+Universal entry point for plexe.
 
 Can be called:
 - As a Python function: from plexe.main import main; main(...)
-- Via CLI: python -m source.main --train-dataset-uri data.parquet --intent "..."
-- From ECS: start.sh reads EXPERIMENT_DATA and calls with CLI args
+- Via CLI: python -m plexe.main --train-dataset-uri data.parquet --intent "..."
 """
 
 import os

@@ -1,6 +1,6 @@
 # Code Index: plexe
 
-> Generated on 2026-02-08 16:52:23
+> Generated on 2026-02-08 17:01:25
 
 Code structure and public interface documentation for the **plexe** package.
 
@@ -124,7 +124,7 @@ Shared utilities for agents.
 
 ---
 ## `checkpointing.py`
-Checkpointing functionality for model-builder-v2.
+Checkpointing functionality for plexe.
 
 **Functions:**
 - `pickle_to_base64(obj) -> str` - Serialize object to base64-encoded pickle string.
@@ -134,7 +134,7 @@ Checkpointing functionality for model-builder-v2.
 
 ---
 ## `config.py`
-Configuration for model-builder-v2.
+Configuration for plexe.
 
 **`ModelType`** - Supported model types (architectural decision).
 
@@ -154,13 +154,13 @@ Configuration for model-builder-v2.
 
 **Functions:**
 - `get_routing_for_model(config: RoutingConfig | None, model_id: str) -> tuple[str | None, dict[str, str]]` - Get routing configuration for a specific model ID.
-- `setup_logging(config: Config) -> logging.Logger` - Configure logging for the model-builder-v2 package.
+- `setup_logging(config: Config) -> logging.Logger` - Configure logging for the plexe package.
 - `setup_litellm(config: Config) -> None` - Configure LiteLLM global settings.
 - `get_config() -> Config` - Get configuration from YAML file (if specified) with environment variable overrides.
 
 ---
 ## `constants.py`
-Constants for model-builder-v2.
+Constants for plexe.
 
 **`ScratchKeys`** - Keys for BuildContext.scratch dictionary.
 
@@ -298,7 +298,7 @@ Amazon S3 storage helper.
 
 ---
 ## `main.py`
-Universal entry point for model-builder-v2.
+Universal entry point for plexe.
 
 **Functions:**
 - `main(intent: str, data_refs: list[str], integration: WorkflowIntegration | None, spark_mode: str, user_id: str, experiment_id: str, max_iterations: int, work_dir: Path, test_dataset_uri: str | None, enable_final_evaluation: bool, max_epochs: int | None, allowed_model_types: list[str] | None, is_retrain: bool, original_model_uri: str | None, original_experiment_id: str | None, auto_mode: bool, user_feedback: dict | None, enable_otel: bool, otel_endpoint: str | None, otel_headers: dict[str, str] | None, external_storage_uri: str | None, csv_delimiter: str, csv_header: bool)` - Main model building function.
@@ -646,7 +646,7 @@ Validation functions for pipelines, models, and other agent outputs.
 
 ---
 ## `viz.py`
-Streamlit dashboard for model-builder-v2.
+Streamlit dashboard for plexe.
 
 **Functions:**
 - `main()` - No description
