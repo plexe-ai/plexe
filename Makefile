@@ -83,7 +83,6 @@ test-quick: build
 			--experiment-id quick_test \
 			--max-iterations 1 \
 			--work-dir /workdir/quick_test \
-			--adapter-type standalone \
 			--spark-mode local \
 			--allowed-model-types xgboost
 	@echo "✅ Quick test passed!"
@@ -110,7 +109,6 @@ test-xgboost: build
 			--experiment-id test_xgboost \
 			--max-iterations 2 \
 			--work-dir /workdir/test_xgboost \
-			--adapter-type standalone \
 			--spark-mode local \
 			--allowed-model-types xgboost
 	@echo "✅ XGBoost test passed!"
@@ -137,7 +135,6 @@ test-catboost: build
 			--experiment-id test_catboost \
 			--max-iterations 2 \
 			--work-dir /workdir/test_catboost \
-			--adapter-type standalone \
 			--spark-mode local \
 			--allowed-model-types catboost
 	@echo "✅ CatBoost test passed!"
@@ -171,7 +168,6 @@ test-all-models: build
 			--experiment-id test_all_models \
 			--max-iterations 3 \
 			--work-dir /workdir/test_all_models \
-			--adapter-type standalone \
 			--spark-mode local
 	@echo "✅ All models test passed!"
 
@@ -197,7 +193,6 @@ test-full: build
 			--experiment-id test_full \
 			--max-iterations 3 \
 			--work-dir /workdir/test_full \
-			--adapter-type standalone \
 			--spark-mode local \
 			--enable-final-evaluation
 	@echo "✅ Full test passed!"
@@ -230,7 +225,6 @@ run-iris: build
 			--experiment-id iris \
 			--max-iterations 10 \
 			--work-dir /workdir/iris/$(TIMESTAMP) \
-			--adapter-type standalone \
 			--spark-mode local \
 			--enable-final-evaluation
 
@@ -257,7 +251,6 @@ run-titanic: build
 			--experiment-id titanic \
 			--max-iterations 10 \
 			--work-dir /workdir/titanic/$(TIMESTAMP) \
-			--adapter-type standalone \
 			--spark-mode local \
 			--enable-final-evaluation
 
@@ -284,7 +277,6 @@ run-house-prices: build
 			--experiment-id house_prices \
 			--max-iterations 10 \
 			--work-dir /workdir/house_prices/$(TIMESTAMP) \
-			--adapter-type standalone \
 			--spark-mode local \
 			--enable-final-evaluation
 
@@ -353,7 +345,6 @@ test-amd64:
 			--experiment-id test_amd64 \
 			--max-iterations 1 \
 			--work-dir /workdir/test_amd64 \
-			--adapter-type standalone \
 			--spark-mode local \
 			--allowed-model-types xgboost
 	@echo "✅ amd64 test passed!"

@@ -80,6 +80,7 @@ ruff = "^0.14.9"
 black = ">=23.0.0"
 streamlit = ">=1.52.1,<2.0.0"
 plotly = ">=6.5.0,<7.0.0"
+boto3 = "^1.42.44"
 
 [tool.semantic_release]
 version_variables = ["pyproject.toml:version"]

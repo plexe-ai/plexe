@@ -263,8 +263,6 @@ def validate_model_definition(model_type: str, definition: dict[str, Any]) -> tu
         return validate_xgboost_params(definition)
     elif model_type == ModelType.CATBOOST:
         return validate_catboost_params(definition)
-    elif model_type == ModelType.PYTORCH:
-        raise NotImplementedError("PyTorch model definition validation not implemented yet")
     else:
         return False, f"Unknown model type: {model_type}"
 
