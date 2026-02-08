@@ -150,7 +150,7 @@ jobs:
     strategy:
       matrix:
         python-version: ['3.11', '3.12']
-        dependencies: ['lightweight', 'all']
+        dependencies: ['lightweight', 'extras']
     env:
       GOOGLE_API_KEY: ${{ vars.GOOGLE_API_KEY }}
       OPENAI_API_KEY: ${{ vars.OPENAI_API_KEY }}
@@ -167,8 +167,8 @@ jobs:
         run: |
           python -m pip install --upgrade pip
           pip install poetry
-          if [ "${{ matrix.dependencies }}" == "all" ]; then
-            poetry install -E all
+          if [ "${{ matrix.dependencies }}" == "extras" ]; then
+            poetry install -E pyspark -E aws
           else
             poetry install
           fi
