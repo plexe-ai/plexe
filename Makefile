@@ -39,7 +39,6 @@ help:
 	@echo "  make test-full          Full test run (3 iterations + evaluation)"
 	@echo ""
 	@echo "📊 Example Datasets:"
-	@echo "  make run-iris           Run on Iris dataset (small, fast)"
 	@echo "  make run-titanic        Run on Titanic dataset (medium)"
 	@echo "  make run-house-prices   Run on House Prices dataset (regression)"
 	@echo ""
@@ -201,32 +200,6 @@ test-full: build
 # ============================================
 # Example Datasets
 # ============================================
-
-# Iris dataset (small, fast)
-.PHONY: run-iris
-run-iris: build
-	@echo "📊 Running on Iris dataset..."
-	$(eval TIMESTAMP := $(shell date +%Y%m%d_%H%M%S))
-	docker run --rm \
-		--add-host=host.docker.internal:host-gateway \
-		$(CONFIG_MOUNT) \
-		$(CONFIG_ENV) \
-		-v $(PWD)/examples/datasets:/data:ro \
-		-v $(PWD)/workdir:/workdir \
-		-e OPENAI_API_KEY=$(OPENAI_API_KEY) \
-		-e ANTHROPIC_API_KEY=$(ANTHROPIC_API_KEY) \
-		-e SPARK_LOCAL_CORES=4 \
-		-e SPARK_DRIVER_MEMORY=4g \
-		plexe:py$(PYTHON_VERSION) \
-		python -m plexe.main \
-			--train-dataset-uri /data/iris/train.csv \
-			--user-id dev_user \
-			--intent "predict which species a flower belongs to" \
-			--experiment-id iris \
-			--max-iterations 10 \
-			--work-dir /workdir/iris/$(TIMESTAMP) \
-			--spark-mode local \
-			--enable-final-evaluation
 
 # Spaceship Titanic dataset (medium)
 .PHONY: run-titanic
