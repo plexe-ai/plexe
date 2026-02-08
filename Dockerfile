@@ -33,9 +33,9 @@ RUN pip install --no-cache-dir --upgrade pip && \
     pip install --no-cache-dir poetry && \
     poetry config virtualenvs.create false
 
-# Install main dependencies (no Spark provider yet)
+# Install main dependencies + AWS support (no Spark provider yet)
 COPY pyproject.toml poetry.lock /code/
-RUN poetry install --only=main --no-root
+RUN poetry install --only=main --no-root --extras aws
 
 # Application code
 COPY plexe/ /code/plexe/

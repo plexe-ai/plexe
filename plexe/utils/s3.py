@@ -8,8 +8,6 @@ import logging
 import tempfile
 from pathlib import Path
 
-import boto3
-
 logger = logging.getLogger(__name__)
 
 
@@ -46,7 +44,9 @@ def download_s3_uri(s3_uri: str, local_dir: Path | None = None) -> str:
         local_dir = Path(local_dir)
         local_dir.mkdir(parents=True, exist_ok=True)
 
-    # Initialize S3 client
+    # Initialize S3 client (boto3 imported lazily — optional dependency)
+    import boto3
+
     s3_client = boto3.client("s3")
 
     # Check if it's a directory or single file
