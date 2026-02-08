@@ -48,6 +48,8 @@ class S3Helper(StorageHelper):
         Returns:
             (bucket, prefix) tuple
         """
+        if not uri.startswith("s3://"):
+            raise ValueError(f"Invalid S3 URI (expected s3://...): {uri}")
         parts = uri[5:].split("/", 1)
         bucket = parts[0]
         prefix = parts[1].rstrip("/") if len(parts) > 1 else ""
@@ -97,7 +99,7 @@ class S3Helper(StorageHelper):
             self.client.head_object(Bucket=self.bucket, Key=key)
             return True
         except ClientError as e:
-            if e.response["Error"]["Code"] == "404":
+            if e.response["Error"]["Code"] in ("404", "NotFound", "NoSuchKey"):
                 return False
             logger.error(f"S3 access error for s3://{self.bucket}/{key}: {e}")
             raise
@@ -133,6 +135,8 @@ class S3Helper(StorageHelper):
             for obj in page["Contents"]:
                 obj_key = obj["Key"]
                 relative_path = obj_key[len(prefix) :].lstrip("/")
+                if not relative_path:
+                    continue
                 local_file = target_dir / relative_path
                 local_file.parent.mkdir(parents=True, exist_ok=True)
                 self.client.download_file(bucket, obj_key, str(local_file))
@@ -180,11 +184,16 @@ class S3Helper(StorageHelper):
             logger.info(f"Extracting tarball to {extract_to}...")
             with tarfile.open(tarball_path, "r:gz") as tar:
                 extract_to_resolved = extract_to.resolve()
+                safe_members = []
                 for member in tar.getmembers():
+                    if member.issym() or member.islnk() or member.isdev() or member.isfifo():
+                        logger.warning(f"Skipping unsafe tar member: {member.name}")
+                        continue
                     member_path = (extract_to / member.name).resolve()
                     if not member_path.is_relative_to(extract_to_resolved):
                         raise ValueError(f"Tarball contains unsafe path traversal: {member.name}")
-                tar.extractall(path=extract_to)
+                    safe_members.append(member)
+                tar.extractall(path=extract_to, members=safe_members)
         finally:
             if Path(tarball_path).exists():
                 os.remove(tarball_path)

@@ -1,6 +1,6 @@
 # Code Index: plexe
 
-> Generated on 2026-02-08 18:48:22
+> Generated on 2026-02-08 21:45:49
 
 Code structure and public interface documentation for the **plexe** package.
 
@@ -57,7 +57,7 @@ Metric Implementation Agent.
 
 **`MetricImplementationAgent`** - Agent that generates metric computation function code.
 - `__init__(self, context: BuildContext, config: Config)`
-- `run(self) -> str` - Generate metric computation function code.
+- `run(self) -> Any` - Generate metric computation function.
 
 ---
 ## `agents/metric_selector.py`

@@ -5,6 +5,7 @@ Generates metric computation function code.
 """
 
 import logging
+from typing import Any
 
 from plexe.utils.litellm_wrapper import PlexeLiteLLMModel
 from smolagents import CodeAgent
@@ -101,12 +102,12 @@ class MetricImplementationAgent:
         )
 
     @agent_span("MetricImplementationAgent")
-    def run(self) -> str:
+    def run(self) -> Any:
         """
-        Generate metric computation function code.
+        Generate metric computation function.
 
         Returns:
-            Function code string
+            Metric computation function (callable)
         """
 
         logger.info(f"Generating implementation for metric: {self.context.metric.name}")
@@ -138,7 +139,7 @@ class MetricImplementationAgent:
             f"3. Returns higher/lower values correctly based on optimization direction\n"
             f"4. Is robust to edge cases\n"
             f"\n"
-            f"Call save_metric_implementation(code) with your function code.\n"
+            f"Call save_metric_implementation(compute_metric) with your function object.\n"
         )
 
         # Run agent

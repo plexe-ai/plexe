@@ -191,7 +191,7 @@ class InsightExtractorAgent:
         summary = ""
 
         # Show parent performance for comparison
-        if parent_perf:
+        if parent_perf is not None:
             summary += f"Parent Performance: {parent_perf:.4f}\n\n"
 
         for sol in self.variant_solutions:
@@ -204,9 +204,9 @@ class InsightExtractorAgent:
                 summary += f"    Change: {sol.plan.model.change_summary}\n"
 
             if sol.is_successful:
-                perf_delta = (sol.performance - parent_perf) if parent_perf else None
+                perf_delta = (sol.performance - parent_perf) if parent_perf is not None else None
                 perf_str = f"{sol.performance:.4f}"
-                if perf_delta:
+                if perf_delta is not None:
                     perf_pct = (perf_delta / parent_perf * 100) if parent_perf else 0
                     perf_str += f" ({perf_delta:+.4f}, {perf_pct:+.1f}%)"
                 summary += f"    Performance: {perf_str}\n"
