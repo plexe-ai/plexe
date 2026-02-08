@@ -1,6 +1,6 @@
 # Code Index: plexe
 
-> Generated on 2026-02-08 16:02:38
+> Generated on 2026-02-08 16:52:23
 
 Code structure and public interface documentation for the **plexe** package.
 
@@ -587,6 +587,15 @@ Utility functions for dashboard data loading.
 - `load_json_file(file_path: Path) -> dict | None` - Load JSON file.
 
 ---
+## `utils/litellm_wrapper.py`
+LiteLLM model wrapper with retry logic and optional post-call hook.
+
+**`PlexeLiteLLMModel`** - LiteLLM model wrapper with automatic retries and an optional post-call hook.
+- `__init__(self, model_id: str, extra_headers: dict[str, str] | None, on_llm_call: Callable[[str, Any, int], None] | None)`
+- `generate(self)` - Generate with automatic retries, header injection, and post-call hook.
+- `chat(self)` - Chat with automatic retries, header injection, and post-call hook.
+
+---
 ## `utils/reporting.py`
 Utilities for saving agent reports to disk.
 
@@ -599,6 +608,16 @@ S3 utilities for downloading datasets.
 
 **Functions:**
 - `download_s3_uri(s3_uri: str, local_dir: Path | None) -> str` - Download S3 URI to local directory.
+
+---
+## `utils/tooling.py`
+This module provides utility functions for defining and managing tools for AI agents.
+
+**`AgentInvocationError`** - Raised when an agent calls an @agentinspectable function with invalid arguments.
+- `__init__(self, func_name: str, help_text: str)`
+
+**Functions:**
+- `agentinspectable(func)` - Decorator for functions intended to be made available for calling to AI agents using mechanisms
 
 ---
 ## `utils/tracing.py`

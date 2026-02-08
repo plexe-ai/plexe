@@ -10,7 +10,7 @@ import logging
 from pathlib import Path
 from typing import TYPE_CHECKING
 
-from plexe_commons.usage_tracking.llm.litellm_wrapper import TrackedLiteLLMModel
+from plexe.utils.litellm_wrapper import PlexeLiteLLMModel
 from smolagents import CodeAgent
 
 if TYPE_CHECKING:
@@ -135,12 +135,8 @@ class DatasetSplitterAgent:
                 "- Timestamp alone does NOT mandate chronological split (see TEMPORAL SPLIT DECISION GUIDE)\n"
                 "- NO data leakage between splits\n"
             ),
-            model=TrackedLiteLLMModel(
+            model=PlexeLiteLLMModel(
                 model_id=self.llm_model,
-                user_id=self.context.user_id,
-                context_id=self.context.experiment_id,
-                agent_name="DatasetSplitterAgent",
-                source="model-builder-v2",
                 api_base=api_base,
                 extra_headers=headers,
             ),

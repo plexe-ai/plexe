@@ -6,7 +6,7 @@ Selects appropriate evaluation metric based on task analysis using smolagents.
 
 import logging
 
-from plexe_commons.usage_tracking.llm.litellm_wrapper import TrackedLiteLLMModel
+from plexe.utils.litellm_wrapper import PlexeLiteLLMModel
 from smolagents import CodeAgent
 
 from plexe.models import BuildContext, Metric
@@ -72,12 +72,8 @@ class MetricSelectorAgent:
                 "- Only use custom metric names for truly unique business needs\n"
                 "- Your rationale should explain WHY this metric fits this specific task\n"
             ),
-            model=TrackedLiteLLMModel(
+            model=PlexeLiteLLMModel(
                 model_id=self.llm_model,
-                user_id=self.context.user_id,
-                context_id=self.context.experiment_id,
-                agent_name="MetricSelectorAgent",
-                source="model-builder-v2",
                 api_base=api_base,
                 extra_headers=headers,
             ),

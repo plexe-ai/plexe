@@ -531,9 +531,6 @@ def setup_logging(config: Config) -> logging.Logger:
     if config.enable_otel:
         package_logger.info("OpenTelemetry tracing enabled")
 
-    # Silence the plexe-commons logger to ERROR level
-    logging.getLogger("plexe_commons").setLevel(logging.ERROR)
-
     return package_logger
 
 

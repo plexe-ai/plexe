@@ -10,7 +10,7 @@ import logging
 from typing import Any, TYPE_CHECKING
 
 import pandas as pd
-from plexe_commons.usage_tracking.llm.litellm_wrapper import TrackedLiteLLMModel
+from plexe.utils.litellm_wrapper import PlexeLiteLLMModel
 from smolagents import CodeAgent
 
 if TYPE_CHECKING:
@@ -113,12 +113,8 @@ class ModelEvaluatorAgent:
                 "CRITICAL: Provide interpretation, not just numbers.\\n"
                 "IMPORTANT: Do not create plots or visualizations (headless environment).\\n"
             ),
-            model=TrackedLiteLLMModel(
+            model=PlexeLiteLLMModel(
                 model_id=self.llm_model,
-                user_id=self.context.user_id,
-                context_id=self.context.experiment_id,
-                agent_name=f"ModelEvaluatorAgent_{phase_name}",
-                source="model-builder-v2",
                 api_base=api_base,
                 extra_headers=headers,
             ),

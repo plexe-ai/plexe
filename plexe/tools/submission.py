@@ -9,7 +9,7 @@ import types
 from typing import Any
 
 import pandas as pd
-from plexe_commons.agents.utils.tooling import agentinspectable
+from plexe.utils.tooling import agentinspectable
 from sklearn.pipeline import Pipeline
 from smolagents import tool
 

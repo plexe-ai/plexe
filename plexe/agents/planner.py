@@ -6,7 +6,7 @@ Creates concrete plan specifications from hypotheses.
 
 import logging
 
-from plexe_commons.usage_tracking.llm.litellm_wrapper import TrackedLiteLLMModel
+from plexe.utils.litellm_wrapper import PlexeLiteLLMModel
 from smolagents import CodeAgent
 
 from plexe.models import BuildContext, Hypothesis, UnifiedPlan
@@ -185,12 +185,8 @@ class PlannerAgent:
         return CodeAgent(
             name="Planner",
             instructions=instructions,
-            model=TrackedLiteLLMModel(
+            model=PlexeLiteLLMModel(
                 model_id=self.llm_model,
-                user_id=self.context.user_id,
-                context_id=self.context.experiment_id,
-                agent_name="PlannerAgent",
-                source="model-builder-v2",
                 api_base=api_base,
                 extra_headers=headers,
                 reasoning_effort="minimal",
