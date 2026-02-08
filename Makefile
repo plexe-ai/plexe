@@ -11,7 +11,6 @@
 
 # Default Python version for local development
 PYTHON_VERSION ?= 3.12
-PLATFORM ?= linux/arm64
 
 # Auto-detect config.yaml and set up mounting (optional)
 # If config.yaml exists, mount it and set CONFIG_FILE env var
@@ -261,7 +260,7 @@ run-house-prices: build
 .PHONY: build
 build:
 	@echo "🏗️  Building default image (Python $(PYTHON_VERSION), PySpark)..."
-	docker buildx build --platform $(PLATFORM) --output type=docker --provenance=false \
+	docker build \
 		--build-arg PYTHON_VERSION=$(PYTHON_VERSION) \
 		-t plexe:py$(PYTHON_VERSION) \
 		-f Dockerfile .
@@ -271,7 +270,7 @@ build:
 .PHONY: build-databricks
 build-databricks:
 	@echo "🏗️  Building Databricks variant (Python $(PYTHON_VERSION))..."
-	docker buildx build --platform $(PLATFORM) --output type=docker --provenance=false \
+	docker build \
 		--build-arg PYTHON_VERSION=$(PYTHON_VERSION) \
 		--target databricks \
 		-t plexe:py$(PYTHON_VERSION)-databricks \
