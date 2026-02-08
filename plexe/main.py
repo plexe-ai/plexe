@@ -19,6 +19,7 @@ import logging
 import sys
 from pathlib import Path
 
+from plexe.integrations.base import WorkflowIntegration
 from plexe.config import setup_logging, setup_litellm, get_config
 from plexe.constants import DirNames, PhaseNames
 from plexe.execution.dataproc.session import get_or_create_spark_session, stop_spark_session
@@ -34,7 +35,7 @@ logger = logging.getLogger(__name__)
 def main(
     intent: str,
     data_refs: list[str],  # TODO: Support multiple datasets + join_strategy when multi-dataset joining is implemented
-    adapter_type: str = "standalone",
+    integration: WorkflowIntegration | None = None,
     spark_mode: str = "local",
     user_id: str = "default_user",
     experiment_id: str = "local",
@@ -61,8 +62,8 @@ def main(
 
     Args:
         intent: ML task description
-        data_refs: Dataset references for adapter.prepare_workspace()
-        adapter_type: Adapter type ("standalone")
+        data_refs: Dataset references
+        integration: WorkflowIntegration instance (default: StandaloneIntegration)
         spark_mode: Spark backend ("local" or "databricks")
         user_id: User identifier
         experiment_id: Experiment identifier
@@ -92,11 +93,13 @@ def main(
         Exception: On workflow failure
     """
 
-    # Adapter will be initialized inside try-except to ensure on_failure() can always be called
-    adapter = None
+    # Default to StandaloneIntegration if no custom integration provided
+    if integration is None:
+        from plexe.integrations.standalone import StandaloneIntegration
+
+        integration = StandaloneIntegration(external_storage_uri=external_storage_uri, user_id=user_id)
 
     try:
-
         # Load config from YAML file (if CONFIG_FILE env var set) + apply env var overrides
         config = get_config()
 
@@ -132,23 +135,27 @@ def main(
         else:
             logger.info("Configuration: using defaults + environment variables")
 
-        # Create adapter
-        if adapter_type == "standalone":
-            from plexe.adapters.standalone import StandaloneAdapter
-
-            adapter = StandaloneAdapter(config, external_storage_uri=external_storage_uri, user_id=user_id)
-        else:
-            raise ValueError(f"Unknown adapter_type: {adapter_type}. Use 'standalone'.")
-
-        # Setup environment (adapter can populate config.otel_headers with secrets)
-        adapter.setup_environment()
-
-        # Setup OTEL tracing (requires secrets from setup_environment)
+        # Setup OTEL tracing
         setup_opentelemetry(config)
 
-        # Prepare workspace
+        # Prepare workspace (restore from durable storage if resuming)
         work_dir.mkdir(parents=True, exist_ok=True)
-        train_dataset_uri, input_format = adapter.prepare_workspace(experiment_id, data_refs, work_dir)
+        integration.prepare_workspace(experiment_id, work_dir)
+
+        # Normalize dataset to parquet
+        if not data_refs:
+            raise ValueError("No dataset references provided")
+        input_uri = data_refs[0]
+        normalized_output = integration.get_artifact_location("normalized", input_uri, experiment_id, work_dir)
+        spark = get_or_create_spark_session(config)
+        from plexe.execution.dataproc.dataset_io import DatasetNormalizer
+
+        normalizer = DatasetNormalizer(spark)
+        csv_options = {"sep": csv_delimiter, "header": csv_header}
+        train_dataset_uri, input_format = normalizer.normalize(
+            input_uri=input_uri, output_uri=normalized_output, read_options=csv_options
+        )
+        input_format = input_format.value
 
         # Prepare original model if retraining
         if is_retrain:
@@ -161,11 +168,11 @@ def main(
                     "--original-experiment-id (platform experiment ID)"
                 )
 
-            # Let adapter interpret the string reference and ensure model is local
-            original_model_uri = adapter.prepare_original_model(model_reference, work_dir)
+            # Let integration interpret the string reference and ensure model is local
+            original_model_uri = integration.prepare_original_model(model_reference, work_dir)
 
         logger.info(f"Experiment: {experiment_id} | User: {user_id}")
-        logger.info(f"Adapter: {adapter_type} | Spark: {spark_mode}")
+        logger.info(f"Integration: {type(integration).__name__} | Spark: {spark_mode}")
         logger.info(f"LiteLLM routing: {'custom config' if config.routing_config else 'default providers'}")
         logger.info(f"Intent: {intent}")
         logger.info(f"Dataset: {train_dataset_uri} (format: {input_format}) | Max iterations: {max_iterations}")
@@ -177,7 +184,10 @@ def main(
             logger.info("RETRAINING MODE")
             logger.info(f"Original model (local): {original_model_uri}")
 
-            # original_model_uri is now guaranteed to be a local path (prepared by adapter)
+            def _on_checkpoint(phase_name, checkpoint_path, work_dir):
+                integration.on_checkpoint(experiment_id, phase_name, checkpoint_path, work_dir)
+
+            # original_model_uri is now guaranteed to be a local path (prepared by integration)
             best_solution, final_metrics = retrain_model(
                 original_model_uri=original_model_uri,
                 train_dataset_uri=train_dataset_uri,
@@ -185,7 +195,7 @@ def main(
                 work_dir=work_dir,
                 runner=runner,
                 config=config,
-                on_checkpoint_saved=adapter.on_checkpoint,
+                on_checkpoint_saved=_on_checkpoint,
             )
             # Retraining doesn't generate evaluation reports
             evaluation_report = None
@@ -199,6 +209,9 @@ def main(
             # If auto_mode=False, pause after Phase 1 for review; if True, no pauses
             pause_points = None if auto_mode else [PhaseNames.ANALYZE_DATA]
 
+            def _on_checkpoint(phase_name, checkpoint_path, work_dir):
+                integration.on_checkpoint(experiment_id, phase_name, checkpoint_path, work_dir)
+
             result = build_model(
                 spark=spark,
                 train_dataset_uri=train_dataset_uri,
@@ -210,11 +223,11 @@ def main(
                 runner=runner,
                 search_policy=search_policy,
                 config=config,
-                adapter=adapter,
+                integration=integration,
                 enable_final_evaluation=enable_final_evaluation,
-                on_checkpoint_saved=adapter.on_checkpoint,
+                on_checkpoint_saved=_on_checkpoint,
                 pause_points=pause_points,
-                on_pause=adapter.on_pause,
+                on_pause=integration.on_pause,
                 user_feedback=user_feedback,
             )
 
@@ -228,20 +241,18 @@ def main(
         logger.info(f"MODEL COMPLETE | Performance: {best_solution.performance:.4f}")
 
         # Finalize
-        adapter.on_completion(experiment_id, work_dir, final_metrics, evaluation_report)
+        integration.on_completion(experiment_id, work_dir, final_metrics, evaluation_report)
 
         return best_solution, final_metrics, evaluation_report
 
     except KeyboardInterrupt:
         logger.warning("Interrupted by user")
-        if adapter:
-            adapter.on_failure(experiment_id, KeyboardInterrupt("User interrupt"))
+        integration.on_failure(experiment_id, KeyboardInterrupt("User interrupt"))
         raise
 
     except Exception as e:
         logger.error(f"Workflow failed: {e}", exc_info=True)
-        if adapter:
-            adapter.on_failure(experiment_id, e)
+        integration.on_failure(experiment_id, e)
         raise
 
     finally:
@@ -289,16 +300,9 @@ if __name__ == "__main__":
 
     # Infrastructure configuration
     parser.add_argument(
-        "--adapter-type",
-        choices=["standalone", "plexe", "local", "aws"],  # Include deprecated names for compatibility
-        default=os.getenv("ADAPTER_TYPE", "standalone"),
-        help="Platform integration: standalone=no cloud integration, plexe=full Plexe platform (S3+DynamoDB). "
-        "Deprecated: 'local' (use 'standalone'), 'aws' (use 'plexe')",
-    )
-    parser.add_argument(
         "--spark-mode",
         choices=["local", "databricks"],
-        help="Spark backend (default: auto-selected based on adapter-type)",
+        help="Spark backend (default: local)",
     )
     parser.add_argument(
         "--external-storage-uri",
@@ -350,9 +354,6 @@ if __name__ == "__main__":
 
     args = parser.parse_args()
 
-    # Determine adapter type from CLI or environment
-    adapter_type = args.adapter_type
-
     # Auto-select spark_mode if not specified
     if args.spark_mode:
         spark_mode = args.spark_mode
@@ -396,7 +397,6 @@ if __name__ == "__main__":
         main(
             intent=args.intent,
             data_refs=[args.train_dataset_uri],
-            adapter_type=adapter_type,
             spark_mode=spark_mode,
             user_id=args.user_id,
             experiment_id=args.experiment_id,

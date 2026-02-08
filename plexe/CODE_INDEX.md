@@ -1,44 +1,9 @@
 # Code Index: plexe
 
-> Generated on 2026-02-06 21:00:01
+> Generated on 2026-02-08 16:02:38
 
 Code structure and public interface documentation for the **plexe** package.
 
-## `adapters/base.py`
-Base adapter interface for environment-specific infrastructure.
-
-**`WorkflowAdapter`** - Adapter interface for environment-specific infrastructure.
-- `setup_environment(self)` - Setup environment-specific configuration.
-- `prepare_workspace(self, experiment_id: str, data_refs: list[str], work_dir: Path) -> tuple[str, str]` - Setup workspace and prepare datasets before workflow starts.
-- `on_checkpoint(self, phase_name: str, checkpoint_path: Path, work_dir: Path)` - Persist checkpoint and workdir to external storage.
-- `on_completion(self, experiment_id: str, work_dir: Path, final_metrics: dict, evaluation_report)` - Upload final model and update metadata when workflow completes.
-- `on_failure(self, experiment_id: str, error: Exception)` - Handle workflow failure.
-- `prepare_original_model(self, model_reference: str, work_dir: Path) -> str` - Ensure original model is available locally for retraining.
-- `on_pause(self, phase_name: str)` - Handle workflow pause for user feedback.
-- `get_splits_output_location(self, dataset_uri: str, experiment_id: str, work_dir: Path) -> str` - Determine where dataset splits should be written.
-- `get_samples_output_location(self, dataset_uri: str, experiment_id: str, work_dir: Path) -> str` - Determine where dataset samples should be written (follows same logic as splits).
-- `get_transformed_output_location(self, dataset_uri: str, experiment_id: str, work_dir: Path) -> str` - Determine where transformed datasets should be written (follows same logic as splits).
-- `ensure_samples_local(self, sample_uris: list[str], work_dir: Path) -> list[str]` - Ensure samples are available locally (download from S3 if needed).
-
----
-## `adapters/standalone.py`
-Standalone adapter for development and testing.
-
-**`StandaloneAdapter`** - Standalone adapter for local development and testing.
-- `__init__(self, config, external_storage_uri: str | None, user_id: str | None)`
-- `setup_environment(self)` - No-op - standalone mode uses environment variables as-is.
-- `prepare_workspace(self, experiment_id: str, data_refs: list[str], work_dir: Path) -> tuple[str, str]` - Prepare workspace and normalize dataset format.
-- `on_checkpoint(self, phase_name: str, checkpoint_path: Path, work_dir: Path)` - Upload checkpoint and workdir to S3 if external storage configured.
-- `on_completion(self, experiment_id: str, work_dir: Path, final_metrics: dict, evaluation_report)` - Upload final model to S3 if external storage configured.
-- `on_failure(self, experiment_id: str, error: Exception)` - No-op - error already logged.
-- `prepare_original_model(self, model_reference: str, work_dir: Path) -> str` - Prepare original model for retraining.
-- `on_pause(self, phase_name: str)` - No-op - local mode has no external state tracking.
-- `get_splits_output_location(self, dataset_uri: str, experiment_id: str, work_dir: Path) -> str` - No description
-- `get_samples_output_location(self, dataset_uri: str, experiment_id: str, work_dir: Path) -> str` - No description
-- `get_transformed_output_location(self, dataset_uri: str, experiment_id: str, work_dir: Path) -> str` - No description
-- `ensure_samples_local(self, sample_uris: list[str], work_dir: Path) -> list[str]` - Download S3 samples to local if needed (handles Spark parquet directories).
-
----
 ## `agents/baseline_builder.py`
 Baseline Builder Agent.
 
@@ -259,11 +224,84 @@ Helper functions for workflow.
 - `compute_metric(y_true, y_pred, metric_name: str, group_ids) -> float` - Compute metric value.
 
 ---
+## `integrations/base.py`
+Base integration interface for connecting plexe to external infrastructure.
+
+**`WorkflowIntegration`** - Integration interface for environment-specific infrastructure.
+- `prepare_workspace(self, experiment_id: str, work_dir: Path) -> None` - Prepare workspace for a model-building run.
+- `get_artifact_location(self, artifact_type: str, dataset_uri: str, experiment_id: str, work_dir: Path) -> str` - Determine where an intermediate artifact should be written.
+- `ensure_local(self, uris: list[str], work_dir: Path) -> list[str]` - Ensure remote URIs are available on the local filesystem.
+- `prepare_original_model(self, model_reference: str, work_dir: Path) -> str` - Locate and download an existing model for retraining.
+- `on_checkpoint(self, experiment_id: str, phase_name: str, checkpoint_path: Path, work_dir: Path) -> None` - Persist checkpoint and work directory after a phase completes.
+- `on_completion(self, experiment_id: str, work_dir: Path, final_metrics: dict, evaluation_report: Any) -> None` - Persist final model and update tracking on successful completion.
+- `on_failure(self, experiment_id: str, error: Exception) -> None` - Handle workflow failure.
+- `on_pause(self, phase_name: str) -> None` - Handle workflow pause for user feedback.
+
+---
+## `integrations/standalone.py`
+Standalone integration for local development and S3-backed deployments.
+
+**`StandaloneIntegration`** - Standalone integration for local development and testing.
+- `__init__(self, external_storage_uri: str | None, user_id: str | None)`
+- `prepare_workspace(self, experiment_id: str, work_dir: Path) -> None` - Restore workspace from S3 if a previous run exists.
+- `get_artifact_location(self, artifact_type: str, dataset_uri: str, experiment_id: str, work_dir: Path) -> str` - Determine storage location based on dataset location.
+- `ensure_local(self, uris: list[str], work_dir: Path) -> list[str]` - Download S3 URIs to local if needed (handles Spark parquet directories).
+- `prepare_original_model(self, model_reference: str, work_dir: Path) -> str` - Prepare original model for retraining.
+- `on_checkpoint(self, experiment_id: str, phase_name: str, checkpoint_path: Path, work_dir: Path) -> None` - Upload checkpoint and workdir to S3 if configured.
+- `on_completion(self, experiment_id: str, work_dir: Path, final_metrics: dict, evaluation_report: Any) -> None` - Upload final model to S3 if configured.
+
+---
+## `integrations/storage/__init__.py`
+Storage helper interface and implementations.
+
+**`StorageHelper`** - Abstract base for cloud/remote storage helpers.
+- `upload_file(self, local_path: Path, key: str) -> str` - Upload a local file to remote storage.
+- `download_file(self, key: str, local_path: Path) -> None` - Download a remote file to local filesystem.
+- `object_exists(self, key: str) -> bool` - Check whether an object exists in remote storage.
+- `download_directory(self, uri: str, local_dir: Path) -> str` - Download a remote directory (e.g., Spark parquet output) to local filesystem.
+
+---
+## `integrations/storage/azure.py`
+Azure Blob Storage helper (stub).
+
+**`AzureBlobHelper`** - Azure Blob Storage helper (not yet implemented).
+- `upload_file(self, local_path: Path, key: str) -> str` - No description
+- `download_file(self, key: str, local_path: Path) -> None` - No description
+- `object_exists(self, key: str) -> bool` - No description
+- `download_directory(self, uri: str, local_dir: Path) -> str` - No description
+
+---
+## `integrations/storage/gcs.py`
+Google Cloud Storage helper (stub).
+
+**`GCSHelper`** - Google Cloud Storage helper (not yet implemented).
+- `upload_file(self, local_path: Path, key: str) -> str` - No description
+- `download_file(self, key: str, local_path: Path) -> None` - No description
+- `object_exists(self, key: str) -> bool` - No description
+- `download_directory(self, uri: str, local_dir: Path) -> str` - No description
+
+---
+## `integrations/storage/s3.py`
+Amazon S3 storage helper.
+
+**`S3Helper`** - Amazon S3 storage helper.
+- `__init__(self, bucket: str, prefix: str, user_id: str | None)`
+- `parse_uri(uri: str) -> tuple[str, str]` - Parse s3://bucket/prefix into (bucket, prefix).
+- `build_key(self, experiment_id: str) -> str` - Build S3 key with user/experiment scoping.
+- `upload_file(self, local_path: Path, key: str) -> str` - Upload file to S3.
+- `download_file(self, key: str, local_path: Path) -> None` - Download file from S3.
+- `object_exists(self, key: str) -> bool` - Check if S3 object exists.
+- `download_directory(self, uri: str, local_dir: Path) -> str` - Download a Spark parquet directory (multiple part files) from S3.
+- `tar_and_upload(self, local_dir: Path, s3_key: str) -> str` - Create tarball from directory and upload to S3.
+- `download_and_extract_tar(self, s3_key: str, extract_to: Path) -> None` - Download tarball from S3 and extract.
+- `handle_download_error(self, error: ClientError, reference: str, context: str) -> None` - Raise appropriate exception for S3 download errors.
+
+---
 ## `main.py`
 Universal entry point for model-builder-v2.
 
 **Functions:**
-- `main(intent: str, data_refs: list[str], adapter_type: str, spark_mode: str, user_id: str, experiment_id: str, max_iterations: int, work_dir: Path, test_dataset_uri: str | None, enable_final_evaluation: bool, max_epochs: int | None, allowed_model_types: list[str] | None, is_retrain: bool, original_model_uri: str | None, original_experiment_id: str | None, auto_mode: bool, user_feedback: dict | None, enable_otel: bool, otel_endpoint: str | None, otel_headers: dict[str, str] | None, external_storage_uri: str | None, csv_delimiter: str, csv_header: bool)` - Main model building function.
+- `main(intent: str, data_refs: list[str], integration: WorkflowIntegration | None, spark_mode: str, user_id: str, experiment_id: str, max_iterations: int, work_dir: Path, test_dataset_uri: str | None, enable_final_evaluation: bool, max_epochs: int | None, allowed_model_types: list[str] | None, is_retrain: bool, original_model_uri: str | None, original_experiment_id: str | None, auto_mode: bool, user_feedback: dict | None, enable_otel: bool, otel_endpoint: str | None, otel_headers: dict[str, str] | None, external_storage_uri: str | None, csv_delimiter: str, csv_header: bool)` - Main model building function.
 
 ---
 ## `models.py`
@@ -599,12 +637,12 @@ Streamlit dashboard for model-builder-v2.
 Main workflow orchestrator.
 
 **Functions:**
-- `build_model(spark: SparkSession, train_dataset_uri: str, test_dataset_uri: str | None, user_id: str, intent: str, experiment_id: str, work_dir: Path, runner: TrainingRunner, search_policy: SearchPolicy, config: Config, adapter, enable_final_evaluation: bool, on_checkpoint_saved: Callable[[str, Path, Path], None] | None, pause_points: list[str] | None, on_pause: Callable[[str], None] | None, user_feedback: dict | None) -> tuple[Solution, dict, EvaluationReport | None] | None` - Main workflow orchestrator.
+- `build_model(spark: SparkSession, train_dataset_uri: str, test_dataset_uri: str | None, user_id: str, intent: str, experiment_id: str, work_dir: Path, runner: TrainingRunner, search_policy: SearchPolicy, config: Config, integration: WorkflowIntegration, enable_final_evaluation: bool, on_checkpoint_saved: Callable[[str, Path, Path], None] | None, pause_points: list[str] | None, on_pause: Callable[[str], None] | None, user_feedback: dict | None) -> tuple[Solution, dict, EvaluationReport | None] | None` - Main workflow orchestrator.
 - `sanitize_dataset_column_names(spark: SparkSession, dataset_uri: str, context: BuildContext) -> str` - Sanitize column names by replacing special characters with underscores.
 - `analyze_data(spark: SparkSession, dataset_uri: str, context: BuildContext, config: Config, on_checkpoint_saved: Callable[[str, Path, Path], None] | None)` - Phase 1: Layout detection + Statistical + ML task analysis + metric selection.
-- `prepare_data(spark: SparkSession, training_dataset_uri: str, test_dataset_uri: str | None, context: BuildContext, config: Config, adapter, generate_test_set: bool, on_checkpoint_saved: Callable[[str, Path, Path], None] | None)` - Phase 2: Split dataset and extract sample.
+- `prepare_data(spark: SparkSession, training_dataset_uri: str, test_dataset_uri: str | None, context: BuildContext, config: Config, integration: WorkflowIntegration, generate_test_set: bool, on_checkpoint_saved: Callable[[str, Path, Path], None] | None)` - Phase 2: Split dataset and extract sample.
 - `build_baselines(spark: SparkSession, context: BuildContext, config: Config, on_checkpoint_saved: Callable[[str, Path, Path], None] | None)` - Phase 3: Build baseline models.
-- `search_models(spark: SparkSession, context: BuildContext, runner: TrainingRunner, search_policy: SearchPolicy, config: Config, adapter, on_checkpoint_saved: Callable[[str, Path, Path], None] | None, restored_journal: SearchJournal | None, restored_insight_store: InsightStore | None) -> Solution | None` - Phase 4: Iterative tree-search for best model.
+- `search_models(spark: SparkSession, context: BuildContext, runner: TrainingRunner, search_policy: SearchPolicy, config: Config, integration: WorkflowIntegration, on_checkpoint_saved: Callable[[str, Path, Path], None] | None, restored_journal: SearchJournal | None, restored_insight_store: InsightStore | None) -> Solution | None` - Phase 4: Iterative tree-search for best model.
 - `retrain_on_full_dataset(spark: SparkSession, best_solution: Solution, context: BuildContext, runner: TrainingRunner, config: Config) -> Solution` - Retrain best solution on FULL dataset.
 - `evaluate_final(spark: SparkSession, context: BuildContext, solution: Solution, config: Config, on_checkpoint_saved: Callable[[str, Path, Path], None] | None) -> dict` - Phase 5: Final evaluation on test set sample.
 - `package_final_model(spark: SparkSession, context: BuildContext, solution: Solution, final_metrics: dict, on_checkpoint_saved: Callable[[str, Path, Path], None] | None) -> Path` - Package all final deliverables into a unified directory.

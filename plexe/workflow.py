@@ -33,6 +33,7 @@ import yaml
 if TYPE_CHECKING:
     from pyspark.sql import SparkSession
 
+from plexe.integrations.base import WorkflowIntegration
 from plexe.config import Config
 from plexe.constants import DirNames, PhaseNames
 from plexe.models import BuildContext, Solution, Baseline, Hypothesis, DataLayout, EvaluationReport
@@ -85,7 +86,7 @@ def build_model(
     runner: TrainingRunner,
     search_policy: SearchPolicy,
     config: Config,
-    adapter,  # WorkflowAdapter for infrastructure queries
+    integration: WorkflowIntegration,
     enable_final_evaluation: bool = False,
     on_checkpoint_saved: Callable[[str, Path, Path], None] | None = None,
     pause_points: list[str] | None = None,
@@ -106,7 +107,7 @@ def build_model(
         runner: Training runner (local, SageMaker, etc.)
         search_policy: Search policy (agent-driven, etc.)
         config: Configuration
-        adapter: WorkflowAdapter for infrastructure queries
+        integration: WorkflowIntegration for infrastructure queries
         enable_final_evaluation: Whether to run final test set evaluation
         on_checkpoint_saved: Optional callback(phase_name, checkpoint_path, work_dir) for external sync
         pause_points: Optional list of phase names to pause at for user feedback
@@ -267,7 +268,7 @@ def build_model(
                     test_uri_to_use,
                     context,
                     config,
-                    adapter,
+                    integration,
                     enable_final_evaluation,
                     on_checkpoint_saved,
                 )
@@ -299,7 +300,15 @@ def build_model(
         if start_phase <= 4:
             with tracer.start_as_current_span("Phase 4: Model Search"):
                 best_solution = search_models(
-                    spark, context, runner, search_policy, config, adapter, on_checkpoint_saved, journal, insight_store
+                    spark,
+                    context,
+                    runner,
+                    search_policy,
+                    config,
+                    integration,
+                    on_checkpoint_saved,
+                    journal,
+                    insight_store,
                 )
 
             # Check if should pause after this phase
@@ -662,7 +671,7 @@ def prepare_data(
     test_dataset_uri: str | None,
     context: BuildContext,
     config: Config,
-    adapter,  # WorkflowAdapter for infrastructure queries
+    integration: WorkflowIntegration,
     generate_test_set: bool,
     on_checkpoint_saved: Callable[[str, Path, Path], None] | None = None,
 ):
@@ -679,7 +688,7 @@ def prepare_data(
         test_dataset_uri: Optional URI to separate test dataset
         context: Build context
         config: Configuration
-        adapter: WorkflowAdapter for infrastructure queries
+        integration: WorkflowIntegration for infrastructure queries
         generate_test_set: Whether to create test set from training data (ignored if test_dataset_uri provided)
         on_checkpoint_saved: Optional callback for platform integration
     """
@@ -725,9 +734,9 @@ def prepare_data(
     # Step 2: Split Training Dataset
     splitter = DatasetSplitterAgent(spark=spark, dataset_uri=training_dataset_uri, context=context, config=config)
 
-    # Get splits output location from adapter (based on dataset location)
-    splits_output_dir = adapter.get_splits_output_location(
-        training_dataset_uri, context.experiment_id, context.work_dir
+    # Get splits output location from integration (based on dataset location)
+    splits_output_dir = integration.get_artifact_location(
+        "splits", training_dataset_uri, context.experiment_id, context.work_dir
     )
 
     train_uri, val_uri, split_test_uri = splitter.run(split_ratios=split_ratios, output_dir=splits_output_dir)
@@ -738,8 +747,8 @@ def prepare_data(
     # Step 3: Create Intelligent Samples
     sampler = SamplingAgent(spark=spark, context=context, config=config)
 
-    samples_output_dir = adapter.get_samples_output_location(
-        training_dataset_uri, context.experiment_id, context.work_dir
+    samples_output_dir = integration.get_artifact_location(
+        "samples", training_dataset_uri, context.experiment_id, context.work_dir
     )
 
     train_sample_uri, val_sample_uri = sampler.run(
@@ -751,9 +760,7 @@ def prepare_data(
     )
 
     # Step 3b: Ensure samples are local (download from S3 if needed)
-    train_sample_uri, val_sample_uri = adapter.ensure_samples_local(
-        [train_sample_uri, val_sample_uri], context.work_dir
-    )
+    train_sample_uri, val_sample_uri = integration.ensure_local([train_sample_uri, val_sample_uri], context.work_dir)
 
     # Step 4: Update Context
     context.update(
@@ -1011,7 +1018,7 @@ def _execute_variant(
         pipeline_code_path = pipelines_dir / f"solution{solution_id}_pipeline.py"
         pipeline_code_path.write_text(pipeline_code if pipeline_code else "# No code")
 
-        # Transform samples (use adapter-provided location)
+        # Transform samples (use integration-provided location)
         train_transformed_uri = f"{transformed_output_base}/solution{solution_id}_train.parquet"
         val_transformed_uri = f"{transformed_output_base}/solution{solution_id}_val.parquet"
 
@@ -1109,7 +1116,7 @@ def search_models(
     runner: TrainingRunner,
     search_policy: SearchPolicy,
     config: Config,
-    adapter,  # WorkflowAdapter
+    integration: WorkflowIntegration,
     on_checkpoint_saved: Callable[[str, Path, Path], None] | None = None,
     restored_journal: SearchJournal | None = None,
     restored_insight_store: InsightStore | None = None,
@@ -1155,9 +1162,9 @@ def search_models(
         context.insight_store = insight_store
         logger.info("Insight store initialized")
 
-    # Prepare directories (transformed location from adapter, pipelines always local)
-    transformed_output_base = adapter.get_transformed_output_location(
-        context.dataset_uri, context.experiment_id, context.work_dir
+    # Prepare directories (transformed location from integration, pipelines always local)
+    transformed_output_base = integration.get_artifact_location(
+        "transformed", context.dataset_uri, context.experiment_id, context.work_dir
     )
 
     # For local paths, mkdir; for S3, no-op (Spark handles creation)
@@ -2091,7 +2098,7 @@ def _save_phase_checkpoint(
         if checkpoint_path:
             logger.info(f"✓ Checkpoint saved: {phase_name}")
 
-            # Invoke adapter callback for external sync (S3, DynamoDB, etc.)
+            # Invoke integration callback for external sync (S3, DynamoDB, etc.)
             if on_checkpoint_saved:
                 try:
                     on_checkpoint_saved(phase_name, checkpoint_path, context.work_dir)

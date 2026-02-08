@@ -50,7 +50,7 @@ def retrain_model(
     4. Copy original package + replace artifacts
 
     Args:
-        original_model_uri: Local path to model.tar.gz (adapter prepares this)
+        original_model_uri: Local path to model.tar.gz (integration prepares this)
         train_dataset_uri: Path or S3 URI to training dataset (S3 URIs automatically downloaded)
         experiment_id: Experiment identifier
         work_dir: Working directory

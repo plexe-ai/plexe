@@ -19,7 +19,6 @@ if __name__ == "__main__":
         best_solution, final_metrics, _ = main(
             intent="predict whether a passenger was transported or not based on other features",
             data_refs=[dataset_uri],
-            adapter_type="standalone",
             user_id="example_user",
             experiment_id="spaceship_titanic",
             max_iterations=6,

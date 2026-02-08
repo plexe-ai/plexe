@@ -234,7 +234,7 @@ class DatasetNormalizer:
         """
         Normalize dataset to Parquet format.
 
-        This is the main entry point for adapters. Handles:
+        This is the main entry point for integrations. Handles:
         1. Format detection (if not provided)
         2. Skip normalization if already Parquet
         3. Otherwise: read → convert → write
