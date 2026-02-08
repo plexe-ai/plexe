@@ -32,11 +32,13 @@ Watch the demo on YouTube:
 ### Installation
 ```bash
 pip install plexe
+export OPENAI_API_KEY=<your-key>
+export ANTHROPIC_API_KEY=<your-key>
 ```
 
 ### Using plexe
 
-You can use plexe from the command line or as a Python library:
+Provide a tabular dataset (Parquet, CSV, ORC, or Avro) and a natural language intent:
 
 ```bash
 python -m plexe.main \
@@ -69,7 +71,7 @@ The system uses 14 specialized AI agents across a 6-phase workflow to:
 - Package the model for deployment
 
 ### 2.2. 🎯 Automated Model Building
-Build complete models with a single call. Plexe supports **XGBoost**, **CatBoost**, and **Keras**:
+Build complete models with a single call. Plexe supports **XGBoost**, **CatBoost**, and **Keras** for tabular data:
 
 ```python
 best_solution, metrics, report = main(
@@ -84,22 +86,31 @@ best_solution, metrics, report = main(
 Run `python -m plexe.main --help` for all CLI options.
 
 ### 2.3. 🐳 Batteries-Included Docker Images
-Run plexe with everything pre-configured — PySpark, Java, and all dependencies included:
+Run plexe with everything pre-configured — PySpark, Java, and all dependencies included.
+A `Makefile` is provided for common workflows:
 
 ```bash
-docker build -t plexe .
+make build          # Build the Docker image
+make test-quick     # Fast sanity check (~1 iteration)
+make run-titanic    # Run on Spaceship Titanic dataset
+```
 
+Or run directly:
+
+```bash
 docker run --rm \
     -e OPENAI_API_KEY=$OPENAI_API_KEY \
     -e ANTHROPIC_API_KEY=$ANTHROPIC_API_KEY \
     -v $(pwd)/data:/data -v $(pwd)/workdir:/workdir \
-    plexe python -m plexe.main \
+    plexe:py3.12 python -m plexe.main \
         --train-dataset-uri /data/dataset.parquet \
         --intent "predict customer churn" \
-        --work-dir /workdir
+        --work-dir /workdir \
+        --spark-mode local
 ```
 
-A Databricks Connect image is also available: `docker build --target databricks .`
+A `config.yaml` in the project root is automatically mounted. A Databricks Connect image
+is also available: `docker build --target databricks .`
 
 ### 2.4. ⚙️ YAML Configuration
 Customize LLM routing, search parameters, Spark settings, and more via a config file:
@@ -109,7 +120,7 @@ Customize LLM routing, search parameters, Spark settings, and more via a config 
 max_search_iterations: 5
 allowed_model_types: [xgboost, catboost]
 spark_driver_memory: "4g"
-hypothesiser_llm: "openai/o3-mini"
+hypothesiser_llm: "openai/gpt-5-mini"
 feature_processor_llm: "anthropic/claude-sonnet-4-5-20250929"
 ```
 
@@ -124,7 +135,7 @@ Plexe uses LLMs via [LiteLLM](https://docs.litellm.ai/docs/providers), so you ca
 
 ```yaml
 # Route different agents to different providers
-hypothesiser_llm: "openai/o3-mini"
+hypothesiser_llm: "openai/gpt-5-mini"
 feature_processor_llm: "anthropic/claude-sonnet-4-5-20250929"
 model_definer_llm: "ollama/llama3"
 ```
