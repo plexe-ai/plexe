@@ -3973,26 +3973,25 @@ diagrams = ["jinja2", "railroad-diagrams"]
 
 [[package]]
 name = "pyspark"
-version = "4.1.1"
+version = "4.0.2"
 description = "Apache Spark Python API"
 optional = true
-python-versions = ">=3.10"
+python-versions = ">=3.9"
 groups = ["main"]
 markers = "extra == \"pyspark\""
 files = [
-    {file = "pyspark-4.1.1.tar.gz", hash = "sha256:77f78984aa84fbe865c717dd37b49913b4e5c97d76ef6824f932f1aefa6621ec"},
+    {file = "pyspark-4.0.2.tar.gz", hash = "sha256:938b4a1883383374d331ebfcb5d92debfa1891cf3d7a6d730520a1a2d23f1a90"},
 ]
 
 [package.dependencies]
 py4j = ">=0.10.9.7,<0.10.9.10"
 
 [package.extras]
-connect = ["googleapis-common-protos (>=1.71.0)", "grpcio (>=1.76.0)", "grpcio-status (>=1.76.0)", "numpy (>=1.21)", "pandas (>=2.2.0)", "pyarrow (>=15.0.0)", "zstandard (>=0.25.0)"]
+connect = ["googleapis-common-protos (>=1.65.0)", "grpcio (>=1.67.0)", "grpcio-status (>=1.67.0)", "numpy (>=1.21)", "pandas (>=2.0.0)", "pyarrow (>=11.0.0)"]
 ml = ["numpy (>=1.21)"]
 mllib = ["numpy (>=1.21)"]
-pandas-on-spark = ["numpy (>=1.21)", "pandas (>=2.2.0)", "pyarrow (>=15.0.0)"]
-pipelines = ["googleapis-common-protos (>=1.71.0)", "grpcio (>=1.76.0)", "grpcio-status (>=1.76.0)", "numpy (>=1.21)", "pandas (>=2.2.0)", "pyarrow (>=15.0.0)", "pyyaml (>=3.11)", "zstandard (>=0.25.0)"]
-sql = ["numpy (>=1.21)", "pandas (>=2.2.0)", "pyarrow (>=15.0.0)"]
+pandas-on-spark = ["numpy (>=1.21)", "pandas (>=2.0.0)", "pyarrow (>=11.0.0)"]
+sql = ["numpy (>=1.21)", "pandas (>=2.0.0)", "pyarrow (>=11.0.0)"]
 
 [[package]]
 name = "pytest"
@@ -5967,4 +5966,4 @@ pyspark = ["pyspark"]
 [metadata]
 lock-version = "2.1"
 python-versions = ">=3.10,<3.13"
-content-hash = "91dc974facc032fe3e3671ea88d0b049ed645baae2f74d4345fb7f6f40afb8b0"
+content-hash = "be497053105e160a447720c8c6dee9308c311b1ea86dc19b694d46e3967d77a8"

@@ -75,7 +75,7 @@ ENV JAVA_HOME=/usr/lib/jvm/java-17-openjdk-${TARGETARCH}
 ENV PATH="${JAVA_HOME}/bin:${PATH}"
 
 # Install pyspark extra
-RUN pip install --no-cache-dir 'pyspark>=4.0.1,<5.0.0'
+RUN pip install --no-cache-dir 'pyspark>=4.0.1,<4.1.0'
 
 # Download Spark JARs for S3 + Avro support (avoids ~40s Maven download at runtime)
 RUN mkdir -p /opt/spark-jars && \
