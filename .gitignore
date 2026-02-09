@@ -202,3 +202,4 @@ notebooks/
 
 **/.claude/settings.local.json
 config.yaml
+Makefile.local

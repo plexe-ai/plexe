@@ -341,3 +341,6 @@ clean-images:
 .PHONY: clean
 clean: clean-workdir clean-images
 	@echo "✅ Full cleanup complete!"
+
+# Include local overrides (not committed to git)
+-include Makefile.local
