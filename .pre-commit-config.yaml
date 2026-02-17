@@ -1,10 +1,25 @@
 repos:
   - repo: https://github.com/psf/black
-    rev: 24.10.0
+    rev: 25.12.0
     hooks:
       - id: black
+        types: [python]
   - repo: https://github.com/astral-sh/ruff-pre-commit
-    rev: v0.9.1
+    rev: v0.14.9
     hooks:
       - id: ruff
         args: [--fix]
+        types: [python]
+  - repo: https://github.com/gitleaks/gitleaks
+    rev: v8.30.0
+    hooks:
+      - id: gitleaks
+  - repo: local
+    hooks:
+      - id: generate-code-index
+        name: Generate code index
+        entry: bash -c 'python3 scripts/generate_code_index.py --include-tests && git add plexe/CODE_INDEX.md tests/CODE_INDEX.md'
+        language: system
+        pass_filenames: false
+        files: ^(plexe|tests)/.*\.py$
+        stages: [pre-commit]

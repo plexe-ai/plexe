@@ -1,0 +1,102 @@
+name: Plexe Version Check
+
+on:
+  pull_request:
+    branches: [main]
+
+jobs:
+  check-version-bump:
+    name: Verify Version Bump
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Fetch main branch
+        run: git fetch origin main:main
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Install packaging module
+        run: pip install packaging
+
+      - name: Check for changes in plexe/
+        id: check-changes
+        run: |
+          if git diff --name-only origin/main...HEAD | grep '^plexe/' | grep -vq 'CODE_INDEX.md$'; then
+            echo "has_changes=true" >> $GITHUB_OUTPUT
+            echo "✅ Changes detected in plexe/ (excluding auto-generated files)"
+          else
+            echo "has_changes=false" >> $GITHUB_OUTPUT
+            echo "ℹ️ No relevant changes detected in plexe/"
+          fi
+
+      - name: Verify version bump
+        if: steps.check-changes.outputs.has_changes == 'true'
+        run: |
+          # Extract version from current branch
+          CURRENT_VERSION=$(python3 -c "
+          import tomllib
+          import sys
+          with open('pyproject.toml', 'rb') as f:
+              data = tomllib.load(f)
+          # Try old Poetry format first, then new PEP 621 format
+          if 'tool' in data and 'poetry' in data['tool'] and 'version' in data['tool']['poetry']:
+              print(data['tool']['poetry']['version'])
+          elif 'project' in data and 'version' in data['project']:
+              print(data['project']['version'])
+          else:
+              print('❌ Error: Could not find version in pyproject.toml', file=sys.stderr)
+              print('Expected tool.poetry.version or project.version', file=sys.stderr)
+              sys.exit(1)
+          ")
+
+          # Extract version from main branch
+          MAIN_VERSION=$(git show origin/main:pyproject.toml | python3 -c "
+          import tomllib
+          import sys
+          data = tomllib.loads(sys.stdin.read())
+          # Try old Poetry format first, then new PEP 621 format
+          if 'tool' in data and 'poetry' in data['tool'] and 'version' in data['tool']['poetry']:
+              print(data['tool']['poetry']['version'])
+          elif 'project' in data and 'version' in data['project']:
+              print(data['project']['version'])
+          else:
+              print('❌ Error: Could not find version in origin/main pyproject.toml', file=sys.stderr)
+              print('Expected tool.poetry.version or project.version', file=sys.stderr)
+              sys.exit(1)
+          ")
+
+          echo "Current branch version: $CURRENT_VERSION"
+          echo "Main branch version: $MAIN_VERSION"
+
+          # Parse versions and compare
+          python3 << EOF
+          from packaging import version
+
+          current = version.parse("$CURRENT_VERSION")
+          main = version.parse("$MAIN_VERSION")
+
+          if current <= main:
+              print(f"❌ ERROR: Version must be incremented!")
+              print(f"   Current: {current}")
+              print(f"   Main: {main}")
+              print(f"")
+              print(f"Please bump the version in pyproject.toml")
+              exit(1)
+          else:
+              print(f"✅ Version properly incremented from {main} to {current}")
+              exit(0)
+          EOF
+
+      - name: Version check passed
+        if: steps.check-changes.outputs.has_changes == 'false'
+        run: |
+          echo "✅ No changes detected in plexe/, version check skipped"

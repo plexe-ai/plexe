@@ -1,27 +1,32 @@
+"""
+Setup script for the plexe project.
+
+Installs core dependencies and configures pre-commit hooks.
+"""
+
 import subprocess
 import sys
+import shlex
 
 
 def run_command(command):
     try:
-        subprocess.run(command, check=True, shell=True)
+        # shell=False is safer; command should be a list of arguments
+        if isinstance(command, str):
+            command = shlex.split(command)
+
+        subprocess.run(command, check=True, shell=False)
     except subprocess.CalledProcessError:
-        print(f"Failed to run: {command}")
+        # Command is always a list here due to normalization above
+        cmd_str = " ".join(map(str, command))
+        print(f"Failed to run: {cmd_str}")
         sys.exit(1)
 
 
 def main():
-    print("Installing dependencies...")
-    print("Note: This installs the lightweight version of plexe by default.")
-    print("Available installation options:")
-    print("  poetry install                    # Default lightweight installation")
-    print("  poetry install -E lightweight     # Explicitly install lightweight version")
-    print("  poetry install -E all             # Full installation with deep learning support")
-    print("  poetry install -E deep-learning   # Only deep learning dependencies")
-    run_command("poetry install")
-
-    print("Installing pre-commit hooks...")
-    run_command("pre-commit install")
+    print("Configuring pre-commit hooks...")
+    print("(Note: Ensure you've run 'poetry install' first to install dependencies)")
+    run_command(["poetry", "run", "pre-commit", "install"])
 
     print("Setup complete!")
 

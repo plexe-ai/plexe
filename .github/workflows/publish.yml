@@ -17,9 +17,50 @@ jobs:
         uses: actions/checkout@v4
 
       - name: Set up Python
-        uses: actions/setup-python@v4
+        uses: actions/setup-python@v5
         with:
           python-version: '3.12'
+
+      - name: Validate version matches release tag
+        if: github.event_name == 'release'
+        run: |
+          # Extract version from pyproject.toml
+          PYPROJECT_VERSION=$(python3 -c "
+          import tomllib
+          import sys
+          with open('pyproject.toml', 'rb') as f:
+              data = tomllib.load(f)
+          # Try old Poetry format first, then new PEP 621 format
+          if 'tool' in data and 'poetry' in data['tool'] and 'version' in data['tool']['poetry']:
+              print(data['tool']['poetry']['version'])
+          elif 'project' in data and 'version' in data['project']:
+              print(data['project']['version'])
+          else:
+              print('❌ Error: Could not find version in pyproject.toml', file=sys.stderr)
+              print('Expected tool.poetry.version or project.version', file=sys.stderr)
+              sys.exit(1)
+          ")
+
+          # Extract tag from release (strip 'v' prefix if present)
+          RELEASE_TAG="${{ github.event.release.tag_name }}"
+          RELEASE_VERSION="${RELEASE_TAG#v}"
+
+          echo "pyproject.toml version: $PYPROJECT_VERSION"
+          echo "Release tag: $RELEASE_TAG"
+          echo "Release version (normalized): $RELEASE_VERSION"
+
+          # Compare versions
+          if [ "$PYPROJECT_VERSION" != "$RELEASE_VERSION" ]; then
+            echo "❌ ERROR: Version mismatch!"
+            echo "   pyproject.toml version: $PYPROJECT_VERSION"
+            echo "   Release tag version: $RELEASE_VERSION"
+            echo ""
+            echo "Please ensure the release tag matches the version in pyproject.toml"
+            echo "Expected tag: v$PYPROJECT_VERSION or $PYPROJECT_VERSION"
+            exit 1
+          fi
+
+          echo "✅ Version validation passed: $PYPROJECT_VERSION"
 
       - name: Install Poetry
         run: |

@@ -59,18 +59,12 @@ To set up the development environment:
 
 1. **Clone the Repository**:
 
-    ```bash
-    git clone https://github.com/plexe-ai/plexe.git
-    cd plexe
-    ```
+   ```bash
+   git clone https://github.com/plexe-ai/plexe.git
+   cd plexe
+   ```
 
 2. **Install Dependencies**:
-    
-    ```
-   -pip install poetry 
-   -poetry env activate or poetry shell depending on the Poetry version being used 
-   -python setup.py
-   ```
 
    If you would like to use uv instead, copy and paste **pyproject-uv.toml** to **pyproject.toml**, then run the following command.
    ```
@@ -80,9 +74,13 @@ To set up the development environment:
 
 3. **Run Tests**:
 
-    ```bash
-    pytest
-    ```
+   ```bash
+   # If 'poetry shell' above was successful, you can run directly:
+   pytest
+
+   # If you encounter "ModuleNotFoundError", use the more robust:
+   poetry run pytest
+   ```
 
 Ensure all tests pass before making contributions.
 
@@ -108,6 +106,6 @@ Write clear and concise commit messages:
 
 - **Example**:
 
-    ```bash
-    feat(model): add support for gemini
-    ```
+  ```bash
+  feat(model): add support for gemini
+  ```

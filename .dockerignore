@@ -1,0 +1,26 @@
+# Project management directories and files
+.idea/
+.gitignore
+.pre-commit-config.yaml
+CLAUDE.md
+CODE_OF_CONDUCT.md
+CONTRIBUTING.md
+Makefile
+SECURITY.md
+setup.py
+tox.ini
+
+# Non-source directories and files
+.claude/
+.github/
+.streamlit/
+examples/
+scripts/
+
+# Testing outputs
+workdir/
+
+# Local environment and config files
+.env
+.env.*
+config.yaml

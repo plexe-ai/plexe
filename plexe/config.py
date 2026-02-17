@@ -1,358 +1,586 @@
 """
-Configuration for the plexe library.
+Configuration for plexe.
+
+Provides Config Pydantic model, constants, and logging setup.
 """
 
-import importlib
 import logging
+import os
+import re
 import warnings
-from dataclasses import dataclass, field
-from importlib.resources import files
-from typing import List
-from functools import cached_property
-from jinja2 import Environment, FileSystemLoader
-import sys
+import yaml
+from enum import Enum
 from pathlib import Path
+from typing import Any
 
-from plexe import templates as template_module
+from pydantic import BaseModel, Field, field_validator, model_validator, AliasChoices
+from pydantic_settings import BaseSettings, SettingsConfigDict, PydanticBaseSettingsSource
 
-
-TEMPLATE_DIR = files("plexe").joinpath("templates/prompts")
+from plexe.models import DataLayout
 
 
 # configure warnings
 warnings.filterwarnings("ignore", category=FutureWarning)
 warnings.filterwarnings("ignore", category=DeprecationWarning)
+warnings.filterwarnings("ignore", message=".*has decorators other than @tool.*", category=UserWarning)
+
+# Suppress cryptography deprecation warnings from smolagents introspection
+# (smolagents.local_python_executor introspects modules, triggering cryptography deprecations)
+try:
+    from cryptography.utils import CryptographyDeprecationWarning
+
+    warnings.filterwarnings("ignore", category=CryptographyDeprecationWarning)
+except ImportError:
+    pass  # cryptography not installed or older version
 
 
-def is_package_available(package_name: str) -> bool:
-    """Check if a Python package is available/installed."""
+# ============================================
+# Constants
+# ============================================
+
+
+class ModelType:
+    """Supported model types (architectural decision)."""
+
+    XGBOOST = "xgboost"
+    CATBOOST = "catboost"
+    KERAS = "keras"
+
+
+# Default model types (enabled by default, user can override via --allowed-model-types)
+DEFAULT_MODEL_TYPES = [ModelType.XGBOOST, ModelType.CATBOOST, ModelType.KERAS]
+
+# Task-compatible model types based on data layout
+# Maps DataLayout enum to compatible model types
+TASK_COMPATIBLE_MODELS = {
+    DataLayout.FLAT_NUMERIC: [ModelType.XGBOOST, ModelType.CATBOOST, ModelType.KERAS],  # Tabular data
+    DataLayout.IMAGE_PATH: [ModelType.KERAS],  # Image data (PyTorch to be added)
+    DataLayout.TEXT_STRING: [ModelType.KERAS],  # Text data (PyTorch to be added)
+}
+
+
+class StandardMetric(str, Enum):
+    """
+    Standard metrics with hardcoded implementations.
+
+    If agent selects a metric not in this enum, MetricImplementationAgent
+    will be invoked to generate custom implementation.
+    """
+
+    # Classification - Simple
+    ACCURACY = "accuracy"
+
+    # Classification - F1 Score variants
+    F1_SCORE = "f1_score"
+    F1_WEIGHTED = "f1_weighted"
+    F1_MACRO = "f1_macro"
+    F1_MICRO = "f1_micro"
+
+    # Classification - Precision variants
+    PRECISION = "precision"
+    PRECISION_WEIGHTED = "precision_weighted"
+    PRECISION_MACRO = "precision_macro"
+    PRECISION_MICRO = "precision_micro"
+
+    # Classification - Recall variants
+    RECALL = "recall"
+    RECALL_WEIGHTED = "recall_weighted"
+    RECALL_MACRO = "recall_macro"
+    RECALL_MICRO = "recall_micro"
+
+    # Classification - Probabilistic
+    ROC_AUC = "roc_auc"
+    ROC_AUC_OVR = "roc_auc_ovr"
+    ROC_AUC_OVO = "roc_auc_ovo"
+    LOG_LOSS = "log_loss"
+
+    # Classification - Other
+    MATTHEWS_CORRCOEF = "matthews_corrcoef"
+    COHEN_KAPPA = "cohen_kappa"
+    HAMMING_LOSS = "hamming_loss"
+
+    # Regression
+    RMSE = "rmse"
+    MSE = "mse"
+    MAE = "mae"
+    R2_SCORE = "r2_score"
+    MAPE = "mape"
+    MEDIAN_ABSOLUTE_ERROR = "median_absolute_error"
+    MAX_ERROR = "max_error"
+    EXPLAINED_VARIANCE = "explained_variance"
+
+    # Ranking
+    NDCG = "ndcg"
+    MAP = "map"
+    MRR = "mrr"
+
+
+# Standard library modules allowed for all agents
+STANDARD_LIB_IMPORTS = [
+    "pathlib",
+    "typing",
+    "dataclasses",
+    "json",
+    "io",
+    "time",
+    "datetime",
+    "os",
+    "sys",
+    "math",
+    "random",
+    "itertools",
+    "collections",
+    "functools",
+    "operator",
+    "re",
+    "copy",
+    "warnings",
+    "logging",
+    "traceback",
+]
+
+
+# ============================================
+# Configuration Helpers
+# ============================================
+
+
+def _resolve_env_vars(value: Any) -> Any:
+    """
+    Recursively resolve ${VAR_NAME} environment variable references.
+
+    Args:
+        value: Value to process (can be str, dict, list, or primitive)
+
+    Returns:
+        Value with all ${VAR_NAME} references replaced with actual env var values
+
+    Raises:
+        ValueError: If referenced environment variable is not set
+    """
+    if isinstance(value, str):
+        # Replace all ${VAR} patterns in the string
+        pattern = r"\$\{([^}]+)\}"
+
+        def replace_var(match):
+            var_name = match.group(1)
+            env_value = os.getenv(var_name)
+            if env_value is None:
+                raise ValueError(
+                    f"Environment variable '{var_name}' is referenced in config "
+                    f"but not set. Please set it before starting."
+                )
+            return env_value
+
+        return re.sub(pattern, replace_var, value)
+    elif isinstance(value, dict):
+        return {k: _resolve_env_vars(v) for k, v in value.items()}
+    elif isinstance(value, list):
+        return [_resolve_env_vars(item) for item in value]
+    else:
+        # Primitives pass through unchanged
+        return value
+
+
+# ============================================
+# Custom Settings Source for YAML Config
+# ============================================
+
+
+class YamlConfigSettingsSource(PydanticBaseSettingsSource):
+    """Custom settings source that loads config from YAML file specified by CONFIG_FILE env var."""
+
+    def get_field_value(self, field, field_name):
+        """Not used in Pydantic v2 - use __call__ instead."""
+        pass
+
+    def __call__(self):
+        """Load configuration from YAML file with ${VAR} resolution."""
+        config_file = os.getenv("CONFIG_FILE")
+
+        if not config_file:
+            return {}
+
+        config_path = Path(config_file)
+        if not config_path.exists():
+            logging.getLogger(__name__).warning(f"CONFIG_FILE set but file not found: {config_file}")
+            return {}
+
+        try:
+            with open(config_path) as f:
+                yaml_data = yaml.safe_load(f)
+
+            if yaml_data is None:
+                return {}
+
+            # Resolve ${VAR} environment variable references
+            resolved_data = _resolve_env_vars(yaml_data)
+
+            return resolved_data
+
+        except Exception as e:
+            logging.getLogger(__name__).error(f"Failed to load YAML config from {config_file}: {e}")
+            raise
+
+
+# ============================================
+# Configuration Models
+# ============================================
+
+
+class RoutingProviderConfig(BaseModel):
+    """Configuration for a single routing provider."""
+
+    api_base: str | None = Field(default=None, description="Base URL for API requests (null = use LiteLLM default)")
+    headers: dict[str, str] = Field(default_factory=dict, description="HTTP headers for requests")
+
+
+class RoutingConfig(BaseModel):
+    """LiteLLM routing configuration for custom API endpoints."""
+
+    default: RoutingProviderConfig | None = Field(default=None, description="Default routing for all models")
+    providers: dict[str, RoutingProviderConfig] = Field(
+        default_factory=dict, description="Named provider configurations"
+    )
+    models: dict[str, str] = Field(default_factory=dict, description="Model ID to provider name mappings")
+
+    @field_validator("models")
+    def validate_model_providers(cls, v: dict[str, str], info) -> dict[str, str]:
+        """Validate that all model provider references exist."""
+        if not v:
+            return v
+
+        providers = info.data.get("providers", {})
+        for model_id, provider_name in v.items():
+            if provider_name not in providers:
+                raise ValueError(
+                    f"Model '{model_id}' references provider '{provider_name}' "
+                    f"which does not exist. Available: {list(providers.keys())}"
+                )
+        return v
+
+
+class Config(BaseSettings):
+    """Configuration for model building workflow."""
+
+    # Search settings
+    max_search_iterations: int = Field(
+        default=10, description="Maximum hypothesis rounds in model search (each creates ~3 variants)", gt=0
+    )
+    max_parallel_variants: int = Field(
+        default=3, description="Maximum variants to execute concurrently (controls resource usage)", gt=0
+    )
+
+    # Training settings
+    training_timeout: int = Field(default=1800, description="Timeout for training runs (seconds)", gt=0)
+    keras_default_epochs: int = Field(default=50, description="Default epochs for Keras training")
+    keras_default_batch_size: int = Field(default=32, description="Default batch size for Keras training")
+
+    # LLM settings (per agent role)
+    statistical_analysis_llm: str = Field(
+        default="anthropic/claude-sonnet-4-5-20250929", description="LLM for statistical profiling agent"
+    )
+    ml_task_analysis_llm: str = Field(
+        default="anthropic/claude-sonnet-4-5-20250929", description="LLM for ML task analysis agent"
+    )
+    metric_selection_llm: str = Field(
+        default="anthropic/claude-sonnet-4-5-20250929", description="LLM for metric selection agent"
+    )
+    dataset_splitting_llm: str = Field(
+        default="anthropic/claude-sonnet-4-5-20250929", description="LLM for dataset splitting agent"
+    )
+    baseline_builder_llm: str = Field(
+        default="anthropic/claude-sonnet-4-5-20250929", description="LLM for baseline builder agent"
+    )
+    feature_processor_llm: str = Field(
+        default="anthropic/claude-sonnet-4-5-20250929", description="LLM for feature engineering agent"
+    )
+    model_definer_llm: str = Field(
+        default="anthropic/claude-sonnet-4-5-20250929", description="LLM for model definition agent"
+    )
+    evaluation_llm: str = Field(
+        default="anthropic/claude-sonnet-4-5-20250929", description="LLM for model evaluation agent"
+    )
+    hypothesiser_llm: str = Field(default="openai/gpt-5-mini", description="LLM for hypothesiser agent")
+    planner_llm: str = Field(default="openai/gpt-5-mini", description="LLM for planner agent")
+    insight_extractor_llm: str = Field(default="openai/gpt-5-mini", description="LLM for insight extractor agent")
+
+    # Logging settings
+    log_level: str = Field(default="INFO", description="Python logging level (DEBUG, INFO, WARNING, ERROR)")
+
+    # Agent settings
+    agent_verbosity_level: int = Field(
+        default=1, description="Smolagents verbosity level (0=silent, 1=normal, 2=verbose)", ge=0, le=2
+    )
+
+    # OpenTelemetry tracing settings
+    enable_otel: bool = Field(default=False, description="Enable OpenTelemetry tracing")
+    otel_endpoint: str | None = Field(
+        default=None,
+        description="OTLP endpoint URL (e.g., https://cloud.langfuse.com/api/public/otel)",
+        validation_alias=AliasChoices("otel_endpoint", "OTEL_EXPORTER_OTLP_ENDPOINT"),
+    )
+    otel_headers: dict[str, str] = Field(default_factory=dict, description="Authentication headers for OTLP endpoint")
+
+    # LiteLLM routing configuration
+    routing_config: RoutingConfig | None = Field(default=None, description="Per-model LiteLLM routing configuration")
+
+    # LiteLLM global settings
+    litellm_ssl_verify: bool = Field(default=True, description="Enable SSL certificate verification for LiteLLM")
+    litellm_drop_params: bool = Field(
+        default=False, description="Drop unsupported parameters instead of raising errors"
+    )
+
+    # Evaluation settings
+    performance_threshold: float = Field(
+        default=1.1, description="Minimum improvement over baseline (1.1 = 10% better)"
+    )
+
+    # Sampling settings
+    train_sample_size: int = Field(default=30_000, description="Training sample size for fast search iterations", gt=0)
+    val_sample_size: int = Field(default=10_000, description="Validation sample size for fast search iterations", gt=0)
+
+    # Code generation settings
+    allowed_base_imports: list[str] = Field(
+        default_factory=lambda: STANDARD_LIB_IMPORTS.copy(),
+        description="Standard library modules allowed for agent code generation",
+    )
+
+    # Model type constraints
+    allowed_model_types: list[str] | None = Field(
+        default=None, description="Restrict to specific model types (null = all allowed)"
+    )
+
+    # Spark execution settings
+    spark_mode: str = Field(default="local", description="Spark backend: 'local' (PySpark) or 'databricks'")
+
+    # Dataset format options
+    csv_delimiter: str = Field(default=",", description="CSV delimiter character")
+    csv_header: bool = Field(default=True, description="Whether CSV files have header row")
+
+    # Local Spark settings
+    spark_local_cores: int = Field(default=8, description="Number of Spark worker threads (local mode only)")
+    spark_driver_memory: str = Field(default="8g", description="Spark driver memory (local mode only)")
+
+    # Databricks settings
+    databricks_use_serverless: bool = Field(default=False, description="Use Databricks serverless compute")
+    databricks_cluster_id: str | None = Field(default=None, description="Databricks cluster ID (if specified)")
+    databricks_host: str | None = Field(default=None, description="Databricks workspace URL")
+    databricks_token: str | None = Field(default=None, description="Databricks access token")
+    databricks_profile: str | None = Field(
+        default=None,
+        description="Databricks config profile name",
+        validation_alias=AliasChoices("databricks_profile", "DATABRICKS_CONFIG_PROFILE"),
+    )
+
+    # Runtime overrides
+    user_id: str | None = Field(default=None, description="User identifier (set at runtime)")
+    experiment_id: str | None = Field(default=None, description="Experiment identifier (set at runtime)")
+
+    model_config = SettingsConfigDict(
+        extra="ignore",  # Ignore unknown fields from YAML
+        validate_assignment=True,  # Validate when fields are modified
+        case_sensitive=False,  # Case-insensitive env var matching (USER_ID → user_id)
+    )
+
+    @classmethod
+    def settings_customise_sources(
+        cls,
+        settings_cls,
+        init_settings,
+        env_settings,
+        dotenv_settings,
+        file_secret_settings,
+    ):
+        """
+        Customize settings source priority.
+
+        Priority (highest to lowest):
+        1. init_settings: Explicit constructor arguments (CLI overrides)
+        2. env_settings: Environment variables
+        3. YamlConfigSettingsSource: YAML file (with ${VAR} resolution)
+        """
+        return (
+            init_settings,
+            env_settings,
+            YamlConfigSettingsSource(settings_cls),
+        )
+
+    @model_validator(mode="after")
+    def parse_otel_headers_from_env(self) -> "Config":
+        """Parse OTEL_EXPORTER_OTLP_HEADERS (comma-separated key=value pairs)."""
+        if os.getenv("OTEL_EXPORTER_OTLP_HEADERS"):
+            # Parse comma-separated key=value pairs (standard OTEL format)
+            headers_str = os.getenv("OTEL_EXPORTER_OTLP_HEADERS")
+            headers_dict = dict(self.otel_headers)  # Copy existing
+            for pair in headers_str.split(","):
+                if "=" in pair:
+                    key, value = pair.split("=", 1)
+                    headers_dict[key.strip()] = value.strip()
+                else:
+                    logging.getLogger(__name__).warning(
+                        f"Skipping malformed header pair in OTEL_EXPORTER_OTLP_HEADERS: '{pair}' (expected KEY=VALUE)"
+                    )
+            object.__setattr__(self, "otel_headers", headers_dict)
+
+        return self
+
+
+# ============================================
+# Routing Helpers
+# ============================================
+
+
+def get_routing_for_model(config: RoutingConfig | None, model_id: str) -> tuple[str | None, dict[str, str]]:
+    """
+    Get routing configuration for a specific model ID.
+
+    Lookup order:
+    1. Check if model_id is in 'models' mapping → use that provider's config
+    2. Else use 'default' config if present
+    3. Else return (None, {}) for LiteLLM's default routing
+
+    Args:
+        config: Routing configuration (or None if no config loaded)
+        model_id: Model ID to look up (e.g., "anthropic/claude-sonnet-4-5-20250929")
+
+    Returns:
+        Tuple of (api_base, headers) where:
+        - api_base: Base URL for API requests (None = use LiteLLM default)
+        - headers: Dict of HTTP headers to include in requests
+    """
+    # If no config provided, use LiteLLM defaults
+    if config is None:
+        return None, {}
+
+    # Check if model has explicit provider mapping
+    if model_id in config.models:
+        provider_name = config.models[model_id]
+
+        if provider_name not in config.providers:
+            # This should have been caught by validation, but handle gracefully
+            logging.getLogger(__name__).warning(
+                f"Model '{model_id}' references non-existent provider '{provider_name}'. Using default routing."
+            )
+            provider_config = config.default
+        else:
+            provider_config = config.providers[provider_name]
+            logging.getLogger(__name__).debug(f"Model '{model_id}' → provider '{provider_name}'")
+    else:
+        # No explicit mapping, use default
+        provider_config = config.default
+        logging.getLogger(__name__).debug(f"Model '{model_id}' → default routing")
+
+    # If no applicable config found, use LiteLLM defaults
+    if provider_config is None:
+        return None, {}
+
+    return provider_config.api_base, provider_config.headers
+
+
+# ============================================
+# Logging Setup
+# ============================================
+
+
+def setup_logging(config: Config) -> logging.Logger:
+    """
+    Configure logging for the plexe package.
+
+    Args:
+        config: Configuration object
+
+    Returns:
+        Configured package logger
+    """
+    # Get package root logger
+    package_logger = logging.getLogger("plexe")
+    package_logger.setLevel(getattr(logging, config.log_level.upper()))
+
+    # Clear existing handlers to avoid duplicates
+    package_logger.handlers = []
+
+    # Define color-coded formatter
+    class ColoredFormatter(logging.Formatter):
+        """Formatter that adds colors to log levels."""
+
+        COLORS = {
+            "DEBUG": "\033[36m",  # Cyan
+            "INFO": "\033[32m",  # Green
+            "WARNING": "\033[33m",  # Yellow
+            "ERROR": "\033[31m",  # Red
+            "CRITICAL": "\033[35m",  # Magenta
+        }
+        RESET = "\033[0m"
+
+        def format(self, record):
+            levelname = record.levelname
+            if levelname in self.COLORS:
+                record.levelname = f"{self.COLORS[levelname]}{levelname}{self.RESET}"
+            return super().format(record)
+
+    formatter = ColoredFormatter("[%(asctime)s - %(levelname)s - %(name)s]: %(message)s", datefmt="%Y-%m-%d %H:%M:%S")
+
+    # Console handler
+    console_handler = logging.StreamHandler()
+    console_handler.setFormatter(formatter)
+    package_logger.addHandler(console_handler)
+
+    package_logger.info(f"Logging configured at {config.log_level} level")
+
+    if config.enable_otel:
+        package_logger.info("OpenTelemetry tracing enabled")
+
+    return package_logger
+
+
+def setup_litellm(config: Config) -> None:
+    """
+    Configure LiteLLM global settings.
+
+    Args:
+        config: Configuration object with LiteLLM settings
+    """
     try:
-        importlib.import_module(package_name)
-        return True
+        import litellm
+
+        # Apply global settings
+        litellm.ssl_verify = config.litellm_ssl_verify
+        litellm.drop_params = config.litellm_drop_params
+
+        logger = logging.getLogger(__name__)
+        logger.info(
+            f"LiteLLM configured: ssl_verify={config.litellm_ssl_verify}, " f"drop_params={config.litellm_drop_params}"
+        )
     except ImportError:
-        return False
+        logger = logging.getLogger(__name__)
+        logger.warning("litellm not installed, skipping LiteLLM configuration")
 
 
-@dataclass(frozen=True)
-class _Config:
-    @dataclass(frozen=True)
-    class _FileStorageConfig:
-        cache_dir: str = field(default=".plexecache/")
-        model_dir: str = field(default="model_files/")
-        checkpoint_dir: str = field(default="checkpoints/")
-        delete_checkpoints_on_success: bool = field(default=False)
-        keep_checkpoints: int = field(default=3)
-
-    @dataclass(frozen=True)
-    class _LoggingConfig:
-        level: str = field(default="INFO")
-        format: str = field(default="[%(asctime)s - %(name)s - %(levelname)s - (%(threadName)-10s)]: - %(message)s")
-
-    @dataclass(frozen=True)
-    class _ModelSearchConfig:
-        initial_nodes: int = field(default=3)
-        max_nodes: int = field(default=15)
-        max_fixing_attempts_train: int = field(default=3)
-        max_fixing_attempts_predict: int = field(default=10)
-        max_time_elapsed: int = field(default=600)
-
-    @dataclass(frozen=True)
-    class _ExecutionConfig:
-        runfile_name: str = field(default="execution_script.py")
-
-    @dataclass(frozen=True)
-    class _CodeGenerationConfig:
-        # Base ML packages that are always available
-        _base_packages: List[str] = field(
-            default_factory=lambda: [
-                "pandas",
-                "numpy",
-                "scikit-learn",
-                "sklearn",
-                "joblib",
-                "mlxtend",
-                "xgboost",
-                "pyarrow",
-                "statsmodels",
-            ]
-        )
-
-        # Deep learning packages that are optional
-        _deep_learning_packages: List[str] = field(
-            default_factory=lambda: [
-                "tensorflow-cpu",
-                "torch",
-                "transformers",
-                "tokenizers",
-                "accelerate",
-                "safetensors",
-            ]
-        )
-
-        # Additional standard library modules for agent execution
-        _standard_lib_modules: List[str] = field(
-            default_factory=lambda: [
-                "pathlib",
-                "typing",
-                "dataclasses",
-                "json",
-                "io",
-                "time",
-                "datetime",
-                "os",
-                "sys",
-                "math",
-                "random",
-                "itertools",
-                "collections",
-                "functools",
-                "operator",
-                "re",
-                "copy",
-                "warnings",
-                "logging",
-                "importlib",
-                "types",
-                "plexe",
-            ]
-        )
-
-        @property
-        def allowed_packages(self) -> List[str]:
-            """Dynamically determine which packages are available and can be used."""
-            available_packages = self._base_packages.copy()
-
-            # Check if deep learning packages are installed and add them if they are
-            for package in self._deep_learning_packages:
-                if is_package_available(package):
-                    available_packages.append(package)
-
-            return available_packages
-
-        @property
-        def authorized_agent_imports(self) -> List[str]:
-            """Return the combined list of allowed packages and standard library modules for agent execution."""
-            # Start with allowed packages
-            imports = self.allowed_packages.copy()
-
-            # Add standard library modules
-            imports.extend(self._standard_lib_modules)
-
-            return imports
-
-        @property
-        def deep_learning_available(self) -> bool:
-            """Check if deep learning packages are available."""
-            return any(is_package_available(pkg) for pkg in self._deep_learning_packages)
-
-        k_fold_validation: int = field(default=5)
-
-    @dataclass(frozen=True)
-    class _DataGenerationConfig:
-        pass  # todo: implement
-
-    @dataclass(frozen=True)
-    class _RayConfig:
-        address: str = field(default=None)  # None for local, Ray address for remote
-        num_cpus: int = field(default=None)  # None for auto-detect
-        num_gpus: int = field(default=None)  # None for auto-detect
-
-    # configuration objects
-    file_storage: _FileStorageConfig = field(default_factory=_FileStorageConfig)
-    logging: _LoggingConfig = field(default_factory=_LoggingConfig)
-    model_search: _ModelSearchConfig = field(default_factory=_ModelSearchConfig)
-    code_generation: _CodeGenerationConfig = field(default_factory=_CodeGenerationConfig)
-    execution: _ExecutionConfig = field(default_factory=_ExecutionConfig)
-    data_generation: _DataGenerationConfig = field(default_factory=_DataGenerationConfig)
-    ray: _RayConfig = field(default_factory=_RayConfig)
+# ============================================
+# Environment Helpers
+# ============================================
 
 
-@dataclass(frozen=True)
-class _CodeTemplates:
-    predictor_interface: str = field(
-        default=Path(importlib.import_module("plexe.core.interfaces.predictor").__file__).read_text()
-    )
-    predictor_template: str = field(
-        default=files(template_module).joinpath("models").joinpath("predictor.tmpl.py").read_text()
-    )
-    feature_transformer_interface: str = field(
-        default=Path(importlib.import_module("plexe.core.interfaces.feature_transformer").__file__).read_text()
-    )
-    feature_transformer_template: str = field(
-        default=files(template_module).joinpath("models").joinpath("feature_transformer.tmpl.py").read_text()
-    )
+def get_config() -> Config:
+    """
+    Get configuration from YAML file (if specified) with environment variable overrides.
 
+    Loading order (via custom settings sources):
+    1. Explicit constructor args (CLI overrides) - highest priority
+    2. Environment variables (auto-detected by BaseSettings)
+    3. YAML file (if CONFIG_FILE env var set, with ${VAR} resolution)
+    4. Field defaults - lowest priority
 
-@dataclass(frozen=True)
-class _PromptTemplates:
-    template_dir: str = field(default=TEMPLATE_DIR)
+    Note: Environment variables override YAML values when both are present.
 
-    @cached_property
-    def env(self) -> Environment:
-        return Environment(loader=FileSystemLoader(str(self.template_dir)))
+    Returns:
+        Config instance with all overrides applied
 
-    def _render(self, template_name: str, **kwargs) -> str:
-        template = self.env.get_template(template_name)
-        return template.render(**kwargs)
-
-    def planning_system(self) -> str:
-        return self._render("planning/system_prompt.jinja")
-
-    def planning_select_metric(self, problem_statement) -> str:
-        return self._render("planning/select_metric.jinja", problem_statement=problem_statement)
-
-    def schema_base(self) -> str:
-        return self._render("schemas/base.jinja")
-
-    def schema_identify_target(self, columns, intent) -> str:
-        return self._render("schemas/identify_target.jinja", columns=columns, intent=intent)
-
-    def schema_generate_from_intent(self, intent, input_schema="input_schema", output_schema="output_schema") -> str:
-        return self._render(
-            "schemas/generate_from_intent.jinja", intent=intent, input_schema=input_schema, output_schema=output_schema
-        )
-
-    def schema_resolver_prompt(
-        self, intent, datasets, input_schema=None, output_schema=None, has_input_schema=False, has_output_schema=False
-    ) -> str:
-        return self._render(
-            "agent/schema_resolver_prompt.jinja",
-            intent=intent,
-            datasets=datasets,
-            input_schema=input_schema,
-            output_schema=output_schema,
-            has_input_schema=has_input_schema,
-            has_output_schema=has_output_schema,
-        )
-
-    def eda_agent_prompt(self, intent, datasets) -> str:
-        return self._render(
-            "agent/agent_data_analyser_prompt.jinja",
-            intent=intent,
-            datasets=datasets,
-        )
-
-    def training_system(self) -> str:
-        return self._render("training/system_prompt.jinja")
-
-    def training_generate(
-        self, problem_statement, plan, history, allowed_packages, training_data_files, validation_data_files
-    ) -> str:
-        return self._render(
-            "training/generate.jinja",
-            problem_statement=problem_statement,
-            plan=plan,
-            history=history,
-            allowed_packages=allowed_packages,
-            training_data_files=training_data_files,
-            validation_data_files=validation_data_files,
-            use_validation_files=len(validation_data_files) > 0,
-        )
-
-    def training_fix(
-        self, training_code, plan, review, problems, allowed_packages, training_data_files, validation_data_files
-    ) -> str:
-        return self._render(
-            "training/fix.jinja",
-            training_code=training_code,
-            plan=plan,
-            review=review,
-            problems=problems,
-            allowed_packages=allowed_packages,
-            training_data_files=training_data_files,
-            validation_data_files=validation_data_files,
-            use_validation_files=len(validation_data_files) > 0,
-        )
-
-    def training_review(self, problem_statement, plan, training_code, problems, allowed_packages) -> str:
-        return self._render(
-            "training/review.jinja",
-            problem_statement=problem_statement,
-            plan=plan,
-            training_code=training_code,
-            problems=problems,
-            allowed_packages=allowed_packages,
-        )
-
-    def review_system(self) -> str:
-        return self._render("review/system_prompt.jinja")
-
-    def review_model(
-        self,
-        intent: str,
-        input_schema: str,
-        output_schema: str,
-        solution_plan: str,
-        training_code: str,
-        inference_code: str,
-    ) -> str:
-        return self._render(
-            "review/model.jinja",
-            intent=intent,
-            input_schema=input_schema,
-            output_schema=output_schema,
-            solution_plan=solution_plan,
-            training_code=training_code,
-            inference_code=inference_code,
-        )
-
-    def cot_system(self) -> str:
-        return self._render("utils/system_prompt.jinja")
-
-    def cot_summarize(self, context: str) -> str:
-        return self._render("utils/cot_summarize.jinja", context=context)
-
-    def agent_builder_prompt(
-        self,
-        intent: str,
-        input_schema: str,
-        output_schema: str,
-        datasets: List[str],
-        working_dir: str,
-        max_iterations: int = None,
-        resume: bool = False,
-    ) -> str:
-        return self._render(
-            "agent/agent_manager_prompt.jinja",
-            intent=intent,
-            input_schema=input_schema,
-            output_schema=output_schema,
-            datasets=datasets,
-            working_dir=working_dir,
-            max_iterations=max_iterations,
-            resume=resume,
-        )
-
-
-# Instantiate configuration and templates
-config: _Config = _Config()
-code_templates: _CodeTemplates = _CodeTemplates()
-prompt_templates: _PromptTemplates = _PromptTemplates()
-
-
-# Default logging configuration
-def configure_logging(level: str | int = logging.INFO, file: str = None) -> None:
-    # Configure the library's root logger
-    sm_root_logger = logging.getLogger("plexe")
-    sm_root_logger.setLevel(level)
-
-    # Clear existing handlers to avoid duplicate logs
-    sm_root_logger.handlers = []
-
-    # Define a common formatter
-    formatter = logging.Formatter(config.logging.format)
-
-    stream_handler = logging.StreamHandler()
-    # Only apply reconfigure if the stream supports it
-    if hasattr(sys.stdout, "reconfigure"):
-        sys.stdout.reconfigure(encoding="utf-8")
-    stream_handler.setFormatter(formatter)
-    sm_root_logger.addHandler(stream_handler)
-
-    if file:
-        file_handler = logging.FileHandler(file, encoding="utf-8")
-        file_handler.setFormatter(formatter)
-        sm_root_logger.addHandler(file_handler)
-
-
-configure_logging(level=config.logging.level)
+    Raises:
+        FileNotFoundError: If CONFIG_FILE is set but file doesn't exist
+        ValueError: If config is invalid
+    """
+    # Config() constructor automatically uses custom settings sources
+    # Priority: constructor args > env vars > YAML file > defaults
+    return Config()
