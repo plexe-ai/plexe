@@ -131,8 +131,24 @@ class LocalProcessRunner(TrainingRunner):
             elif "pytorch" in template:
                 import torch
 
+                if not optimizer or not loss:
+                    raise TrainingError("PyTorch training requires optimizer and loss to be passed as parameters")
+
                 torch.save(model, untrained_model_path)
+
+                # Save optimizer and loss configs as JSON (mirror Keras pattern)
+                training_config = {
+                    "optimizer_class": type(optimizer).__name__,
+                    "optimizer_config": {k: v for k, v in optimizer.defaults.items()},
+                    "loss_class": type(loss).__name__,
+                }
+
+                config_path = run_dir / "training_config.json"
+                with open(config_path, "w") as f:
+                    json.dump(training_config, f, indent=2)
+
                 logger.info(f"Saved untrained PyTorch model to {untrained_model_path}")
+                logger.info(f"Saved training config to {config_path}")
             else:
                 raise TrainingError(f"Unknown template type: {template}")
 
@@ -166,8 +182,8 @@ class LocalProcessRunner(TrainingRunner):
                 str(output_dir),
             ]
 
-            # Add Keras-specific training params if provided
-            if "keras" in template:
+            # Add neural network training params if provided (Keras and PyTorch)
+            if "keras" in template or "pytorch" in template:
                 if epochs is not None:
                     cmd.extend(["--epochs", str(epochs)])
                 if batch_size is not None:

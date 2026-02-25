@@ -265,11 +265,11 @@ class Solution:
     model: Any  # XGBClassifier, keras.Sequential, etc. (untrained initially)
     model_type: str  # "xgboost", "keras" - determines training template
 
-    # Keras-specific (only populated for keras model_type)
-    optimizer: Any | None = None  # keras.optimizers.Optimizer for Keras models
-    loss: Any | None = None  # keras.losses.Loss for Keras models
-    epochs: int | None = None  # Training epochs for Keras models
-    batch_size: int | None = None  # Batch size for Keras models
+    # Neural network training params (populated for keras and pytorch model types)
+    optimizer: Any | None = None  # Optimizer instance (Keras or PyTorch)
+    loss: Any | None = None  # Loss instance (Keras or PyTorch)
+    epochs: int | None = None  # Training epochs
+    batch_size: int | None = None  # Batch size
 
     # Execution Results
     model_artifacts_path: Path | None = None

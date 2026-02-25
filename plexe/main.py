@@ -106,7 +106,7 @@ def main(
         config.max_search_iterations = max_iterations
         config.spark_mode = spark_mode
         if max_epochs:
-            config.keras_default_epochs = min(max_epochs, config.keras_default_epochs)
+            config.nn_default_epochs = min(max_epochs, config.nn_default_epochs)
         if allowed_model_types:
             config.allowed_model_types = allowed_model_types
 
@@ -274,11 +274,11 @@ if __name__ == "__main__":
     parser.add_argument("--max-iterations", type=int, default=10, help="Max search iterations")
     parser.add_argument("--work-dir", type=Path, default=Path("/tmp/model_builder_v2"), help="Working directory")
     parser.add_argument("--enable-final-evaluation", action="store_true", help="Enable test set evaluation")
-    parser.add_argument("--max-epochs", type=int, help="Cap Keras epochs (testing)")
+    parser.add_argument("--max-epochs", type=int, help="Cap neural network epochs (Keras, PyTorch)")
     parser.add_argument(
         "--allowed-model-types",
         nargs="+",
-        choices=["xgboost", "catboost", "lightgbm", "keras"],
+        choices=["xgboost", "catboost", "lightgbm", "keras", "pytorch"],
         help="Restrict models",
     )
 

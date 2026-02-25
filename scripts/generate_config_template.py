@@ -69,8 +69,8 @@ def generate_template():
         ],
         "Training Settings": [
             "training_timeout",
-            "keras_default_epochs",
-            "keras_default_batch_size",
+            "nn_default_epochs",
+            "nn_default_batch_size",
         ],
         "LLM Settings (per agent role)": [
             "statistical_analysis_llm",

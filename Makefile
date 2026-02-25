@@ -34,6 +34,7 @@ help:
 	@echo "  make test-xgboost       Test XGBoost model type"
 	@echo "  make test-catboost      Test CatBoost model type"
 	@echo "  make test-lightgbm      Test LightGBM model type"
+	@echo "  make test-pytorch       Test PyTorch model type"
 	@echo "  make test-keras         Test Keras model type"
 	@echo "  make test-all-models    Test all model types (sequential)"
 	@echo "  make test-full          Full test run (3 iterations + evaluation)"
@@ -164,6 +165,32 @@ test-lightgbm: build
 			--allowed-model-types lightgbm \
 			--enable-final-evaluation
 	@echo "✅ LightGBM test passed!"
+
+# Test PyTorch specifically
+.PHONY: test-pytorch
+test-pytorch: build
+	@echo "🧪 Testing PyTorch model type..."
+	docker run --rm \
+		--add-host=host.docker.internal:host-gateway \
+		$(CONFIG_MOUNT) \
+		$(CONFIG_ENV) \
+		-v $(PWD)/examples/datasets:/data:ro \
+		-v $(PWD)/workdir:/workdir \
+		-e OPENAI_API_KEY=$(OPENAI_API_KEY) \
+		-e ANTHROPIC_API_KEY=$(ANTHROPIC_API_KEY) \
+		-e SPARK_LOCAL_CORES=4 \
+		-e SPARK_DRIVER_MEMORY=4g \
+		plexe:py$(PYTHON_VERSION) \
+		python -m plexe.main \
+			--train-dataset-uri /data/spaceship-titanic/train.parquet \
+			--user-id test_user \
+			--intent "predict whether a passenger was transported" \
+			--experiment-id test_pytorch \
+			--max-iterations 2 \
+			--work-dir /workdir/test_pytorch \
+			--spark-mode local \
+			--allowed-model-types pytorch
+	@echo "✅ PyTorch test passed!"
 
 # Test Keras specifically (requires appropriate dataset)
 .PHONY: test-keras

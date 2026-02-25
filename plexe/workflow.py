@@ -988,15 +988,13 @@ def _execute_variant(
             plan=plan.model,
         ).run()
 
-        # Capture Keras params (thread-safe: isolated scratch)
+        # Capture neural network params (thread-safe: isolated scratch)
         solution_kwargs = {}
-        if plan.model.model_type == "keras":
+        if plan.model.model_type in ("keras", "pytorch"):
             solution_kwargs["optimizer"] = variant_context.scratch.get("_saved_optimizer")
             solution_kwargs["loss"] = variant_context.scratch.get("_saved_loss")
-            solution_kwargs["epochs"] = variant_context.scratch.get("_keras_epochs", config.keras_default_epochs)
-            solution_kwargs["batch_size"] = variant_context.scratch.get(
-                "_keras_batch_size", config.keras_default_batch_size
-            )
+            solution_kwargs["epochs"] = variant_context.scratch.get("_nn_epochs", config.nn_default_epochs)
+            solution_kwargs["batch_size"] = variant_context.scratch.get("_nn_batch_size", config.nn_default_batch_size)
 
         # Create solution
         new_solution = Solution(
@@ -1044,7 +1042,7 @@ def _execute_variant(
 
         # Train
         training_kwargs = {}
-        if plan.model.model_type == "keras":
+        if plan.model.model_type in ("keras", "pytorch"):
             training_kwargs.update(
                 {k: v for k, v in solution_kwargs.items() if k in ["optimizer", "loss", "epochs", "batch_size"]}
             )
@@ -1456,9 +1454,9 @@ def retrain_on_full_dataset(
     # ============================================
     logger.info("Training final model on full dataset (may take 10-60 minutes)...")
 
-    # For Keras, pass optimizer, loss, and training params
+    # For neural networks, pass optimizer, loss, and training params
     retrain_kwargs = {}
-    if best_solution.model_type == "keras":
+    if best_solution.model_type in ("keras", "pytorch"):
         retrain_kwargs["optimizer"] = best_solution.optimizer
         retrain_kwargs["loss"] = best_solution.loss
         retrain_kwargs["epochs"] = best_solution.epochs
@@ -1522,7 +1520,7 @@ def retrain_on_full_dataset(
     # Step 5: Return Final Solution
     # ============================================
     final_solution_kwargs = {}
-    if best_solution.model_type == "keras":
+    if best_solution.model_type in ("keras", "pytorch"):
         final_solution_kwargs["optimizer"] = best_solution.optimizer
         final_solution_kwargs["loss"] = best_solution.loss
         final_solution_kwargs["epochs"] = best_solution.epochs
@@ -1616,6 +1614,7 @@ def evaluate_final(
             "catboost": "CatBoostPredictor",
             "lightgbm": "LightGBMPredictor",
             "keras": "KerasPredictor",
+            "pytorch": "PyTorchPredictor",
         }
         class_name = predictor_class_lookup.get(solution.model_type)
         if class_name is None or not hasattr(predictor_module, class_name):
@@ -1898,6 +1897,7 @@ def package_final_model(
         "catboost": "CatBoostPredictor",
         "lightgbm": "LightGBMPredictor",
         "keras": "KerasPredictor",
+        "pytorch": "PyTorchPredictor",
     }
     predictor_class = predictor_class_map.get(solution.model_type, f"{solution.model_type.capitalize()}Predictor")
     readme_content = readme_template.format(

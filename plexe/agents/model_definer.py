@@ -75,6 +75,13 @@ class ModelDefinerAgent:
                 "keras.optimizers",
                 "keras.losses",
             ]
+        elif self.model_type == ModelType.PYTORCH:
+            extra_imports = [
+                "torch",
+                "torch.*",
+                "torch.nn",
+                "torch.optim",
+            ]
 
         # Get routing configuration for this agent's model
         api_base, headers = get_routing_for_model(self.config.routing_config, self.llm_model)
@@ -115,7 +122,9 @@ class ModelDefinerAgent:
             "save_model": get_save_model_fn(
                 self.context,
                 self.model_type,
-                max_epochs=self.config.keras_default_epochs if self.model_type == ModelType.KERAS else None,
+                max_epochs=(
+                    self.config.nn_default_epochs if self.model_type in (ModelType.KERAS, ModelType.PYTORCH) else None
+                ),
             ),
             "task_analysis": self.context.task_analysis,
         }
@@ -312,8 +321,8 @@ class ModelDefinerAgent:
                 "\n"
                 "5. **Determine Training Config**:\n"
                 "   - Extract epochs and batch_size from the plan directive (e.g., 'Train 40 epochs, batch_size 64')\n"
-                f"   - If not specified, use defaults: epochs={self.config.keras_default_epochs}, batch_size={self.config.keras_default_batch_size}\n"
-                f"   - epochs MUST be ≤ {self.config.keras_default_epochs} (enforced cap)\n"
+                f"   - If not specified, use defaults: epochs={self.config.nn_default_epochs}, batch_size={self.config.nn_default_batch_size}\n"
+                f"   - epochs MUST be ≤ {self.config.nn_default_epochs} (enforced cap)\n"
                 "   - Consider dataset size and model complexity when choosing\n"
                 "\n"
                 "6. Call save_model(model, optimizer, loss, epochs, batch_size) with all five arguments\n"
@@ -323,20 +332,53 @@ class ModelDefinerAgent:
                 "- KERAS_BACKEND MUST be 'tensorflow'\n"
                 "- Create actual object instances, not strings\n"
                 "- epochs and batch_size must be integers\n"
-                f"- epochs MUST NOT exceed {self.config.keras_default_epochs}\n"
+                f"- epochs MUST NOT exceed {self.config.nn_default_epochs}\n"
             )
         else:  # PyTorch
             instructions += (
                 "## TASK:\n"
-                "1. Import torch and torch.nn\n"
-                f"2. Create neural network with input_dim={num_features}\n"
-                f"3. Set output_dim based on task:\n"
-                f"   - Classification: output_dim={num_classes}\n"
-                "   - Regression: output_dim=1\n"
-                "4. Interpret the plan directive to determine architecture (layers, activation, etc.)\n"
-                "5. Call save_model(model) with the untrained nn.Module instance\n"
+                "Create THREE objects: model, optimizer, and loss.\n"
                 "\n"
-                "The directive is natural language - translate it to concrete architecture.\n"
+                "1. **Import PyTorch**:\n"
+                "   import torch\n"
+                "   import torch.nn as nn\n"
+                "   import torch.optim as optim\n"
+                "\n"
+                "2. **Create Model** (nn.Sequential or custom nn.Module):\n"
+                f"   - Input features: {num_features}\n"
+                f"   - Output units: {num_classes if 'classification' in task_type else 1}\n"
+                "   - Interpret the plan directive for architecture (num layers, units, activation, dropout)\n"
+                "\n"
+                "   Example:\n"
+                "   model = nn.Sequential(\n"
+                f"       nn.Linear({num_features}, 64),\n"
+                "       nn.ReLU(),\n"
+                "       nn.Dropout(0.2),\n"
+                "       nn.Linear(64, 32),\n"
+                "       nn.ReLU(),\n"
+                f"       nn.Linear(32, {num_classes})\n"
+                "   )\n"
+                "\n"
+                "3. **Create Optimizer**:\n"
+                "   optimizer = optim.Adam(model.parameters(), lr=0.001)\n"
+                "\n"
+                "4. **Create Loss**:\n"
+                "   - Binary classification: loss = nn.BCEWithLogitsLoss()\n"
+                "   - Multi-class: loss = nn.CrossEntropyLoss()\n"
+                "   - Regression: loss = nn.MSELoss()\n"
+                "\n"
+                "5. **Determine Training Config**:\n"
+                "   - Extract epochs and batch_size from the plan directive\n"
+                f"   - If not specified, use defaults: epochs={self.config.nn_default_epochs}, batch_size={self.config.nn_default_batch_size}\n"
+                f"   - epochs MUST be ≤ {self.config.nn_default_epochs} (enforced cap)\n"
+                "\n"
+                "6. Call save_model(model, optimizer, loss, epochs, batch_size) with all five arguments\n"
+                "\n"
+                "CRITICAL:\n"
+                "- Create actual object instances, not strings\n"
+                "- The optimizer MUST be created with model.parameters()\n"
+                "- epochs and batch_size must be integers\n"
+                f"- epochs MUST NOT exceed {self.config.nn_default_epochs}\n"
             )
 
         return instructions

@@ -126,6 +126,10 @@ def train_keras(
         json.dump(history_data, f, indent=2)
     logger.info(f"History saved to {history_path}")
 
+    # FIXME: metadata should include optimizer_class, optimizer_config, loss_class, and
+    # loss_config so that retrain.py can reconstruct actual Keras objects. Without these,
+    # the Keras retrain path in retrain.py will crash (it passes strings where objects are expected).
+    # See the PyTorch training template for the correct pattern.
     # Save metadata
     metadata = {
         "model_type": "keras",

@@ -167,27 +167,27 @@ def get_save_model_fn(context: BuildContext, model_type: str, max_epochs: int = 
 
     Args:
         context: Build context for storing result
-        model_type: "xgboost", "keras"
-        max_epochs: Maximum allowed epochs for Keras (enforced in validation)
+        model_type: "xgboost", "keras", or "pytorch"
+        max_epochs: Maximum allowed epochs for neural nets (enforced in validation)
 
     Returns:
         Configured save_model function (signature varies by model_type)
     """
 
-    if model_type == "keras":
-        # Keras needs model + optimizer + loss + training params
+    if model_type in ("keras", "pytorch"):
+        # Neural networks need model + optimizer + loss + training params
         @tool_span
         @agentinspectable
         def save_model(model: Any, optimizer: Any, loss: Any, epochs: int, batch_size: int) -> str:
             """
-            Submit your Keras model, optimizer, loss, and training configuration.
+            Submit your neural network model, optimizer, loss, and training configuration.
 
-            This function validates and saves all components needed for Keras training.
+            This function validates and saves all components needed for training.
 
             Args:
-                model: keras.Sequential or keras.Model instance
-                optimizer: keras.optimizers.Optimizer instance (e.g., Adam(learning_rate=0.001))
-                loss: keras.losses.Loss instance (e.g., SparseCategoricalCrossentropy())
+                model: Neural network model instance (keras.Model or nn.Module)
+                optimizer: Optimizer instance (keras.optimizers.Optimizer or torch.optim.Optimizer)
+                loss: Loss instance (keras.losses.Loss or nn.Module)
                 epochs: Number of training epochs (e.g., 50)
                 batch_size: Batch size for training (e.g., 32)
 
@@ -197,63 +197,84 @@ def get_save_model_fn(context: BuildContext, model_type: str, max_epochs: int = 
             Raises:
                 ValueError: If validation fails
             """
-            from plexe.validation.validators import validate_keras_model, validate_keras_optimizer, validate_keras_loss
+            if model_type == "keras":
+                from plexe.validation.validators import (
+                    validate_keras_model,
+                    validate_keras_optimizer,
+                    validate_keras_loss,
+                )
 
-            # Validate model
-            is_valid, error_msg = validate_keras_model(model, context.task_analysis)
-            if not is_valid:
-                logger.debug(f"Keras model validation failed: {error_msg}")
-                raise ValueError(f"Keras model validation failed: {error_msg}")
+                is_valid, error_msg = validate_keras_model(model, context.task_analysis)
+                if not is_valid:
+                    logger.debug(f"Keras model validation failed: {error_msg}")
+                    raise ValueError(f"Keras model validation failed: {error_msg}")
 
-            # Validate optimizer
-            is_valid, error_msg = validate_keras_optimizer(optimizer)
-            if not is_valid:
-                logger.debug(f"Keras optimizer validation failed: {error_msg}")
-                raise ValueError(f"Keras optimizer validation failed: {error_msg}")
+                is_valid, error_msg = validate_keras_optimizer(optimizer)
+                if not is_valid:
+                    logger.debug(f"Keras optimizer validation failed: {error_msg}")
+                    raise ValueError(f"Keras optimizer validation failed: {error_msg}")
 
-            # Validate loss
-            is_valid, error_msg = validate_keras_loss(loss)
-            if not is_valid:
-                logger.debug(f"Keras loss validation failed: {error_msg}")
-                raise ValueError(f"Keras loss validation failed: {error_msg}")
+                is_valid, error_msg = validate_keras_loss(loss)
+                if not is_valid:
+                    logger.debug(f"Keras loss validation failed: {error_msg}")
+                    raise ValueError(f"Keras loss validation failed: {error_msg}")
+
+            elif model_type == "pytorch":
+                import torch.nn as nn
+
+                if not isinstance(model, nn.Module):
+                    error_msg = f"Expected torch.nn.Module, got {type(model)}"
+                    logger.debug(error_msg)
+                    raise ValueError(error_msg)
+
+                import torch.optim
+
+                if not isinstance(optimizer, torch.optim.Optimizer):
+                    error_msg = f"Expected torch.optim.Optimizer, got {type(optimizer)}"
+                    logger.debug(error_msg)
+                    raise ValueError(error_msg)
+
+                if not isinstance(loss, nn.Module):
+                    error_msg = f"Expected torch.nn.Module (loss function), got {type(loss)}"
+                    logger.debug(error_msg)
+                    raise ValueError(error_msg)
 
             # Validate training params
             if not isinstance(epochs, int) or epochs < 1:
                 raise ValueError(f"epochs must be integer >= 1, got {epochs}")
 
-            # Enforce max_epochs constraint if provided
             if max_epochs is not None and epochs > max_epochs:
                 raise ValueError(f"epochs must be ≤ {max_epochs} (configured cap), got {epochs}")
 
             if not isinstance(batch_size, int) or batch_size < 1 or batch_size > 1024:
                 raise ValueError(f"batch_size must be integer in [1, 1024], got {batch_size}")
 
-            # Save all to context
+            # Save all to context (same keys for both Keras and PyTorch)
             context.scratch["_saved_model"] = model
             context.scratch["_saved_optimizer"] = optimizer
             context.scratch["_saved_loss"] = loss
-            context.scratch["_keras_epochs"] = epochs
-            context.scratch["_keras_batch_size"] = batch_size
+            context.scratch["_nn_epochs"] = epochs
+            context.scratch["_nn_batch_size"] = batch_size
 
             logger.info(
-                f"Keras components saved: model={type(model).__name__}, optimizer={type(optimizer).__name__}, loss={type(loss).__name__}, epochs={epochs}, batch_size={batch_size}"
+                f"{model_type} components saved: model={type(model).__name__}, optimizer={type(optimizer).__name__}, loss={type(loss).__name__}, epochs={epochs}, batch_size={batch_size}"
             )
-            return f"Keras model saved: {epochs} epochs, batch_size={batch_size}"
+            return f"{model_type} model saved: {epochs} epochs, batch_size={batch_size}"
 
         return save_model
 
     else:
-        # XGBoost/CatBoost/LightGBM/PyTorch: just model object
+        # XGBoost/CatBoost/LightGBM: just model object
         @tool_span
         @agentinspectable
         def save_model(model: Any) -> str:
             """
             Submit your model object.
 
-            This function validates and saves your XGBoost, CatBoost, LightGBM, or PyTorch model object.
+            This function validates and saves your XGBoost, CatBoost, or LightGBM model object.
 
             Args:
-                model: Model object (XGBClassifier, XGBRegressor, CatBoostClassifier, CatBoostRegressor, LGBMClassifier, etc)
+                model: Model object (XGBClassifier, XGBRegressor, CatBoostClassifier, CatBoostRegressor, or LGBMClassifier, etc)
 
             Returns:
                 Confirmation message
@@ -292,16 +313,6 @@ def get_save_model_fn(context: BuildContext, model_type: str, max_epochs: int = 
                     raise ValueError(error_msg)
 
                 logger.info(f"LightGBM model validated: {type(model).__name__}")
-
-            elif model_type == "pytorch":
-                import torch.nn as nn
-
-                if not isinstance(model, nn.Module):
-                    error_msg = f"Expected torch.nn.Module, got {type(model)}"
-                    logger.debug(error_msg)
-                    raise ValueError(error_msg)
-
-                logger.info(f"PyTorch model validated: {type(model).__name__}")
 
             else:
                 error_msg = f"Unknown model_type: {model_type}"
@@ -1243,7 +1254,13 @@ def get_save_plan_tool(context: BuildContext, hypothesis: "Hypothesis", allowed_
             raise ValueError("variant_id cannot be empty")
 
         # Validate model_type
-        valid_model_types = [ModelType.XGBOOST, ModelType.CATBOOST, ModelType.LIGHTGBM, ModelType.KERAS]
+        valid_model_types = [
+            ModelType.XGBOOST,
+            ModelType.CATBOOST,
+            ModelType.LIGHTGBM,
+            ModelType.KERAS,
+            ModelType.PYTORCH,
+        ]
         if model_type not in valid_model_types:
             raise ValueError(f"model_type must be one of {valid_model_types}, got: {model_type}")
 

@@ -46,10 +46,17 @@ class ModelType:
     CATBOOST = "catboost"
     LIGHTGBM = "lightgbm"
     KERAS = "keras"
+    PYTORCH = "pytorch"
 
 
 # Default model types (enabled by default, user can override via --allowed-model-types)
-DEFAULT_MODEL_TYPES = [ModelType.XGBOOST, ModelType.CATBOOST, ModelType.LIGHTGBM, ModelType.KERAS]
+DEFAULT_MODEL_TYPES = [
+    ModelType.XGBOOST,
+    ModelType.CATBOOST,
+    ModelType.LIGHTGBM,
+    ModelType.KERAS,
+    ModelType.PYTORCH,
+]
 
 # Task-compatible model types based on data layout
 # Maps DataLayout enum to compatible model types
@@ -59,9 +66,10 @@ TASK_COMPATIBLE_MODELS = {
         ModelType.CATBOOST,
         ModelType.LIGHTGBM,
         ModelType.KERAS,
+        ModelType.PYTORCH,
     ],  # Tabular data
-    DataLayout.IMAGE_PATH: [ModelType.KERAS],  # Image data (PyTorch to be added)
-    DataLayout.TEXT_STRING: [ModelType.KERAS],  # Text data (PyTorch to be added)
+    DataLayout.IMAGE_PATH: [ModelType.KERAS, ModelType.PYTORCH],  # Image data
+    DataLayout.TEXT_STRING: [ModelType.KERAS, ModelType.PYTORCH],  # Text data
 }
 
 
@@ -279,8 +287,12 @@ class Config(BaseSettings):
 
     # Training settings
     training_timeout: int = Field(default=1800, description="Timeout for training runs (seconds)", gt=0)
-    keras_default_epochs: int = Field(default=50, description="Default epochs for Keras training")
-    keras_default_batch_size: int = Field(default=32, description="Default batch size for Keras training")
+    nn_default_epochs: int = Field(
+        default=50, description="Default epochs for neural network training (Keras, PyTorch)"
+    )
+    nn_default_batch_size: int = Field(
+        default=32, description="Default batch size for neural network training (Keras, PyTorch)"
+    )
 
     # LLM settings (per agent role)
     statistical_analysis_llm: str = Field(

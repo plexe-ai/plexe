@@ -32,15 +32,15 @@
 # Default: 1800
 # training_timeout: 1800
 
-# Default epochs for Keras training
+# Default epochs for neural network training (Keras, PyTorch)
 # Type: integer
 # Default: 50
-# keras_default_epochs: 50
+# nn_default_epochs: 50
 
-# Default batch size for Keras training
+# Default batch size for neural network training (Keras, PyTorch)
 # Type: integer
 # Default: 32
-# keras_default_batch_size: 32
+# nn_default_batch_size: 32
 
 # ------------------------------------------------------------
 # LLM Settings (per agent role)

@@ -310,9 +310,14 @@ class PlannerAgent:
             guidance += "  * NOTE: num_leaves controls complexity (default 31), often faster than XGBoost/CatBoost\n"
 
         if "keras" in viable:
-            guidance += "- **keras**: Neural networks\n"
+            guidance += "- **keras**: Neural networks (TensorFlow backend)\n"
             guidance += "  * Params: layer sizes, activation, dropout, optimizer, loss\n"
-            guidance += f"  * Max epochs: {self.config.keras_default_epochs}\n"
+            guidance += f"  * Max epochs: {self.config.nn_default_epochs}\n"
+
+        if "pytorch" in viable:
+            guidance += "- **pytorch**: Neural networks (PyTorch)\n"
+            guidance += "  * Params: layer sizes, activation, dropout, optimizer, lr\n"
+            guidance += f"  * Max epochs: {self.config.nn_default_epochs}\n"
 
         if len(viable) > 1:
             guidance += "\n**FRAMEWORK EXPLORATION**: You can experiment with different model types across variants.\n"
@@ -340,6 +345,10 @@ class PlannerAgent:
         if "keras" in viable:
             examples.append(
                 "    * Keras example: 'Create 3-layer network (64, 32, 16 units, relu, dropout 0.2). Train 40 epochs, batch_size 64'"
+            )
+        if "pytorch" in viable:
+            examples.append(
+                "    * PyTorch example: 'Create 3-layer network (128, 64, 32 units, ReLU, dropout 0.3). Train 30 epochs, batch_size 64'"
             )
 
         return "\n".join(examples) if examples else "    * No examples available"

@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "plexe"
-version = "1.1.0"
+version = "1.2.0"
 description = "An agentic framework for building ML models from natural language"
 authors = [
     "Marcello De Bernardi <mdebernardi@plexe.ai>",
@@ -44,6 +44,7 @@ pandas = ">=2.3.3,<2.4.0"
 xgboost = ">=3.1.1,<3.2.0"
 catboost = ">=1.2.0,<1.3.0"
 lightgbm = ">=4.6.0,<4.7.0"
+torch = ">=2.7.1,<2.8.0"
 pyarrow = ">=22.0.0,<23.0.0"
 datasets = ">=4.4.1,<5.0.0"
 scikit-learn = ">=1.7.2,<1.8.0"
