@@ -6,7 +6,9 @@ import numpy as np
 import pytest
 from sklearn.metrics import accuracy_score
 
-from plexe.helpers import compute_metric
+from plexe.config import ModelType
+from plexe.helpers import compute_metric, select_viable_model_types
+from plexe.models import DataLayout
 
 
 # ============================================
@@ -54,3 +56,27 @@ def test_compute_metric_unknown_raises():
 
     with pytest.raises(ValueError, match="Unsupported metric"):
         compute_metric(y_true, y_pred, "unknown_metric")
+
+
+def test_select_viable_model_types_defaults_image():
+    """Default model types intersect with IMAGE_PATH."""
+    result = select_viable_model_types(DataLayout.IMAGE_PATH)
+
+    assert result == [ModelType.KERAS]
+
+
+def test_select_viable_model_types_no_intersection():
+    """No compatible frameworks should raise ValueError."""
+    with pytest.raises(ValueError, match="No compatible model types"):
+        select_viable_model_types(DataLayout.TEXT_STRING, selected_frameworks=[ModelType.XGBOOST])
+
+
+def test_compute_metric_map_grouped():
+    """MAP should compute per-group and average."""
+    y_true = np.array([1, 0, 0, 1])
+    y_pred = np.array([0.9, 0.1, 0.8, 0.7])
+    group_ids = np.array([1, 1, 2, 2])
+
+    result = compute_metric(y_true, y_pred, "map", group_ids=group_ids)
+
+    assert result == pytest.approx(0.75)

@@ -10,6 +10,7 @@ from plexe.validation.validators import (
     validate_sklearn_pipeline,
     validate_xgboost_params,
     validate_model_definition,
+    validate_metric_function_object,
 )
 from plexe.config import ModelType
 
@@ -97,3 +98,32 @@ def test_validate_model_definition_unknown_type():
     is_valid, error = validate_model_definition("unknown", definition)
 
     assert not is_valid
+
+
+# ============================================
+# Metric Function Validation Tests
+# ============================================
+
+
+def test_validate_metric_function_object_success():
+    """Callable with correct signature should pass."""
+
+    def metric_fn(y_true, y_pred):
+        return float(sum(y_true) + sum(y_pred))
+
+    is_valid, error = validate_metric_function_object(metric_fn)
+
+    assert is_valid
+    assert error == ""
+
+
+def test_validate_metric_function_object_bad_signature():
+    """Callable with wrong arg names should fail."""
+
+    def metric_fn(a, b):
+        return float(sum(a) + sum(b))
+
+    is_valid, error = validate_metric_function_object(metric_fn)
+
+    assert not is_valid
+    assert "Arguments must be named" in error
