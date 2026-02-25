@@ -1,6 +1,6 @@
 # Code Index: tests
 
-> Generated on 2026-02-25 14:34:08
+> Generated on 2026-02-25 14:49:32
 
 Test suite structure and test case documentation.
 
@@ -88,7 +88,7 @@ Unit tests for core model dataclasses.
 Unit tests for reporting utilities.
 
 **Functions:**
-- `test_convert_to_native_types_numpy_nested()` - Numpy scalars/arrays should become native Python types.
+- `test_save_report_converts_numpy_types(tmp_path)` - save_report should serialize numpy types to native Python values.
 
 ---
 ## `unit/utils/test_tooling.py`

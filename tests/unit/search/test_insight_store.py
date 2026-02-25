@@ -33,7 +33,16 @@ def test_insight_store_add_update_serialize_roundtrip():
     data = store.to_dict()
     restored = InsightStore.from_dict(data)
 
-    assert restored._next_id == store._next_id
     assert len(restored.insights) == 2
     assert restored.insights[0].change == "param x"
     assert restored.insights[1].change == "param y"
+
+    max_id = max(insight.id for insight in restored.insights)
+    new_insight = restored.add(
+        change="param z",
+        effect="+3",
+        context="ctx2",
+        confidence="medium",
+        supporting_evidence=[3],
+    )
+    assert new_insight.id == max_id + 1

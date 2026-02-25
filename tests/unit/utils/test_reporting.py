@@ -1,12 +1,13 @@
 """Unit tests for reporting utilities."""
 
 import numpy as np
+import yaml
 
-from plexe.utils.reporting import _convert_to_native_types
+from plexe.utils.reporting import save_report
 
 
-def test_convert_to_native_types_numpy_nested():
-    """Numpy scalars/arrays should become native Python types."""
+def test_save_report_converts_numpy_types(tmp_path):
+    """save_report should serialize numpy types to native Python values."""
     data = {
         "a": np.int64(3),
         "b": np.float64(2.5),
@@ -15,13 +16,14 @@ def test_convert_to_native_types_numpy_nested():
         "f": [np.float32(1.25), {"g": np.array([3, 4])}],
     }
 
-    converted = _convert_to_native_types(data)
+    report_path = save_report(tmp_path, "sample_report", data)
+    loaded = yaml.safe_load(report_path.read_text())
 
-    assert converted["a"] == 3
-    assert isinstance(converted["a"], int)
-    assert converted["b"] == 2.5
-    assert isinstance(converted["b"], float)
-    assert converted["c"] == [1, 2]
-    assert isinstance(converted["d"]["e"], bool)
-    assert converted["f"][0] == 1.25
-    assert converted["f"][1]["g"] == [3, 4]
+    assert loaded["a"] == 3
+    assert isinstance(loaded["a"], int)
+    assert loaded["b"] == 2.5
+    assert isinstance(loaded["b"], float)
+    assert loaded["c"] == [1, 2]
+    assert isinstance(loaded["d"]["e"], bool)
+    assert loaded["f"][0] == 1.25
+    assert loaded["f"][1]["g"] == [3, 4]
