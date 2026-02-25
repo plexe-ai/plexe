@@ -25,9 +25,9 @@ jobs:
       - name: Check branch name
         run: |
           branch_name="${{ github.head_ref }}"
-          if [[ ! $branch_name =~ ^(feature|feat|fix|hotfix|chore|refactor)/.+ ]]; then
+          if [[ ! $branch_name =~ ^(feature|feat|fix|hotfix|chore|refactor|codex)/.+ ]]; then
             echo "❌ Branch name '$branch_name' does not follow the required pattern."
-            echo "Branch name must start with: feature/, feat/, fix/, hotfix/, chore/, or refactor/"
+            echo "Branch name must start with: feature/, feat/, fix/, hotfix/, chore/, refactor/, or codex/"
             exit 1
           fi
           echo "✅ Branch name '$branch_name' is valid."
