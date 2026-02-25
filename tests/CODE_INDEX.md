@@ -1,6 +1,6 @@
 # Code Index: tests
 
-> Generated on 2026-02-25 15:35:27
+> Generated on 2026-02-25 15:52:05
 
 Test suite structure and test case documentation.
 
@@ -75,6 +75,20 @@ Test that all production modules can be imported without errors.
 
 **Functions:**
 - `test_all_modules_importable()` - Import all production modules in the plexe/ package to catch import errors.
+
+---
+## `unit/test_lightgbm_predictor.py`
+Unit tests for LightGBM predictor template.
+
+**`DummyModel`** - Minimal model stub with a predict method.
+- `predict(self, x)` - No description
+
+**`DummyPipeline`** - Minimal pipeline stub with a transform method.
+- `transform(self, x)` - No description
+
+**Functions:**
+- `test_lightgbm_predictor_basic(tmp_path: Path) -> None` - No description
+- `test_lightgbm_predictor_label_encoder(tmp_path: Path) -> None` - No description
 
 ---
 ## `unit/test_models.py`
