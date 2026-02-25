@@ -161,7 +161,8 @@ test-lightgbm: build
 			--max-iterations 2 \
 			--work-dir /workdir/test_lightgbm \
 			--spark-mode local \
-			--allowed-model-types lightgbm
+			--allowed-model-types lightgbm \
+			--enable-final-evaluation
 	@echo "✅ LightGBM test passed!"
 
 # Test Keras specifically (requires appropriate dataset)
