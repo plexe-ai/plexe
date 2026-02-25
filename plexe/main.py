@@ -276,7 +276,10 @@ if __name__ == "__main__":
     parser.add_argument("--enable-final-evaluation", action="store_true", help="Enable test set evaluation")
     parser.add_argument("--max-epochs", type=int, help="Cap Keras epochs (testing)")
     parser.add_argument(
-        "--allowed-model-types", nargs="+", choices=["xgboost", "catboost", "keras"], help="Restrict models"
+        "--allowed-model-types",
+        nargs="+",
+        choices=["xgboost", "catboost", "lightgbm", "keras"],
+        help="Restrict models",
     )
 
     # Retraining support

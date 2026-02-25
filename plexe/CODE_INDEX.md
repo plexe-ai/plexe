@@ -1,6 +1,6 @@
 # Code Index: plexe
 
-> Generated on 2026-02-25 14:49:32
+> Generated on 2026-02-25 15:35:27
 
 Code structure and public interface documentation for the **plexe** package.
 
@@ -451,6 +451,14 @@ Standard Keras predictor - NO Plexe dependencies.
 - `predict(self, x: pd.DataFrame) -> pd.DataFrame` - Make predictions on input DataFrame.
 
 ---
+## `templates/inference/lightgbm_predictor.py`
+Standard LightGBM predictor - NO Plexe dependencies.
+
+**`LightGBMPredictor`** - Standalone LightGBM predictor.
+- `__init__(self, model_dir: str)`
+- `predict(self, x: pd.DataFrame) -> pd.DataFrame` - Make predictions on input DataFrame.
+
+---
 ## `templates/inference/xgboost_predictor.py`
 Standard XGBoost predictor - NO Plexe dependencies.
 
@@ -472,6 +480,14 @@ Hardcoded robust Keras training loop.
 
 **Functions:**
 - `train_keras(untrained_model_path: Path, train_uri: str, val_uri: str, output_dir: Path, target_column: str, epochs: int, batch_size: int) -> dict` - Train Keras model directly.
+
+---
+## `templates/training/train_lightgbm.py`
+Hardcoded robust LightGBM training loop.
+
+**Functions:**
+- `train_lightgbm(untrained_model_path: Path, train_uri: str, val_uri: str, output_dir: Path, target_column: str, group_column: str | None) -> dict` - Train LightGBM model directly (no Spark).
+- `main()` - No description
 
 ---
 ## `templates/training/train_xgboost.py`

@@ -243,17 +243,17 @@ def get_save_model_fn(context: BuildContext, model_type: str, max_epochs: int = 
         return save_model
 
     else:
-        # XGBoost/PyTorch: just model object
+        # XGBoost/CatBoost/LightGBM/PyTorch: just model object
         @tool_span
         @agentinspectable
         def save_model(model: Any) -> str:
             """
             Submit your model object.
 
-            This function validates and saves your XGBoost, CatBoost, or PyTorch model object.
+            This function validates and saves your XGBoost, CatBoost, LightGBM, or PyTorch model object.
 
             Args:
-                model: Model object (XGBClassifier, XGBRegressor, CatBoostClassifier, CatBoostRegressor, or nn.Module)
+                model: Model object (XGBClassifier, XGBRegressor, CatBoostClassifier, CatBoostRegressor, LGBMClassifier, etc)
 
             Returns:
                 Confirmation message
@@ -282,6 +282,16 @@ def get_save_model_fn(context: BuildContext, model_type: str, max_epochs: int = 
                     raise ValueError(error_msg)
 
                 logger.info(f"CatBoost model validated: {type(model).__name__}")
+
+            elif model_type == "lightgbm":
+                from lightgbm import LGBMClassifier, LGBMRegressor, LGBMRanker
+
+                if not isinstance(model, LGBMClassifier | LGBMRegressor | LGBMRanker):
+                    error_msg = f"Expected LGBMClassifier, LGBMRegressor, or LGBMRanker, got {type(model)}"
+                    logger.debug(error_msg)
+                    raise ValueError(error_msg)
+
+                logger.info(f"LightGBM model validated: {type(model).__name__}")
 
             elif model_type == "pytorch":
                 import torch.nn as nn
@@ -1233,7 +1243,7 @@ def get_save_plan_tool(context: BuildContext, hypothesis: "Hypothesis", allowed_
             raise ValueError("variant_id cannot be empty")
 
         # Validate model_type
-        valid_model_types = [ModelType.XGBOOST, ModelType.CATBOOST, ModelType.KERAS]
+        valid_model_types = [ModelType.XGBOOST, ModelType.CATBOOST, ModelType.LIGHTGBM, ModelType.KERAS]
         if model_type not in valid_model_types:
             raise ValueError(f"model_type must be one of {valid_model_types}, got: {model_type}")
 

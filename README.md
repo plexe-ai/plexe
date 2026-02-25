@@ -71,7 +71,7 @@ The system uses 14 specialized AI agents across a 6-phase workflow to:
 - Package the model for deployment
 
 ### 2.2. 🎯 Automated Model Building
-Build complete models with a single call. Plexe supports **XGBoost**, **CatBoost**, and **Keras** for tabular data:
+Build complete models with a single call. Plexe supports **XGBoost**, **CatBoost**, **LightGBM**, and **Keras** for tabular data:
 
 ```python
 best_solution, metrics, report = main(
@@ -178,7 +178,7 @@ See [`plexe/integrations/base.py`](plexe/integrations/base.py) for the full inte
 
 ### 3.1. Installation Options
 ```bash
-pip install plexe                    # Core (XGBoost, CatBoost, Keras, scikit-learn)
+pip install plexe                    # Core (XGBoost, CatBoost, LightGBM, Keras, scikit-learn)
 pip install plexe[pyspark]           # + Local PySpark execution
 pip install plexe[aws]               # + S3 storage support (boto3)
 ```

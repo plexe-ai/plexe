@@ -88,7 +88,7 @@ def evaluate_on_sample(
         spark: SparkSession
         sample_uri: Sample data URI
         model_artifacts_path: Path to model artifacts
-        model_type: "xgboost", "keras", or "pytorch"
+        model_type: "xgboost", "catboost", "lightgbm", "keras", or "pytorch"
         metric: Metric name
         target_columns: Target column names
         group_column: Optional group column for ranking metrics (query_id, session_id)
@@ -122,6 +122,10 @@ def evaluate_on_sample(
         from plexe.templates.inference.catboost_predictor import CatBoostPredictor
 
         predictor = CatBoostPredictor(str(model_artifacts_path))
+    elif model_type == ModelType.LIGHTGBM:
+        from plexe.templates.inference.lightgbm_predictor import LightGBMPredictor
+
+        predictor = LightGBMPredictor(str(model_artifacts_path))
     elif model_type == ModelType.KERAS:
         from plexe.templates.inference.keras_predictor import KerasPredictor
 

@@ -59,8 +59,8 @@ class LocalProcessRunner(TrainingRunner):
         Execute training in subprocess.
 
         Args:
-            template: "train_xgboost" or "train_pytorch"
-            model: Untrained model object (XGBClassifier or nn.Module)
+            template: "train_xgboost", "train_catboost", "train_lightgbm", or "train_pytorch"
+            model: Untrained model object (XGBClassifier, LGBMClassifier, or nn.Module)
             feature_pipeline: Fitted sklearn Pipeline
             train_uri: Training data URI
             val_uri: Validation data URI
@@ -99,6 +99,9 @@ class LocalProcessRunner(TrainingRunner):
                 # Training script will use native .save_model() for trained model
                 joblib.dump(model, untrained_model_path)
                 logger.info(f"Saved untrained CatBoost model to {untrained_model_path}")
+            elif "lightgbm" in template:
+                joblib.dump(model, untrained_model_path)
+                logger.info(f"Saved untrained LightGBM model to {untrained_model_path}")
             elif "keras" in template:
                 # For Keras, use native Keras serialization (cloudpickle causes deadlocks)
                 if not optimizer or not loss:
@@ -243,6 +246,8 @@ class LocalProcessRunner(TrainingRunner):
                 required_files.append("model.pkl")
             elif "catboost" in template:
                 required_files.append("model.cbm")
+            elif "lightgbm" in template:
+                required_files.append("model.pkl")
             elif "keras" in template:
                 required_files.append("model.keras")
             elif "pytorch" in template:

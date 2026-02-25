@@ -64,6 +64,8 @@ class ModelDefinerAgent:
             extra_imports = ["xgboost"]
         elif self.model_type == ModelType.CATBOOST:
             extra_imports = ["catboost"]
+        elif self.model_type == ModelType.LIGHTGBM:
+            extra_imports = ["lightgbm"]
         elif self.model_type == ModelType.KERAS:
             extra_imports = [
                 "keras",
@@ -164,6 +166,8 @@ class ModelDefinerAgent:
             model_name = "XGBoost"
         elif self.model_type == ModelType.CATBOOST:
             model_name = "CatBoost"
+        elif self.model_type == ModelType.LIGHTGBM:
+            model_name = "LightGBM"
         elif self.model_type == ModelType.KERAS:
             model_name = "Keras"
         else:
@@ -245,6 +249,31 @@ class ModelDefinerAgent:
                 "- Param name is 'iterations' (not 'n_estimators' like XGBoost)\n"
                 "- Param name is 'depth' (not 'max_depth' like XGBoost)\n"
                 "- Default depth=6, learning_rate=0.03, iterations=1000\n"
+            )
+        elif self.model_type == ModelType.LIGHTGBM:
+            instructions += (
+                "## TASK:\n"
+                "1. Import the appropriate LightGBM class based on task_analysis['task_type']\n"
+                "   - Use LGBMClassifier for classification tasks (binary_classification, multiclass_classification)\n"
+                "   - Use LGBMRegressor for regression tasks\n"
+                "   - Use LGBMRanker for ranking tasks (learning_to_rank)\n"
+                "2. Interpret the plan directive and instantiate model with appropriate hyperparameters\n"
+                "   - Common params: n_estimators, num_leaves, max_depth, learning_rate, subsample, colsample_bytree\n"
+                "   - For ranking: objective='lambdarank' or 'rank_xendcg'\n"
+                "   - The directive is natural language - translate it to concrete parameter values\n"
+                "3. Call save_model(model) with the untrained model instance\n"
+                "\n"
+                "Example directive interpretation:\n"
+                "  'Increase n_estimators to around 200' → n_estimators=200\n"
+                "  'Try more leaves around 63' → num_leaves=63\n"
+                "  'Try higher learning rate around 0.1' → learning_rate=0.1\n"
+                "\n"
+                "LIGHTGBM-SPECIFIC NOTES:\n"
+                "- LightGBM auto-detects feature dimensions - you don't need to specify input_dim\n"
+                "- Key param is 'num_leaves' (controls tree complexity, default 31)\n"
+                "- num_leaves should be <= 2^max_depth to avoid overfitting\n"
+                "- Default n_estimators=100, learning_rate=0.1, num_leaves=31\n"
+                "- Set verbose=-1 to suppress training output\n"
             )
         elif self.model_type == ModelType.KERAS:
             instructions += (

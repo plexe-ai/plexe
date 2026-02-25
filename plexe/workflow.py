@@ -1610,16 +1610,18 @@ def evaluate_final(
         sys.modules["predictor_module"] = predictor_module
         spec.loader.exec_module(predictor_module)
 
-        # Get predictor class (XGBoostPredictor, CatBoostPredictor, or KerasPredictor)
-        if solution.model_type == "xgboost":
-            predictor_class = predictor_module.XGBoostPredictor
-        elif solution.model_type == "catboost":
-            predictor_class = predictor_module.CatBoostPredictor
-        elif solution.model_type == "keras":
-            predictor_class = predictor_module.KerasPredictor
-        else:
+        # Get predictor class based on model type
+        predictor_class_lookup = {
+            "xgboost": "XGBoostPredictor",
+            "catboost": "CatBoostPredictor",
+            "lightgbm": "LightGBMPredictor",
+            "keras": "KerasPredictor",
+        }
+        class_name = predictor_class_lookup.get(solution.model_type)
+        if class_name is None or not hasattr(predictor_module, class_name):
             logger.error(f"Unknown model type: {solution.model_type}")
             return None
+        predictor_class = getattr(predictor_module, class_name)
 
         # Instantiate predictor
         predictor = predictor_class(str(solution.model_artifacts_path))
@@ -1894,6 +1896,7 @@ def package_final_model(
     predictor_class_map = {
         "xgboost": "XGBoostPredictor",
         "catboost": "CatBoostPredictor",
+        "lightgbm": "LightGBMPredictor",
         "keras": "KerasPredictor",
     }
     predictor_class = predictor_class_map.get(solution.model_type, f"{solution.model_type.capitalize()}Predictor")

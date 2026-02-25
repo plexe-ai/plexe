@@ -44,16 +44,22 @@ class ModelType:
 
     XGBOOST = "xgboost"
     CATBOOST = "catboost"
+    LIGHTGBM = "lightgbm"
     KERAS = "keras"
 
 
 # Default model types (enabled by default, user can override via --allowed-model-types)
-DEFAULT_MODEL_TYPES = [ModelType.XGBOOST, ModelType.CATBOOST, ModelType.KERAS]
+DEFAULT_MODEL_TYPES = [ModelType.XGBOOST, ModelType.CATBOOST, ModelType.LIGHTGBM, ModelType.KERAS]
 
 # Task-compatible model types based on data layout
 # Maps DataLayout enum to compatible model types
 TASK_COMPATIBLE_MODELS = {
-    DataLayout.FLAT_NUMERIC: [ModelType.XGBOOST, ModelType.CATBOOST, ModelType.KERAS],  # Tabular data
+    DataLayout.FLAT_NUMERIC: [
+        ModelType.XGBOOST,
+        ModelType.CATBOOST,
+        ModelType.LIGHTGBM,
+        ModelType.KERAS,
+    ],  # Tabular data
     DataLayout.IMAGE_PATH: [ModelType.KERAS],  # Image data (PyTorch to be added)
     DataLayout.TEXT_STRING: [ModelType.KERAS],  # Text data (PyTorch to be added)
 }

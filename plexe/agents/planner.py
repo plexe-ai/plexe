@@ -304,6 +304,11 @@ class PlannerAgent:
             guidance += "  * Params: iterations, depth, learning_rate, l2_leaf_reg\n"
             guidance += "  * NOTE: CatBoost handles categorical features automatically\n"
 
+        if "lightgbm" in viable:
+            guidance += "- **lightgbm**: Fast gradient boosted decision trees with leaf-wise growth\n"
+            guidance += "  * Params: n_estimators, num_leaves, max_depth, learning_rate, subsample, colsample_bytree\n"
+            guidance += "  * NOTE: num_leaves controls complexity (default 31), often faster than XGBoost/CatBoost\n"
+
         if "keras" in viable:
             guidance += "- **keras**: Neural networks\n"
             guidance += "  * Params: layer sizes, activation, dropout, optimizer, loss\n"
@@ -327,6 +332,10 @@ class PlannerAgent:
         if "catboost" in viable:
             examples.append(
                 "    * CatBoost example: 'Create CatBoost with iterations around 500, depth 6, learning_rate 0.05'"
+            )
+        if "lightgbm" in viable:
+            examples.append(
+                "    * LightGBM example: 'Create LightGBM with n_estimators around 200, num_leaves 31, learning_rate 0.05'"
             )
         if "keras" in viable:
             examples.append(
