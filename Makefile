@@ -182,12 +182,12 @@ test-pytorch: build
 		-e SPARK_DRIVER_MEMORY=4g \
 		plexe:py$(PYTHON_VERSION) \
 		python -m plexe.main \
-			--train-dataset-uri /data/spaceship-titanic/train.parquet \
+			--train-dataset-uri /data/house-prices/train.csv \
 			--user-id test_user \
-			--intent "predict whether a passenger was transported" \
-			--experiment-id test_pytorch \
+			--intent "predict house sale price" \
+			--experiment-id test_pytorch_house_prices \
 			--max-iterations 2 \
-			--work-dir /workdir/test_pytorch \
+			--work-dir /workdir/test_pytorch_house_prices \
 			--spark-mode local \
 			--allowed-model-types pytorch
 	@echo "✅ PyTorch test passed!"
