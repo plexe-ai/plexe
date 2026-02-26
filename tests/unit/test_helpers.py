@@ -62,7 +62,7 @@ def test_select_viable_model_types_defaults_image():
     """Default model types intersect with IMAGE_PATH."""
     result = select_viable_model_types(DataLayout.IMAGE_PATH)
 
-    assert result == [ModelType.KERAS]
+    assert result == [ModelType.KERAS, ModelType.PYTORCH]
 
 
 def test_select_viable_model_types_no_intersection():
