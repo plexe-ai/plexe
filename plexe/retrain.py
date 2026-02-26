@@ -216,7 +216,11 @@ def retrain_model(
                 trained_model.load_model(str(original_model_path))
                 params = trained_model.get_params()
                 untrained_model = CatBoostClassifier(**params)
-            except Exception:
+            except Exception as exc:
+                logger.debug(
+                    "CatBoost classifier load failed; falling back to regressor",
+                    exc_info=exc,
+                )
                 trained_model = CatBoostRegressor()
                 trained_model.load_model(str(original_model_path))
                 params = trained_model.get_params()
@@ -232,8 +236,6 @@ def retrain_model(
             if isinstance(trained_model, LGBMClassifier):
                 untrained_model = LGBMClassifier(**params)
             elif isinstance(trained_model, LGBMRanker):
-                from lightgbm import LGBMRanker
-
                 untrained_model = LGBMRanker(**params)
             else:
                 from lightgbm import LGBMRegressor

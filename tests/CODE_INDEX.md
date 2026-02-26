@@ -1,6 +1,6 @@
 # Code Index: tests
 
-> Generated on 2026-02-26 10:04:13
+> Generated on 2026-02-26 10:09:18
 
 Test suite structure and test case documentation.
 
@@ -102,7 +102,7 @@ Unit tests for core model dataclasses.
 Unit tests for PyTorch model submission.
 
 **Functions:**
-- `test_save_model_pytorch(tmp_path)` - No description
+- `test_save_model_pytorch(tmp_path)` - Test PyTorch model submission validation and context scratch storage.
 
 ---
 ## `unit/utils/test_reporting.py`

@@ -13,6 +13,7 @@ from plexe.tools.submission import get_save_model_fn
 
 
 def test_save_model_pytorch(tmp_path):
+    """Test PyTorch model submission validation and context scratch storage."""
     context = BuildContext(
         user_id="test_user",
         experiment_id="exp_pytorch",
