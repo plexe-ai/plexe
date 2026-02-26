@@ -83,14 +83,11 @@ class PyTorchPredictor:
         else:
             # Single output: squeeze to 1D
             predictions = raw_predictions.squeeze()
-            # Binary classification with BCEWithLogitsLoss: apply sigmoid + threshold
-            # Heuristic: treat large-magnitude outputs as logits to avoid misclassifying regression in [0, 1]
-            preds_for_check = np.atleast_1d(predictions)
-            if preds_for_check.size > 0:
-                abs_max = np.max(np.abs(preds_for_check))
-                if abs_max > 1.5:  # Likely logits from BCEWithLogitsLoss
-                    predictions = 1 / (1 + np.exp(-predictions))
-                    predictions = (predictions > 0.5).astype(int)
+            # Binary classification: threshold at 0.5 if output looks like probabilities
+            # FIXME: This heuristic can misclassify regression outputs in [0, 1];
+            # we'll address this in a follow-up PR with richer task metadata.
+            if predictions.ndim > 0 and predictions.max() <= 1.0 and predictions.min() >= 0.0:
+                predictions = (predictions > 0.5).astype(int)
 
         return pd.DataFrame({"prediction": predictions})
 
