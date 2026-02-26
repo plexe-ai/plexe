@@ -8,7 +8,6 @@ import pytest
 
 torch = pytest.importorskip("torch")
 
-# TODO: Once torch becomes optional, switch this test to pytest.importorskip("torch")
 
 from plexe.models import BuildContext
 from plexe.tools.submission import get_save_model_fn
