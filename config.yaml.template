@@ -117,8 +117,8 @@
 
 # Smolagents verbosity level (0=silent, 1=normal, 2=verbose)
 # Type: integer
-# Default: 1
-# agent_verbosity_level: 1
+# Default: 0
+# agent_verbosity_level: 0
 
 # ------------------------------------------------------------
 # OpenTelemetry Tracing
@@ -296,7 +296,7 @@
 #
 # Uncomment these for quick local testing:
 #
-# agent_verbosity_level: 1
+# agent_verbosity_level: 0
 # max_search_iterations: 5
 # train_sample_size: 10000
 # val_sample_size: 3000

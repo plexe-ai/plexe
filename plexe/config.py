@@ -329,7 +329,7 @@ class Config(BaseSettings):
 
     # Agent settings
     agent_verbosity_level: int = Field(
-        default=1, description="Smolagents verbosity level (0=silent, 1=normal, 2=verbose)", ge=0, le=2
+        default=0, description="Smolagents verbosity level (0=silent, 1=normal, 2=verbose)", ge=0, le=2
     )
 
     # OpenTelemetry tracing settings
