@@ -6,6 +6,7 @@ import json
 import logging
 import os
 import subprocess
+import sys
 import time
 import uuid
 from pathlib import Path
@@ -168,7 +169,7 @@ class LocalProcessRunner(TrainingRunner):
             target_column = target_columns[0] if target_columns else "target"
 
             cmd = [
-                "python",
+                sys.executable,
                 str(template_script),
                 "--untrained-model",
                 str(untrained_model_path),

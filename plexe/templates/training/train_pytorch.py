@@ -6,6 +6,7 @@ Trains PyTorch models directly with DataLoader-based batching.
 
 import argparse
 import copy
+import inspect
 import json
 import logging
 import sys
@@ -63,6 +64,21 @@ def train_pytorch(
     # Recreate optimizer (needs model.parameters())
     optimizer_class = getattr(torch.optim, training_config["optimizer_class"])
     optimizer_config = training_config.get("optimizer_config", {})
+    if optimizer_config:
+        signature = inspect.signature(optimizer_class.__init__)
+        params = signature.parameters
+        accepts_kwargs = any(param.kind == inspect.Parameter.VAR_KEYWORD for param in params.values())
+        if not accepts_kwargs:
+            allowed = {name for name in params if name not in ("self", "params")}
+            filtered_config = {key: value for key, value in optimizer_config.items() if key in allowed}
+            dropped_keys = sorted(set(optimizer_config) - set(filtered_config))
+            if dropped_keys:
+                logger.warning(
+                    "Dropping unsupported optimizer args for %s: %s",
+                    optimizer_class.__name__,
+                    dropped_keys,
+                )
+            optimizer_config = filtered_config
     optimizer = optimizer_class(model.parameters(), **optimizer_config)
     logger.info(f"Optimizer: {type(optimizer).__name__}")
 

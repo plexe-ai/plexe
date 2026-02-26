@@ -4,6 +4,7 @@ Model retraining functionality.
 Retrain existing models with new data using original training pipeline.
 """
 
+import inspect
 import json
 import logging
 import shutil
@@ -290,6 +291,21 @@ def retrain_model(
             if "optimizer_class" in metadata:
                 optimizer_cls = getattr(torch.optim, metadata["optimizer_class"])
                 optimizer_config = metadata.get("optimizer_config", {})
+                if optimizer_config:
+                    signature = inspect.signature(optimizer_cls.__init__)
+                    params = signature.parameters
+                    accepts_kwargs = any(param.kind == inspect.Parameter.VAR_KEYWORD for param in params.values())
+                    if not accepts_kwargs:
+                        allowed = {name for name in params if name not in ("self", "params")}
+                        filtered_config = {key: value for key, value in optimizer_config.items() if key in allowed}
+                        dropped_keys = sorted(set(optimizer_config) - set(filtered_config))
+                        if dropped_keys:
+                            logger.warning(
+                                "Dropping unsupported optimizer args for %s: %s",
+                                optimizer_cls.__name__,
+                                dropped_keys,
+                            )
+                        optimizer_config = filtered_config
                 training_kwargs["optimizer"] = optimizer_cls(untrained_model.parameters(), **optimizer_config)
             if "loss_class" in metadata:
                 loss_cls = getattr(torch.nn, metadata["loss_class"])
