@@ -4,6 +4,7 @@ Configuration for plexe.
 Provides Config Pydantic model, constants, and logging setup.
 """
 
+import importlib.util
 import logging
 import os
 import re
@@ -50,13 +51,18 @@ class ModelType:
 
 
 # Default model types (enabled by default, user can override via --allowed-model-types)
+def _is_module_available(module_name: str) -> bool:
+    return importlib.util.find_spec(module_name) is not None
+
+
 DEFAULT_MODEL_TYPES = [
     ModelType.XGBOOST,
     ModelType.CATBOOST,
     ModelType.LIGHTGBM,
     ModelType.KERAS,
-    ModelType.PYTORCH,
 ]
+if _is_module_available("torch"):
+    DEFAULT_MODEL_TYPES.append(ModelType.PYTORCH)
 
 # Task-compatible model types based on data layout
 # Maps DataLayout enum to compatible model types

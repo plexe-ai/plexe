@@ -4,7 +4,9 @@ Unit tests for PyTorch model submission.
 
 from __future__ import annotations
 
-import torch
+import pytest
+
+torch = pytest.importorskip("torch")
 
 # TODO: Once torch becomes optional, switch this test to pytest.importorskip("torch")
 
