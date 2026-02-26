@@ -258,9 +258,14 @@ def retrain_model(
                 trained_model = cloudpickle.load(f)
 
             # Re-initialize weights (fresh random initialization, recursive for nested modules)
-            for module in trained_model.modules():
+            def reset_weights(module):
                 if hasattr(module, "reset_parameters"):
-                    module.reset_parameters()
+                    try:
+                        module.reset_parameters()
+                    except (AttributeError, NotImplementedError):
+                        pass
+
+            trained_model.apply(reset_weights)
 
             untrained_model = trained_model
             logger.info("Created new untrained PyTorch model from architecture")
