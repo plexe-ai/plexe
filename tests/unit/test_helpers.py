@@ -8,6 +8,7 @@ from sklearn.metrics import accuracy_score
 
 from plexe.config import ModelType
 from plexe.helpers import compute_metric, select_viable_model_types
+from plexe.config import DEFAULT_MODEL_TYPES
 from plexe.models import DataLayout
 
 
@@ -62,7 +63,11 @@ def test_select_viable_model_types_defaults_image():
     """Default model types intersect with IMAGE_PATH."""
     result = select_viable_model_types(DataLayout.IMAGE_PATH)
 
-    assert result == [ModelType.KERAS, ModelType.PYTORCH]
+    expected = [ModelType.KERAS]
+    if ModelType.PYTORCH in DEFAULT_MODEL_TYPES:
+        expected.append(ModelType.PYTORCH)
+
+    assert result == expected
 
 
 def test_select_viable_model_types_no_intersection():
