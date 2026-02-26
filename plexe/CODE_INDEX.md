@@ -1,6 +1,6 @@
 # Code Index: plexe
 
-> Generated on 2026-02-25 17:05:53
+> Generated on 2026-02-26 10:04:13
 
 Code structure and public interface documentation for the **plexe** package.
 
@@ -150,6 +150,7 @@ Configuration for plexe.
 
 **`Config`** - Configuration for model building workflow.
 - `settings_customise_sources(cls, settings_cls, init_settings, env_settings, dotenv_settings, file_secret_settings)` - Customize settings source priority.
+- `validate_nn_training_settings(self) -> 'Config'` - Ensure neural network defaults do not exceed the configured cap.
 - `parse_otel_headers_from_env(self) -> 'Config'` - Parse OTEL_EXPORTER_OTLP_HEADERS (comma-separated key=value pairs).
 
 **Functions:**

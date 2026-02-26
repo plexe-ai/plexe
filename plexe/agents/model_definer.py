@@ -123,7 +123,7 @@ class ModelDefinerAgent:
                 self.context,
                 self.model_type,
                 max_epochs=(
-                    self.config.nn_default_epochs if self.model_type in (ModelType.KERAS, ModelType.PYTORCH) else None
+                    self.config.nn_max_epochs if self.model_type in (ModelType.KERAS, ModelType.PYTORCH) else None
                 ),
             ),
             "task_analysis": self.context.task_analysis,
@@ -322,7 +322,7 @@ class ModelDefinerAgent:
                 "5. **Determine Training Config**:\n"
                 "   - Extract epochs and batch_size from the plan directive (e.g., 'Train 40 epochs, batch_size 64')\n"
                 f"   - If not specified, use defaults: epochs={self.config.nn_default_epochs}, batch_size={self.config.nn_default_batch_size}\n"
-                f"   - epochs MUST be ≤ {self.config.nn_default_epochs} (enforced cap)\n"
+                f"   - epochs MUST be ≤ {self.config.nn_max_epochs} (enforced cap)\n"
                 "   - Consider dataset size and model complexity when choosing\n"
                 "\n"
                 "6. Call save_model(model, optimizer, loss, epochs, batch_size) with all five arguments\n"
@@ -332,9 +332,9 @@ class ModelDefinerAgent:
                 "- KERAS_BACKEND MUST be 'tensorflow'\n"
                 "- Create actual object instances, not strings\n"
                 "- epochs and batch_size must be integers\n"
-                f"- epochs MUST NOT exceed {self.config.nn_default_epochs}\n"
+                f"- epochs MUST NOT exceed {self.config.nn_max_epochs}\n"
             )
-        else:  # PyTorch
+        elif self.model_type == ModelType.PYTORCH:
             instructions += (
                 "## TASK:\n"
                 "Create THREE objects: model, optimizer, and loss.\n"
@@ -370,7 +370,7 @@ class ModelDefinerAgent:
                 "5. **Determine Training Config**:\n"
                 "   - Extract epochs and batch_size from the plan directive\n"
                 f"   - If not specified, use defaults: epochs={self.config.nn_default_epochs}, batch_size={self.config.nn_default_batch_size}\n"
-                f"   - epochs MUST be ≤ {self.config.nn_default_epochs} (enforced cap)\n"
+                f"   - epochs MUST be ≤ {self.config.nn_max_epochs} (enforced cap)\n"
                 "\n"
                 "6. Call save_model(model, optimizer, loss, epochs, batch_size) with all five arguments\n"
                 "\n"
@@ -378,7 +378,9 @@ class ModelDefinerAgent:
                 "- Create actual object instances, not strings\n"
                 "- The optimizer MUST be created with model.parameters()\n"
                 "- epochs and batch_size must be integers\n"
-                f"- epochs MUST NOT exceed {self.config.nn_default_epochs}\n"
+                f"- epochs MUST NOT exceed {self.config.nn_max_epochs}\n"
             )
+        else:
+            raise ValueError(f"Unsupported neural network model type: {self.model_type}")
 
         return instructions

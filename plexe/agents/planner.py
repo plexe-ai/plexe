@@ -312,12 +312,14 @@ class PlannerAgent:
         if "keras" in viable:
             guidance += "- **keras**: Neural networks (TensorFlow backend)\n"
             guidance += "  * Params: layer sizes, activation, dropout, optimizer, loss\n"
-            guidance += f"  * Max epochs: {self.config.nn_default_epochs}\n"
+            guidance += f"  * Default epochs: {self.config.nn_default_epochs}\n"
+            guidance += f"  * Max epochs: {self.config.nn_max_epochs}\n"
 
         if "pytorch" in viable:
             guidance += "- **pytorch**: Neural networks (PyTorch)\n"
             guidance += "  * Params: layer sizes, activation, dropout, optimizer, lr\n"
-            guidance += f"  * Max epochs: {self.config.nn_default_epochs}\n"
+            guidance += f"  * Default epochs: {self.config.nn_default_epochs}\n"
+            guidance += f"  * Max epochs: {self.config.nn_max_epochs}\n"
 
         if len(viable) > 1:
             guidance += "\n**FRAMEWORK EXPLORATION**: You can experiment with different model types across variants.\n"

@@ -174,20 +174,42 @@ def get_save_model_fn(context: BuildContext, model_type: str, max_epochs: int = 
         Configured save_model function (signature varies by model_type)
     """
 
-    if model_type in ("keras", "pytorch"):
+    def _validate_training_params(epochs: int, batch_size: int) -> None:
+        if not isinstance(epochs, int) or epochs < 1:
+            raise ValueError(f"epochs must be integer >= 1, got {epochs}")
+
+        if max_epochs is not None and epochs > max_epochs:
+            raise ValueError(f"epochs must be ≤ {max_epochs} (configured cap), got {epochs}")
+
+        if not isinstance(batch_size, int) or batch_size < 1 or batch_size > 1024:
+            raise ValueError(f"batch_size must be integer in [1, 1024], got {batch_size}")
+
+    def _save_nn_components(model: Any, optimizer: Any, loss: Any, epochs: int, batch_size: int) -> str:
+        context.scratch["_saved_model"] = model
+        context.scratch["_saved_optimizer"] = optimizer
+        context.scratch["_saved_loss"] = loss
+        context.scratch["_nn_epochs"] = epochs
+        context.scratch["_nn_batch_size"] = batch_size
+
+        logger.info(
+            f"{model_type} components saved: model={type(model).__name__}, optimizer={type(optimizer).__name__}, loss={type(loss).__name__}, epochs={epochs}, batch_size={batch_size}"
+        )
+        return f"{model_type} model saved: {epochs} epochs, batch_size={batch_size}"
+
+    if model_type == "keras":
         # Neural networks need model + optimizer + loss + training params
         @tool_span
         @agentinspectable
         def save_model(model: Any, optimizer: Any, loss: Any, epochs: int, batch_size: int) -> str:
             """
-            Submit your neural network model, optimizer, loss, and training configuration.
+            Submit your Keras model, optimizer, loss, and training configuration.
 
             This function validates and saves all components needed for training.
 
             Args:
-                model: Neural network model instance (keras.Model or nn.Module)
-                optimizer: Optimizer instance (keras.optimizers.Optimizer or torch.optim.Optimizer)
-                loss: Loss instance (keras.losses.Loss or nn.Module)
+                model: Keras model instance (keras.Model)
+                optimizer: Optimizer instance (keras.optimizers.Optimizer)
+                loss: Loss instance (keras.losses.Loss)
                 epochs: Number of training epochs (e.g., 50)
                 batch_size: Batch size for training (e.g., 32)
 
@@ -197,69 +219,75 @@ def get_save_model_fn(context: BuildContext, model_type: str, max_epochs: int = 
             Raises:
                 ValueError: If validation fails
             """
-            if model_type == "keras":
-                from plexe.validation.validators import (
-                    validate_keras_model,
-                    validate_keras_optimizer,
-                    validate_keras_loss,
-                )
-
-                is_valid, error_msg = validate_keras_model(model, context.task_analysis)
-                if not is_valid:
-                    logger.debug(f"Keras model validation failed: {error_msg}")
-                    raise ValueError(f"Keras model validation failed: {error_msg}")
-
-                is_valid, error_msg = validate_keras_optimizer(optimizer)
-                if not is_valid:
-                    logger.debug(f"Keras optimizer validation failed: {error_msg}")
-                    raise ValueError(f"Keras optimizer validation failed: {error_msg}")
-
-                is_valid, error_msg = validate_keras_loss(loss)
-                if not is_valid:
-                    logger.debug(f"Keras loss validation failed: {error_msg}")
-                    raise ValueError(f"Keras loss validation failed: {error_msg}")
-
-            elif model_type == "pytorch":
-                import torch.nn as nn
-
-                if not isinstance(model, nn.Module):
-                    error_msg = f"Expected torch.nn.Module, got {type(model)}"
-                    logger.debug(error_msg)
-                    raise ValueError(error_msg)
-
-                import torch.optim
-
-                if not isinstance(optimizer, torch.optim.Optimizer):
-                    error_msg = f"Expected torch.optim.Optimizer, got {type(optimizer)}"
-                    logger.debug(error_msg)
-                    raise ValueError(error_msg)
-
-                if not isinstance(loss, nn.Module):
-                    error_msg = f"Expected torch.nn.Module (loss function), got {type(loss)}"
-                    logger.debug(error_msg)
-                    raise ValueError(error_msg)
-
-            # Validate training params
-            if not isinstance(epochs, int) or epochs < 1:
-                raise ValueError(f"epochs must be integer >= 1, got {epochs}")
-
-            if max_epochs is not None and epochs > max_epochs:
-                raise ValueError(f"epochs must be ≤ {max_epochs} (configured cap), got {epochs}")
-
-            if not isinstance(batch_size, int) or batch_size < 1 or batch_size > 1024:
-                raise ValueError(f"batch_size must be integer in [1, 1024], got {batch_size}")
-
-            # Save all to context (same keys for both Keras and PyTorch)
-            context.scratch["_saved_model"] = model
-            context.scratch["_saved_optimizer"] = optimizer
-            context.scratch["_saved_loss"] = loss
-            context.scratch["_nn_epochs"] = epochs
-            context.scratch["_nn_batch_size"] = batch_size
-
-            logger.info(
-                f"{model_type} components saved: model={type(model).__name__}, optimizer={type(optimizer).__name__}, loss={type(loss).__name__}, epochs={epochs}, batch_size={batch_size}"
+            from plexe.validation.validators import (
+                validate_keras_model,
+                validate_keras_optimizer,
+                validate_keras_loss,
             )
-            return f"{model_type} model saved: {epochs} epochs, batch_size={batch_size}"
+
+            is_valid, error_msg = validate_keras_model(model, context.task_analysis)
+            if not is_valid:
+                logger.debug(f"Keras model validation failed: {error_msg}")
+                raise ValueError(f"Keras model validation failed: {error_msg}")
+
+            is_valid, error_msg = validate_keras_optimizer(optimizer)
+            if not is_valid:
+                logger.debug(f"Keras optimizer validation failed: {error_msg}")
+                raise ValueError(f"Keras optimizer validation failed: {error_msg}")
+
+            is_valid, error_msg = validate_keras_loss(loss)
+            if not is_valid:
+                logger.debug(f"Keras loss validation failed: {error_msg}")
+                raise ValueError(f"Keras loss validation failed: {error_msg}")
+
+            _validate_training_params(epochs, batch_size)
+            return _save_nn_components(model, optimizer, loss, epochs, batch_size)
+
+        return save_model
+
+    elif model_type == "pytorch":
+        # Neural networks need model + optimizer + loss + training params
+        @tool_span
+        @agentinspectable
+        def save_model(model: Any, optimizer: Any, loss: Any, epochs: int, batch_size: int) -> str:
+            """
+            Submit your PyTorch model, optimizer, loss, and training configuration.
+
+            This function validates and saves all components needed for training.
+
+            Args:
+                model: PyTorch model instance (torch.nn.Module)
+                optimizer: Optimizer instance (torch.optim.Optimizer)
+                loss: Loss instance (torch.nn.Module)
+                epochs: Number of training epochs (e.g., 50)
+                batch_size: Batch size for training (e.g., 32)
+
+            Returns:
+                Confirmation message
+
+            Raises:
+                ValueError: If validation fails
+            """
+            import torch.nn as nn
+            import torch.optim
+
+            if not isinstance(model, nn.Module):
+                error_msg = f"Expected torch.nn.Module, got {type(model)}"
+                logger.debug(error_msg)
+                raise ValueError(error_msg)
+
+            if not isinstance(optimizer, torch.optim.Optimizer):
+                error_msg = f"Expected torch.optim.Optimizer, got {type(optimizer)}"
+                logger.debug(error_msg)
+                raise ValueError(error_msg)
+
+            if not isinstance(loss, nn.Module):
+                error_msg = f"Expected torch.nn.Module (loss function), got {type(loss)}"
+                logger.debug(error_msg)
+                raise ValueError(error_msg)
+
+            _validate_training_params(epochs, batch_size)
+            return _save_nn_components(model, optimizer, loss, epochs, batch_size)
 
         return save_model
 

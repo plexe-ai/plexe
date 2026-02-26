@@ -106,7 +106,9 @@ def main(
         config.max_search_iterations = max_iterations
         config.spark_mode = spark_mode
         if max_epochs:
-            config.nn_default_epochs = min(max_epochs, config.nn_default_epochs)
+            config.nn_max_epochs = max_epochs
+            if config.nn_default_epochs > config.nn_max_epochs:
+                config.nn_default_epochs = config.nn_max_epochs
         if allowed_model_types:
             config.allowed_model_types = allowed_model_types
 

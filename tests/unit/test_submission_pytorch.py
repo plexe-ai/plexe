@@ -6,6 +6,8 @@ from __future__ import annotations
 
 import torch
 
+# TODO: Once torch becomes optional, switch this test to pytest.importorskip("torch")
+
 from plexe.models import BuildContext
 from plexe.tools.submission import get_save_model_fn
 

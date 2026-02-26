@@ -70,6 +70,7 @@ def generate_template():
         "Training Settings": [
             "training_timeout",
             "nn_default_epochs",
+            "nn_max_epochs",
             "nn_default_batch_size",
         ],
         "LLM Settings (per agent role)": [

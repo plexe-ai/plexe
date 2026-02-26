@@ -288,8 +288,9 @@ class Config(BaseSettings):
     # Training settings
     training_timeout: int = Field(default=1800, description="Timeout for training runs (seconds)", gt=0)
     nn_default_epochs: int = Field(
-        default=50, description="Default epochs for neural network training (Keras, PyTorch)"
+        default=25, description="Default epochs for neural network training (Keras, PyTorch)"
     )
+    nn_max_epochs: int = Field(default=50, description="Maximum epochs for neural network training (Keras, PyTorch)")
     nn_default_batch_size: int = Field(
         default=32, description="Default batch size for neural network training (Keras, PyTorch)"
     )
@@ -423,6 +424,13 @@ class Config(BaseSettings):
             env_settings,
             YamlConfigSettingsSource(settings_cls),
         )
+
+    @model_validator(mode="after")
+    def validate_nn_training_settings(self) -> "Config":
+        """Ensure neural network defaults do not exceed the configured cap."""
+        if self.nn_default_epochs > self.nn_max_epochs:
+            raise ValueError("nn_default_epochs must be <= nn_max_epochs")
+        return self
 
     @model_validator(mode="after")
     def parse_otel_headers_from_env(self) -> "Config":
