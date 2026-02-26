@@ -9,7 +9,7 @@ from __future__ import annotations
 import logging
 from collections.abc import Iterator
 from textwrap import shorten
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 import cloudpickle
 import pandas as pd
@@ -19,6 +19,61 @@ if TYPE_CHECKING:
     from pyspark.sql import SparkSession
 
 logger = logging.getLogger(__name__)
+
+
+def _generic_feature_names(num_output_features: int) -> list[str]:
+    return [f"feature_{i}" for i in range(num_output_features)]
+
+
+def _call_get_feature_names_out(transformer: Any, feature_columns: list[str]) -> list[str]:
+    try:
+        names = transformer.get_feature_names_out(input_features=feature_columns)
+    except TypeError:
+        names = transformer.get_feature_names_out()
+    return list(names)
+
+
+def _try_get_feature_names_out(
+    fitted_pipeline: Pipeline, feature_columns: list[str]
+) -> tuple[list[str] | None, str | None]:
+    strategies: list[tuple[str, Any]] = []
+
+    if hasattr(fitted_pipeline, "get_feature_names_out"):
+        strategies.append(("pipeline.get_feature_names_out()", fitted_pipeline))
+
+    if isinstance(fitted_pipeline, Pipeline) and fitted_pipeline.steps:
+        last_step_name, last_step = fitted_pipeline.steps[-1]
+
+        if not hasattr(last_step, "get_feature_names_out") and len(fitted_pipeline.steps) > 1:
+            strategies.append(
+                (f"pipeline[:-1].get_feature_names_out() (skipped {last_step_name})", fitted_pipeline[:-1])
+            )
+
+        if hasattr(last_step, "get_feature_names_out"):
+            strategies.append((f"{last_step_name}.get_feature_names_out()", last_step))
+
+    for label, transformer in strategies:
+        try:
+            names = _call_get_feature_names_out(transformer, feature_columns)
+        except Exception:
+            continue
+        return names, label
+
+    return None, None
+
+
+def _resolve_transformed_feature_names(
+    fitted_pipeline: Pipeline, feature_columns: list[str], num_output_features: int
+) -> tuple[list[str], str]:
+    names, source = _try_get_feature_names_out(fitted_pipeline, feature_columns)
+
+    if names is None:
+        return _generic_feature_names(num_output_features), "generic"
+
+    if len(names) != num_output_features:
+        return _generic_feature_names(num_output_features), "generic_mismatch"
+
+    return names, source or "pipeline.get_feature_names_out()"
 
 
 def transform_dataset_via_spark(
@@ -101,20 +156,19 @@ def transform_dataset_via_spark(
         sample_transformed_features = sample_transformed
     else:
         # Pipeline returned numpy array - need to assign column names
-        try:
-            # Try sklearn's get_feature_names_out() (sklearn 1.0+)
-            if hasattr(fitted_pipeline, "get_feature_names_out"):
-                transformed_feature_cols = fitted_pipeline.get_feature_names_out(
-                    input_features=feature_columns
-                ).tolist()
-                logger.info("Using feature names from pipeline.get_feature_names_out()")
-            else:
-                raise AttributeError("No get_feature_names_out method")
-        except Exception as e:
-            # Fallback to generic names
-            num_output_features = sample_transformed.shape[1]
-            transformed_feature_cols = [f"feature_{i}" for i in range(num_output_features)]
-            logger.warning(f"Using generic feature names ({e})")
+        num_output_features = sample_transformed.shape[1]
+        transformed_feature_cols, feature_name_source = _resolve_transformed_feature_names(
+            fitted_pipeline=fitted_pipeline,
+            feature_columns=feature_columns,
+            num_output_features=num_output_features,
+        )
+
+        if feature_name_source == "generic":
+            logger.debug("Falling back to generic feature names (pipeline has no get_feature_names_out).")
+        elif feature_name_source == "generic_mismatch":
+            logger.debug("Falling back to generic feature names (pipeline feature count mismatch).")
+        else:
+            logger.info("Using feature names from %s", feature_name_source)
 
         sample_transformed_features = pd.DataFrame(sample_transformed, columns=transformed_feature_cols)
 

@@ -1,6 +1,6 @@
 # Code Index: tests
 
-> Generated on 2026-02-26 15:06:43
+> Generated on 2026-02-26 19:02:04
 
 Test suite structure and test case documentation.
 
@@ -48,6 +48,23 @@ Unit tests for SearchJournal.
 - `test_journal_get_history()` - Test history returns recent entries.
 - `test_journal_improvement_trend_improving()` - Test improvement trend with steadily improving solutions.
 - `test_journal_improvement_trend_insufficient_data()` - Test improvement trend with fewer than 2 successful solutions.
+
+---
+## `unit/templates/features/test_pipeline_runner.py`
+Unit tests for pipeline_runner feature name resolution.
+
+**`NoFeatureNamesTransformer`** - Transformer without get_feature_names_out.
+- `fit(self, x, y)` - No description
+- `transform(self, x)` - No description
+
+**`SelectFirstColumnTransformer`** - Transformer that reduces output to a single column.
+- `fit(self, x, y)` - No description
+- `transform(self, x)` - No description
+
+**Functions:**
+- `test_resolve_feature_names_uses_pipeline_minus_last()` - Falls back to pipeline[:-1] when last step lacks get_feature_names_out.
+- `test_resolve_feature_names_falls_back_on_mismatch()` - Returns generic names when resolved names don't match output count.
+- `test_resolve_feature_names_falls_back_when_unavailable()` - Returns generic names when no get_feature_names_out is available.
 
 ---
 ## `unit/test_config.py`
