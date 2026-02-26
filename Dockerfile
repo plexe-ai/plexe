@@ -37,6 +37,9 @@ RUN pip install --no-cache-dir --upgrade pip && \
 COPY pyproject.toml poetry.lock /code/
 RUN poetry install --only=main --no-root --extras aws
 
+# Install CPU-only PyTorch (no CUDA/NVIDIA packages - quickstart image includes torch)
+RUN pip install --no-cache-dir torch==2.7.1 --index-url https://download.pytorch.org/whl/cpu --extra-index-url https://pypi.org/simple
+
 # Application code
 COPY plexe/ /code/plexe/
 
