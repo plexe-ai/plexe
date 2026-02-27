@@ -189,15 +189,37 @@ test-pytorch: build
 			--max-iterations 2 \
 			--work-dir /workdir/test_pytorch_house_prices \
 			--spark-mode local \
-			--allowed-model-types pytorch
+			--allowed-model-types pytorch \
+			--enable-final-evaluation
 	@echo "✅ PyTorch test passed!"
 
-# Test Keras specifically (requires appropriate dataset)
+# Test Keras specifically
 .PHONY: test-keras
 test-keras: build
-	@echo "⚠️  Keras requires IMAGE_PATH or TEXT_STRING data layout"
-	@echo "⚠️  Spaceship Titanic is FLAT_NUMERIC - incompatible with Keras"
-	@echo "Skipping Keras test (add image/text dataset to enable)"
+	@echo "🧪 Testing Keras model type..."
+	docker run --rm \
+		--add-host=host.docker.internal:host-gateway \
+		$(CONFIG_MOUNT) \
+		$(CONFIG_ENV) \
+		-v $(PWD)/examples/datasets:/data:ro \
+		-v $(PWD)/workdir:/workdir \
+		-e OPENAI_API_KEY=$(OPENAI_API_KEY) \
+		-e ANTHROPIC_API_KEY=$(ANTHROPIC_API_KEY) \
+		-e SPARK_LOCAL_CORES=4 \
+		-e SPARK_DRIVER_MEMORY=4g \
+		-e KERAS_BACKEND=tensorflow \
+		plexe:py$(PYTHON_VERSION) \
+		python -m plexe.main \
+			--train-dataset-uri /data/spaceship-titanic/train.parquet \
+			--user-id test_user \
+			--intent "predict whether a passenger was transported" \
+			--experiment-id test_keras \
+			--max-iterations 2 \
+			--work-dir /workdir/test_keras \
+			--spark-mode local \
+			--allowed-model-types keras \
+			--enable-final-evaluation
+	@echo "✅ Keras test passed!"
 
 # Test all model types (let agents explore)
 .PHONY: test-all-models
