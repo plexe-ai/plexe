@@ -17,10 +17,7 @@ import pandas as pd
 
 # Ensure keras uses TensorFlow backend even when retrain is invoked directly.
 os.environ.setdefault("KERAS_BACKEND", "tensorflow")
-try:
-    import keras
-except ImportError:
-    keras = None
+import keras
 import yaml
 from sklearn.model_selection import train_test_split
 from xgboost import XGBClassifier, XGBRegressor
@@ -258,8 +255,6 @@ def retrain_model(
             logger.info("Created new untrained LightGBM model from architecture")
 
         elif model_type == "keras":
-            if keras is None:
-                raise RetrainingError("Keras is required for retraining Keras models but is not installed")
             # Load trained model to extract architecture config
             trained_model = keras.models.load_model(original_model_path)
             config = trained_model.get_config()
