@@ -1,6 +1,6 @@
 # Code Index: plexe
 
-> Generated on 2026-02-27 14:59:37
+> Generated on 2026-02-27 15:11:29
 
 Code structure and public interface documentation for the **plexe** package.
 

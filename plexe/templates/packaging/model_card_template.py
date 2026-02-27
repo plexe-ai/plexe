@@ -189,11 +189,11 @@ def generate_model_card(context, final_metrics: dict, evaluation_report: Any | N
     metadata = model_metadata.get("metadata", {})
     training_timestamp = metadata.get("created_at") or DEFAULT_NOT_AVAILABLE
     experiment_id = metadata.get("experiment_id") or context.experiment_id or DEFAULT_NOT_AVAILABLE
-    builder_version = _resolve_model_builder_version() or metadata.get("version") or DEFAULT_NOT_AVAILABLE
+    plexe_version = _resolve_plexe_version() or metadata.get("version") or DEFAULT_NOT_AVAILABLE
 
     lines.append(f"- Experiment ID: {experiment_id}")
     lines.append(f"- Training timestamp: {training_timestamp}")
-    lines.append(f"- Model-builder-v2 version: {builder_version}")
+    lines.append(f"- Plexe version: {plexe_version}")
 
     return "\n".join(lines).strip() + "\n"
 
@@ -208,7 +208,8 @@ def _safe_load_json(path: Path) -> dict | None:
         return None
     try:
         with open(path, encoding="utf-8") as f:
-            return json.load(f)
+            loaded = json.load(f)
+            return loaded if isinstance(loaded, dict) else None
     except (json.JSONDecodeError, OSError, UnicodeDecodeError):
         return None
 
@@ -218,7 +219,8 @@ def _safe_load_yaml(path: Path) -> dict | None:
         return None
     try:
         with open(path, encoding="utf-8") as f:
-            return yaml.safe_load(f)
+            loaded = yaml.safe_load(f)
+            return loaded if isinstance(loaded, dict) else None
     except (yaml.YAMLError, OSError, UnicodeDecodeError):
         return None
 
@@ -226,23 +228,50 @@ def _safe_load_yaml(path: Path) -> dict | None:
 def _normalize_evaluation_report(evaluation_report: Any | None, package_dir: Path) -> dict | None:
     if evaluation_report is None:
         fallback = _safe_load_json(package_dir / "evaluation" / "reports" / "evaluation.json")
-        return fallback
+        return _to_plain_dict(fallback)
 
     if isinstance(evaluation_report, dict):
-        return evaluation_report
+        return _to_plain_dict(evaluation_report)
 
     if hasattr(evaluation_report, "to_dict"):
         try:
-            return evaluation_report.to_dict()
+            return _to_plain_dict(evaluation_report.to_dict())
         except Exception:
             pass
 
     if hasattr(evaluation_report, "__dict__"):
         try:
-            return dict(evaluation_report.__dict__)
+            return _to_plain_dict(dict(evaluation_report.__dict__))
         except Exception:
             return None
 
+    return None
+
+
+def _to_plain_structure(value: Any) -> Any:
+    if value is None or isinstance(value, str | bytes | bool | numbers.Real):
+        return value
+    if isinstance(value, dict):
+        return {k: _to_plain_structure(v) for k, v in value.items()}
+    if isinstance(value, list | tuple):
+        return [_to_plain_structure(v) for v in value]
+    if hasattr(value, "to_dict"):
+        try:
+            return _to_plain_structure(value.to_dict())
+        except Exception:
+            pass
+    if hasattr(value, "__dict__"):
+        try:
+            return _to_plain_structure(dict(value.__dict__))
+        except Exception:
+            pass
+    return value
+
+
+def _to_plain_dict(value: Any) -> dict | None:
+    normalized = _to_plain_structure(value)
+    if isinstance(normalized, dict):
+        return normalized
     return None
 
 
@@ -549,7 +578,7 @@ def _is_number(value: Any) -> bool:
     return isinstance(value, numbers.Real)
 
 
-def _resolve_model_builder_version() -> str | None:
+def _resolve_plexe_version() -> str | None:
     pyproject_path = _find_pyproject()
     if not pyproject_path:
         return None
