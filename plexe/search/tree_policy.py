@@ -28,10 +28,13 @@ class TreeSearchPolicy(SearchPolicy):
         num_drafts: int = SearchDefaults.NUM_DRAFTS,
         debug_prob: float = SearchDefaults.DEBUG_PROB,
         max_debug_depth: int = SearchDefaults.MAX_DEBUG_DEPTH,
+        seed: int | None = None,
     ):
         self.num_drafts = num_drafts
         self.debug_prob = debug_prob
         self.max_debug_depth = max_debug_depth
+        self._rng = random.Random(seed)
+        self._np_rng = np.random.default_rng(seed)
 
     def decide_next_solution(
         self, journal: SearchJournal, context: BuildContext, iteration: int, max_iterations: int
@@ -45,10 +48,10 @@ class TreeSearchPolicy(SearchPolicy):
             return None
 
         # Stage 2: Debugging (Probabilistic)
-        if random.random() < self.debug_prob:
+        if self._rng.random() < self.debug_prob:
             debuggable = [n for n in journal.buggy_nodes if n.is_leaf and n.debug_depth < self.max_debug_depth]
             if debuggable:
-                buggy = random.choice(debuggable)
+                buggy = self._rng.choice(debuggable)
                 logger.info(f"Debug solution {buggy.solution_id}")
                 return buggy
 
@@ -73,7 +76,7 @@ class TreeSearchPolicy(SearchPolicy):
         perfs = np.array([n.performance for n in top_k])
         probs = np.exp((perfs / temp) - np.max(perfs / temp))
         probs /= probs.sum()
-        selected = np.random.choice(top_k, p=probs)
+        selected = self._np_rng.choice(top_k, p=probs)
 
         logger.info(
             f"Softmax: solution {selected.solution_id} (perf={selected.performance:.4f}, k={k}, temp={temp:.2f})"

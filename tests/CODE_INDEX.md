@@ -1,6 +1,6 @@
 # Code Index: tests
 
-> Generated on 2026-02-26 19:02:04
+> Generated on 2026-02-27 14:59:37
 
 Test suite structure and test case documentation.
 
@@ -27,6 +27,13 @@ Tests for user feedback integration in agents.
 - `test_agent_without_feedback_works(self, mock_context, mock_config)` - Agents should work normally when no feedback is provided.
 
 ---
+## `unit/search/test_evolutionary_policy_determinism.py`
+Determinism tests for EvolutionarySearchPolicy local RNG behavior.
+
+**Functions:**
+- `test_evolutionary_policy_determinism(monkeypatch, tmp_path)` - No description
+
+---
 ## `unit/search/test_insight_store.py`
 Unit tests for InsightStore.
 
@@ -48,6 +55,13 @@ Unit tests for SearchJournal.
 - `test_journal_get_history()` - Test history returns recent entries.
 - `test_journal_improvement_trend_improving()` - Test improvement trend with steadily improving solutions.
 - `test_journal_improvement_trend_insufficient_data()` - Test improvement trend with fewer than 2 successful solutions.
+
+---
+## `unit/search/test_tree_policy_determinism.py`
+Determinism tests for TreeSearchPolicy local RNG behavior.
+
+**Functions:**
+- `test_tree_policy_determinism(monkeypatch, tmp_path)` - No description
 
 ---
 ## `unit/templates/features/test_pipeline_runner.py`
@@ -72,6 +86,9 @@ Unit tests for config helpers.
 
 **Functions:**
 - `test_get_routing_for_model_mapping_and_default()` - Mapped models use provider config; others use default.
+- `test_temperature_fields_from_env(monkeypatch)` - No description
+- `test_temperature_fields_from_yaml(tmp_path, monkeypatch)` - No description
+- `test_get_temperature_resolves_override_and_default()` - No description
 
 ---
 ## `unit/test_helpers.py`

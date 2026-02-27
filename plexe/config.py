@@ -297,8 +297,14 @@ class Config(BaseSettings):
         default=10, description="Maximum hypothesis rounds in model search (each creates ~3 variants)", gt=0
     )
     max_parallel_variants: int = Field(
-        default=3, description="Maximum variants to execute concurrently (controls resource usage)", gt=0
+        default=3,
+        description=(
+            "Maximum variants to execute concurrently (controls resource usage). "
+            "For full reproducibility with global_seed, set to 1."
+        ),
+        gt=0,
     )
+    global_seed: int | None = Field(default=None, description="Global seed for random/numpy and search policies")
 
     # Training settings
     training_timeout: int = Field(default=1800, description="Timeout for training runs (seconds)", gt=0)
@@ -335,9 +341,19 @@ class Config(BaseSettings):
     evaluation_llm: str = Field(
         default="anthropic/claude-sonnet-4-5-20250929", description="LLM for model evaluation agent"
     )
-    hypothesiser_llm: str = Field(default="openai/gpt-5-mini", description="LLM for hypothesiser agent")
-    planner_llm: str = Field(default="openai/gpt-5-mini", description="LLM for planner agent")
-    insight_extractor_llm: str = Field(default="openai/gpt-5-mini", description="LLM for insight extractor agent")
+    hypothesiser_llm: str = Field(
+        default="anthropic/claude-sonnet-4-5-20250929", description="LLM for hypothesiser agent"
+    )
+    planner_llm: str = Field(default="anthropic/claude-sonnet-4-5-20250929", description="LLM for planner agent")
+    insight_extractor_llm: str = Field(
+        default="anthropic/claude-sonnet-4-5-20250929", description="LLM for insight extractor agent"
+    )
+
+    # LLM temperature settings
+    default_temperature: float = Field(default=0.2, description="Default LLM temperature for analysis agents")
+    hypothesiser_temperature: float = Field(default=0.7, description="Temperature for hypothesiser agent")
+    planner_temperature: float = Field(default=0.7, description="Temperature for planner agent")
+    insight_extractor_temperature: float = Field(default=0.5, description="Temperature for insight extractor agent")
 
     # Logging settings
     log_level: str = Field(default="INFO", description="Python logging level (DEBUG, INFO, WARNING, ERROR)")
@@ -416,6 +432,15 @@ class Config(BaseSettings):
         validate_assignment=True,  # Validate when fields are modified
         case_sensitive=False,  # Case-insensitive env var matching (USER_ID → user_id)
     )
+
+    def get_temperature(self, agent_name: str) -> float:
+        """Resolve temperature for a given agent, falling back to default_temperature."""
+        overrides = {
+            "hypothesiser": self.hypothesiser_temperature,
+            "planner": self.planner_temperature,
+            "insight_extractor": self.insight_extractor_temperature,
+        }
+        return overrides.get(agent_name, self.default_temperature)
 
     @classmethod
     def settings_customise_sources(

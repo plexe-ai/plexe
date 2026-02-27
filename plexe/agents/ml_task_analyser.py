@@ -101,6 +101,7 @@ class MLTaskAnalyserAgent:
             ),
             model=PlexeLiteLLMModel(
                 model_id=self.llm_model,
+                temperature=self.config.get_temperature("ml_task_analyser"),
                 api_base=api_base,
                 extra_headers=headers,
             ),

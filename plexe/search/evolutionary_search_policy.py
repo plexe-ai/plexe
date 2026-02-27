@@ -29,10 +29,13 @@ class EvolutionarySearchPolicy(SearchPolicy):
         num_drafts: int = SearchDefaults.NUM_DRAFTS,
         debug_prob: float = SearchDefaults.DEBUG_PROB,
         max_debug_depth: int = SearchDefaults.MAX_DEBUG_DEPTH,
+        seed: int | None = None,
     ):
         self.num_drafts = num_drafts
         self.debug_prob = debug_prob  # Used as baseline, but overridden by state analysis
         self.max_debug_depth = max_debug_depth
+        self._rng = random.Random(seed)
+        self._np_rng = np.random.default_rng(seed)
 
     def decide_next_solution(
         self, journal: SearchJournal, context: BuildContext, iteration: int, max_iterations: int
@@ -178,7 +181,7 @@ class EvolutionarySearchPolicy(SearchPolicy):
 
         # Sample action with calculated probabilities
         actions, weights = list(probs.keys()), list(probs.values())
-        return str(np.random.choice(actions, p=weights))
+        return str(self._np_rng.choice(actions, p=weights))
 
     def _explore_action(self, journal: SearchJournal) -> Solution | None:
         """Generate diverse new solution from scratch."""
@@ -212,7 +215,7 @@ class EvolutionarySearchPolicy(SearchPolicy):
             # Numerical stability: subtract max before exp
             exp_probs = np.exp((perfs / temp) - np.max(perfs / temp))
             probs = exp_probs / np.sum(exp_probs)
-            selected = np.random.choice(top_k, p=probs)
+            selected = self._np_rng.choice(top_k, p=probs)
             logger.info(
                 f"Action: EXPLOIT (softmax) - solution {selected.solution_id} "
                 f"(perf={selected.performance:.4f}, k={k}, temp={temp:.2f})"
@@ -255,7 +258,7 @@ class EvolutionarySearchPolicy(SearchPolicy):
         mid_range_end = min(len(sorted_nodes), 3 * len(sorted_nodes) // 4)
         mid_range = sorted_nodes[mid_range_start:mid_range_end] if mid_range_end > mid_range_start else sorted_nodes
 
-        selected = random.choice(mid_range) if mid_range else random.choice(good_nodes)
+        selected = self._rng.choice(mid_range) if mid_range else self._rng.choice(good_nodes)
         logger.info(f"Action: MUTATE - varying solution {selected.solution_id} (perf={selected.performance:.4f})")
         return selected
 

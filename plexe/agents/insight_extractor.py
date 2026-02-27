@@ -127,9 +127,9 @@ class InsightExtractorAgent:
             instructions=instructions,
             model=PlexeLiteLLMModel(
                 model_id=self.llm_model,
+                temperature=self.config.get_temperature("insight_extractor"),
                 api_base=api_base,
                 extra_headers=headers,
-                reasoning_effort="minimal",
             ),
             verbosity_level=self.config.agent_verbosity_level,
             tools=[get_save_insight_tool(self.insight_store)],

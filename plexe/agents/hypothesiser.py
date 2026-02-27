@@ -127,9 +127,9 @@ class HypothesiserAgent:
             instructions=instructions,
             model=PlexeLiteLLMModel(
                 model_id=self.llm_model,
+                temperature=self.config.get_temperature("hypothesiser"),
                 api_base=api_base,
                 extra_headers=headers,
-                reasoning_effort="minimal",
             ),
             verbosity_level=self.config.agent_verbosity_level,
             tools=[get_save_hypothesis_tool(self.context, self.expand_solution_id)],

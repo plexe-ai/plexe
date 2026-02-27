@@ -91,6 +91,7 @@ class ModelDefinerAgent:
             instructions=instructions,
             model=PlexeLiteLLMModel(
                 model_id=self.llm_model,
+                temperature=self.config.get_temperature("model_definer"),
                 api_base=api_base,
                 extra_headers=headers,
             ),

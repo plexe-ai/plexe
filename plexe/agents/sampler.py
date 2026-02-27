@@ -125,6 +125,7 @@ class SamplingAgent:
             ),
             model=PlexeLiteLLMModel(
                 model_id=self.llm_model,
+                temperature=self.config.get_temperature("sampler"),
                 api_base=api_base,
                 extra_headers=headers,
             ),

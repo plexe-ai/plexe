@@ -93,18 +93,18 @@
 
 # LLM for hypothesiser agent
 # Type: string
-# Default: "openai/gpt-5-mini"
-# hypothesiser_llm: "openai/gpt-5-mini"
+# Default: "anthropic/claude-sonnet-4-5-20250929"
+# hypothesiser_llm: "anthropic/claude-sonnet-4-5-20250929"
 
 # LLM for planner agent
 # Type: string
-# Default: "openai/gpt-5-mini"
-# planner_llm: "openai/gpt-5-mini"
+# Default: "anthropic/claude-sonnet-4-5-20250929"
+# planner_llm: "anthropic/claude-sonnet-4-5-20250929"
 
 # LLM for insight extractor agent
 # Type: string
-# Default: "openai/gpt-5-mini"
-# insight_extractor_llm: "openai/gpt-5-mini"
+# Default: "anthropic/claude-sonnet-4-5-20250929"
+# insight_extractor_llm: "anthropic/claude-sonnet-4-5-20250929"
 
 # ------------------------------------------------------------
 # Logging & Agent Settings

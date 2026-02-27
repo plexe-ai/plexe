@@ -131,6 +131,7 @@ class BaselineBuilderAgent:
             ),
             model=PlexeLiteLLMModel(
                 model_id=self.llm_model,
+                temperature=self.config.get_temperature("baseline_builder"),
                 api_base=api_base,
                 extra_headers=headers,
             ),

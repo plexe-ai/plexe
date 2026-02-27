@@ -187,9 +187,9 @@ class PlannerAgent:
             instructions=instructions,
             model=PlexeLiteLLMModel(
                 model_id=self.llm_model,
+                temperature=self.config.get_temperature("planner"),
                 api_base=api_base,
                 extra_headers=headers,
-                reasoning_effort="minimal",
             ),
             verbosity_level=self.config.agent_verbosity_level,
             tools=[get_save_plan_tool(self.context, tool_hypothesis, self.context.viable_model_types)],

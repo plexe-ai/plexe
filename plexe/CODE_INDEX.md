@@ -1,6 +1,6 @@
 # Code Index: plexe
 
-> Generated on 2026-02-26 19:02:04
+> Generated on 2026-02-27 14:59:37
 
 Code structure and public interface documentation for the **plexe** package.
 
@@ -149,11 +149,13 @@ Configuration for plexe.
 - `validate_model_providers(cls, v: dict[str, str], info) -> dict[str, str]` - Validate that all model provider references exist.
 
 **`Config`** - Configuration for model building workflow.
+- `get_temperature(self, agent_name: str) -> float` - Resolve temperature for a given agent, falling back to default_temperature.
 - `settings_customise_sources(cls, settings_cls, init_settings, env_settings, dotenv_settings, file_secret_settings)` - Customize settings source priority.
 - `validate_nn_training_settings(self) -> 'Config'` - Ensure neural network defaults do not exceed the configured cap.
 - `parse_otel_headers_from_env(self) -> 'Config'` - Parse OTEL_EXPORTER_OTLP_HEADERS (comma-separated key=value pairs).
 
 **Functions:**
+- `detect_installed_frameworks() -> list[str]` - Detect which ML frameworks are installed and importable.
 - `get_routing_for_model(config: RoutingConfig | None, model_id: str) -> tuple[str | None, dict[str, str]]` - Get routing configuration for a specific model ID.
 - `setup_logging(config: Config) -> logging.Logger` - Configure logging for the plexe package.
 - `setup_litellm(config: Config) -> None` - Configure LiteLLM global settings.
@@ -302,7 +304,7 @@ Amazon S3 storage helper.
 Universal entry point for plexe.
 
 **Functions:**
-- `main(intent: str, data_refs: list[str], integration: WorkflowIntegration | None, spark_mode: str, user_id: str, experiment_id: str, max_iterations: int, work_dir: Path, test_dataset_uri: str | None, enable_final_evaluation: bool, max_epochs: int | None, allowed_model_types: list[str] | None, is_retrain: bool, original_model_uri: str | None, original_experiment_id: str | None, auto_mode: bool, user_feedback: dict | None, enable_otel: bool, otel_endpoint: str | None, otel_headers: dict[str, str] | None, external_storage_uri: str | None, csv_delimiter: str, csv_header: bool)` - Main model building function.
+- `main(intent: str, data_refs: list[str], integration: WorkflowIntegration | None, spark_mode: str, user_id: str, experiment_id: str, max_iterations: int, global_seed: int | None, work_dir: Path, test_dataset_uri: str | None, enable_final_evaluation: bool, max_epochs: int | None, allowed_model_types: list[str] | None, is_retrain: bool, original_model_uri: str | None, original_experiment_id: str | None, auto_mode: bool, user_feedback: dict | None, enable_otel: bool, otel_endpoint: str | None, otel_headers: dict[str, str] | None, external_storage_uri: str | None, csv_delimiter: str, csv_header: bool)` - Main model building function.
 
 ---
 ## `models.py`
@@ -367,7 +369,7 @@ Model retraining functionality.
 PiEvolve-inspired evolutionary search policy with adaptive state analysis.
 
 **`EvolutionarySearchPolicy`** - PiEvolve-inspired probabilistic action selection with adaptive search state analysis.
-- `__init__(self, num_drafts: int, debug_prob: float, max_debug_depth: int)`
+- `__init__(self, num_drafts: int, debug_prob: float, max_debug_depth: int, seed: int | None)`
 - `decide_next_solution(self, journal: SearchJournal, context: BuildContext, iteration: int, max_iterations: int) -> Solution | None` - PiEvolve-style probabilistic action selection based on search state.
 - `should_stop(self, journal: SearchJournal, iteration: int, max_iterations: int) -> bool` - Enhanced stopping criteria with intelligent early stopping.
 
@@ -417,7 +419,7 @@ Search policy abstract base class.
 Tree-search policy inspired by AIDE.
 
 **`TreeSearchPolicy`** - AIDE-inspired tree-search with draft/debug/improve stages.
-- `__init__(self, num_drafts: int, debug_prob: float, max_debug_depth: int)`
+- `__init__(self, num_drafts: int, debug_prob: float, max_debug_depth: int, seed: int | None)`
 - `decide_next_solution(self, journal: SearchJournal, context: BuildContext, iteration: int, max_iterations: int) -> Solution | None` - Decide which solution node to expand next.
 - `should_stop(self, journal: SearchJournal, iteration: int, max_iterations: int) -> bool` - Decide if search should terminate early.
 

@@ -15,8 +15,11 @@ os.environ["KERAS_BACKEND"] = "tensorflow"
 import argparse
 import json
 import logging
+import random
 import sys
 from pathlib import Path
+
+import numpy as np
 
 from plexe.integrations.base import WorkflowIntegration
 from plexe.config import setup_logging, setup_litellm, get_config
@@ -39,6 +42,7 @@ def main(
     user_id: str = "default_user",
     experiment_id: str = "local",
     max_iterations: int = 10,
+    global_seed: int | None = None,
     work_dir: Path = Path("/tmp/model_builder_v2"),
     test_dataset_uri: str | None = None,
     enable_final_evaluation: bool = False,
@@ -67,6 +71,7 @@ def main(
         user_id: User identifier
         experiment_id: Experiment identifier
         max_iterations: Maximum search iterations
+        global_seed: Global seed for reproducible runs (random + numpy + search policies)
         work_dir: Working directory for artifacts
         test_dataset_uri: Optional test dataset URI
         enable_final_evaluation: Whether to run test evaluation
@@ -111,6 +116,8 @@ def main(
                 config.nn_default_epochs = config.nn_max_epochs
         if allowed_model_types:
             config.allowed_model_types = allowed_model_types
+        if global_seed is not None:
+            config.global_seed = global_seed
 
         # Apply CSV format options from CLI args
         config.csv_delimiter = csv_delimiter
@@ -122,6 +129,11 @@ def main(
             config.otel_endpoint = otel_endpoint
         if otel_headers:
             config.otel_headers.update(otel_headers)
+
+        # Seed RNGs early for reproducibility
+        if config.global_seed is not None:
+            random.seed(config.global_seed)
+            np.random.seed(config.global_seed)
 
         # Setup basic logging early (before workspace preparation)
         setup_logging(config)
@@ -177,6 +189,11 @@ def main(
         logger.info(f"LiteLLM routing: {'custom config' if config.routing_config else 'default providers'}")
         logger.info(f"Intent: {intent}")
         logger.info(f"Dataset: {train_dataset_uri} (format: {input_format}) | Max iterations: {max_iterations}")
+        if config.global_seed is not None and config.max_parallel_variants > 1:
+            logger.info(
+                "Reproducibility note: max_parallel_variants>1 can introduce nondeterminism under threading. "
+                "Set max_parallel_variants=1 for fully deterministic search trajectories."
+            )
 
         runner = LocalProcessRunner(work_dir=str(work_dir / DirNames.BUILD_DIR / "search" / "runs"))
 
@@ -203,8 +220,8 @@ def main(
         else:
             # Normal build workflow
             spark = get_or_create_spark_session(config)
-            search_policy = TreeSearchPolicy()
-            # search_policy = EvolutionarySearchPolicy()  TODO: enable after testing
+            search_policy = TreeSearchPolicy(seed=config.global_seed)
+            # search_policy = EvolutionarySearchPolicy(seed=config.global_seed)  TODO: enable after testing
 
             # Convert auto_mode to pause_points
             # If auto_mode=False, pause after Phase 1 for review; if True, no pauses
@@ -274,6 +291,7 @@ if __name__ == "__main__":
     parser.add_argument("--intent", required=True, help="ML task description")
     parser.add_argument("--experiment-id", default=os.getenv("EXPERIMENT_ID", "local"), help="Experiment identifier")
     parser.add_argument("--max-iterations", type=int, default=10, help="Max search iterations")
+    parser.add_argument("--seed", type=int, help="Global seed for reproducible runs")
     parser.add_argument("--work-dir", type=Path, default=Path("/tmp/model_builder_v2"), help="Working directory")
     parser.add_argument("--enable-final-evaluation", action="store_true", help="Enable test set evaluation")
     parser.add_argument("--max-epochs", type=int, help="Cap neural network epochs (Keras, PyTorch)")
@@ -405,6 +423,7 @@ if __name__ == "__main__":
             user_id=args.user_id,
             experiment_id=args.experiment_id,
             max_iterations=args.max_iterations,
+            global_seed=args.seed,
             work_dir=args.work_dir,
             test_dataset_uri=args.test_dataset_uri,
             enable_final_evaluation=enable_final_evaluation,
