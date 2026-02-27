@@ -170,3 +170,11 @@ Unit tests for validation functions.
 - `test_validate_metric_function_object_bad_signature()` - Callable with wrong arg names should fail.
 
 ---
+## `unit/workflow/test_model_card.py`
+Unit tests for model card generation.
+
+**Functions:**
+- `test_generate_model_card_full_context(tmp_path: Path) -> None` - No description
+- `test_generate_model_card_minimal_context(tmp_path: Path) -> None` - No description
+
+---

@@ -478,6 +478,13 @@ Standard XGBoost predictor - NO Plexe dependencies.
 - `predict(self, x: pd.DataFrame) -> pd.DataFrame` - Make predictions on input DataFrame.
 
 ---
+## `templates/packaging/model_card_template.py`
+Model card template generator.
+
+**Functions:**
+- `generate_model_card(context, final_metrics: dict, evaluation_report: Any | None) -> str` - Generate a Markdown model card for the final package.
+
+---
 ## `templates/training/train_catboost.py`
 Hardcoded robust CatBoost training loop.
 

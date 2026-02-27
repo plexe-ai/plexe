@@ -61,6 +61,7 @@ from plexe.utils.tracing import tracer
 from plexe.utils.reporting import save_report
 from plexe.templates.features.pipeline_fitter import fit_pipeline
 from plexe.templates.features.pipeline_runner import transform_dataset_via_spark
+from plexe.templates.packaging.model_card_template import generate_model_card
 from plexe.helpers import evaluate_on_sample, select_viable_model_types
 
 logger = logging.getLogger(__name__)
@@ -2015,6 +2016,18 @@ Refer to `evaluation/reports/evaluation.json` for detailed analysis.
 
     # Note: Keep artifacts/metadata.json for debugging (contains full training metadata)
     # Hyperparameters are duplicated in config/ for convenience
+
+    # ============================================
+    # Step 4b: Create MODEL_CARD.md
+    # ============================================
+    logger.info("Creating MODEL_CARD.md...")
+
+    evaluation_report = context.scratch.get("_evaluation_report")
+    model_card_content = generate_model_card(context, final_metrics, evaluation_report)
+    model_card_path = package_dir / "MODEL_CARD.md"
+    with open(model_card_path, "w", encoding="utf-8") as f:
+        f.write(model_card_content)
+    logger.info("  Created MODEL_CARD.md")
 
     # ============================================
     # Step 5: Create Tarball Archive
