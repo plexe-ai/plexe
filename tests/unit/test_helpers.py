@@ -6,9 +6,8 @@ import numpy as np
 import pytest
 from sklearn.metrics import accuracy_score
 
-from plexe.config import ModelType
+from plexe.config import DEFAULT_MODEL_TYPES, ModelType, detect_installed_frameworks
 from plexe.helpers import compute_metric, select_viable_model_types
-from plexe.config import DEFAULT_MODEL_TYPES
 from plexe.models import DataLayout
 
 
@@ -63,9 +62,10 @@ def test_select_viable_model_types_defaults_image():
     """Default model types intersect with IMAGE_PATH."""
     result = select_viable_model_types(DataLayout.IMAGE_PATH)
 
-    expected = [ModelType.KERAS]
-    if ModelType.PYTORCH in DEFAULT_MODEL_TYPES:
-        expected.append(ModelType.PYTORCH)
+    installed = detect_installed_frameworks()
+    expected = [mt for mt in DEFAULT_MODEL_TYPES if mt in {ModelType.KERAS, ModelType.PYTORCH}]
+    if not expected:
+        pytest.skip(f"No image-capable frameworks installed. Installed: {installed}")
 
     assert result == expected
 

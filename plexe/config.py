@@ -50,19 +50,29 @@ class ModelType:
     PYTORCH = "pytorch"
 
 
-# Default model types (enabled by default, user can override via --allowed-model-types)
-def _is_module_available(module_name: str) -> bool:
-    return importlib.util.find_spec(module_name) is not None
+def detect_installed_frameworks() -> list[str]:
+    """Detect which ML frameworks are installed and importable.
+
+    XGBoost is always available (core dependency). Other frameworks are
+    checked via importlib.util.find_spec() which is fast and has no side effects.
+    """
+    available = [ModelType.XGBOOST]  # Always available (core dependency)
+
+    _OPTIONAL_FRAMEWORKS = [
+        ("catboost", ModelType.CATBOOST),
+        ("lightgbm", ModelType.LIGHTGBM),
+        ("keras", ModelType.KERAS),
+        ("torch", ModelType.PYTORCH),
+    ]
+    for module_name, model_type in _OPTIONAL_FRAMEWORKS:
+        if importlib.util.find_spec(module_name) is not None:
+            available.append(model_type)
+
+    return available
 
 
-DEFAULT_MODEL_TYPES = [
-    ModelType.XGBOOST,
-    ModelType.CATBOOST,
-    ModelType.LIGHTGBM,
-    ModelType.KERAS,
-]
-if _is_module_available("torch"):
-    DEFAULT_MODEL_TYPES.append(ModelType.PYTORCH)
+# Default model types (auto-detected from installed packages, user can override via --allowed-model-types)
+DEFAULT_MODEL_TYPES = detect_installed_frameworks()
 
 # Task-compatible model types based on data layout
 # Maps DataLayout enum to compatible model types

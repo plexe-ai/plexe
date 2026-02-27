@@ -1,6 +1,7 @@
 """Test that all production modules can be imported without errors."""
 
 import importlib
+import importlib.util
 import pkgutil
 import sys
 from pathlib import Path
@@ -24,6 +25,13 @@ def test_all_modules_importable():
 
     failed = []
     success_count = 0
+    missing_optional = set()
+    if importlib.util.find_spec("catboost") is None:
+        missing_optional.add("catboost")
+    if importlib.util.find_spec("lightgbm") is None:
+        missing_optional.add("lightgbm")
+    if importlib.util.find_spec("torch") is None:
+        missing_optional.add("torch")
 
     for _importer, modname, _ispkg in pkgutil.walk_packages(
         path=plexe.__path__,
@@ -31,6 +39,14 @@ def test_all_modules_importable():
     ):
         # Skip dashboard/viz modules — optional dependencies (streamlit/plotly)
         if "dashboard" in modname or modname == "plexe.viz":
+            continue
+        if "catboost" in modname and "catboost" in missing_optional:
+            continue
+        if "lightgbm" in modname and "lightgbm" in missing_optional:
+            continue
+        if "pytorch" in modname and "torch" in missing_optional:
+            continue
+        if "torch" in modname and "torch" in missing_optional:
             continue
 
         try:

@@ -482,6 +482,15 @@ def build_model(
             logger.info("Skipping Phase 6 (already completed)")
             final_package_dir = work_dir / "model"
 
+        summary_journal = journal or context.scratch.get("_search_journal")
+        if summary_journal and summary_journal.nodes:
+            total_attempts = len(summary_journal.nodes)
+            logger.info(
+                "Search summary: %s/%s solutions succeeded",
+                summary_journal.successful_attempts,
+                total_attempts,
+            )
+
         logger.info(f"Model building complete! Validation performance: {final_metrics}")
         logger.info(f"Final model package: {final_package_dir}")
 

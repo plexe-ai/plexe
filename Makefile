@@ -250,7 +250,6 @@ test-full: build
 			--enable-final-evaluation
 	@echo "✅ Full test passed!"
 
-
 # ============================================
 # Example Datasets
 # ============================================
@@ -320,6 +319,7 @@ build:
 		-t plexe:py$(PYTHON_VERSION) \
 		-f Dockerfile .
 	@echo "✅ Build complete: plexe:py$(PYTHON_VERSION)"
+
 
 # Build Databricks variant
 .PHONY: build-databricks

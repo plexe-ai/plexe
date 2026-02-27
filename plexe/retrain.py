@@ -5,6 +5,7 @@ Retrain existing models with new data using original training pipeline.
 """
 
 import inspect
+import os
 import json
 import logging
 import shutil
@@ -12,8 +13,14 @@ import tarfile
 from pathlib import Path
 
 import joblib
-import keras
 import pandas as pd
+
+# Ensure keras uses TensorFlow backend even when retrain is invoked directly.
+os.environ.setdefault("KERAS_BACKEND", "tensorflow")
+try:
+    import keras
+except ImportError:
+    keras = None
 import yaml
 from sklearn.model_selection import train_test_split
 from xgboost import XGBClassifier, XGBRegressor
@@ -209,7 +216,10 @@ def retrain_model(
             logger.info("Created new untrained XGBoost model from architecture")
 
         elif model_type == "catboost":
-            from catboost import CatBoostClassifier, CatBoostRegressor
+            try:
+                from catboost import CatBoostClassifier, CatBoostRegressor
+            except ImportError:
+                raise RetrainingError("CatBoost is required for retraining CatBoost models but is not installed")
 
             # CatBoost uses native format — try classifier first, then regressor
             try:
@@ -229,7 +239,10 @@ def retrain_model(
             logger.info("Created new untrained CatBoost model from architecture")
 
         elif model_type == "lightgbm":
-            from lightgbm import LGBMClassifier, LGBMRanker
+            try:
+                from lightgbm import LGBMClassifier, LGBMRanker
+            except ImportError:
+                raise RetrainingError("LightGBM is required for retraining LightGBM models but is not installed")
 
             trained_model = joblib.load(original_model_path)
             params = trained_model.get_params()
@@ -245,6 +258,8 @@ def retrain_model(
             logger.info("Created new untrained LightGBM model from architecture")
 
         elif model_type == "keras":
+            if keras is None:
+                raise RetrainingError("Keras is required for retraining Keras models but is not installed")
             # Load trained model to extract architecture config
             trained_model = keras.models.load_model(original_model_path)
             config = trained_model.get_config()

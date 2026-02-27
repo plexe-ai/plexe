@@ -178,9 +178,18 @@ See [`plexe/integrations/base.py`](plexe/integrations/base.py) for the full inte
 
 ### 3.1. Installation Options
 ```bash
-pip install plexe                    # Core (XGBoost, CatBoost, LightGBM, Keras, PyTorch, scikit-learn)
-pip install plexe[pyspark]           # + Local PySpark execution
-pip install plexe[aws]               # + S3 storage support (boto3)
+pip install plexe                    # Core (XGBoost, Keras, scikit-learn)
+```
+
+You can add optional dependencies either by framework or by task grouping:
+- Framework extras: `catboost`, `lightgbm`, `pytorch`
+- Task extras: `tabular` (CatBoost + LightGBM), `vision` (PyTorch)
+- Platform extras: `pyspark`, `aws`
+
+Examples:
+```bash
+pip install "plexe[tabular,pyspark]"   # tabular stack + local PySpark
+pip install "plexe[pytorch,aws]"       # explicit framework + S3 support
 ```
 
 Requires Python >= 3.10, < 3.13.

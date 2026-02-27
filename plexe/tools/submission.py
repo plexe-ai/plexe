@@ -323,7 +323,10 @@ def get_save_model_fn(context: BuildContext, model_type: str, max_epochs: int = 
                 logger.info(f"XGBoost model validated: {type(model).__name__}")
 
             elif model_type == "catboost":
-                from catboost import CatBoostClassifier, CatBoostRegressor
+                try:
+                    from catboost import CatBoostClassifier, CatBoostRegressor
+                except ImportError:
+                    raise ValueError("CatBoost is required for CatBoost models but is not installed")
 
                 if not isinstance(model, CatBoostClassifier | CatBoostRegressor):
                     error_msg = f"Expected CatBoostClassifier or CatBoostRegressor, got {type(model)}"
@@ -333,7 +336,10 @@ def get_save_model_fn(context: BuildContext, model_type: str, max_epochs: int = 
                 logger.info(f"CatBoost model validated: {type(model).__name__}")
 
             elif model_type == "lightgbm":
-                from lightgbm import LGBMClassifier, LGBMRegressor, LGBMRanker
+                try:
+                    from lightgbm import LGBMClassifier, LGBMRegressor, LGBMRanker
+                except ImportError:
+                    raise ValueError("LightGBM is required for LightGBM models but is not installed")
 
                 if not isinstance(model, LGBMClassifier | LGBMRegressor | LGBMRanker):
                     error_msg = f"Expected LGBMClassifier, LGBMRegressor, or LGBMRanker, got {type(model)}"

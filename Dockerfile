@@ -33,13 +33,20 @@ RUN pip install --no-cache-dir --upgrade pip && \
     pip install --no-cache-dir poetry && \
     poetry config virtualenvs.create false
 
-# Install CPU-only PyTorch (no CUDA/NVIDIA packages - quickstart image includes torch)
-# Install before dependency copy so pyproject changes don't invalidate this layer.
-RUN pip install --no-cache-dir torch==2.7.1 --index-url https://download.pytorch.org/whl/cpu --extra-index-url https://pypi.org/simple
+# Install large stable dependencies before poetry to maximize build cache reuse.
+# INSTALL_PYTORCH controls whether CPU-only PyTorch is installed.
+ARG INSTALL_PYTORCH="true"
+RUN if [ "$INSTALL_PYTORCH" = "true" ]; then \
+        pip install --no-cache-dir torch==2.7.1 \
+            --index-url https://download.pytorch.org/whl/cpu \
+            --extra-index-url https://pypi.org/simple; \
+    fi
 
-# Install main dependencies + AWS support (no Spark provider yet)
+# Install main dependencies + optional framework extras (no Spark provider yet)
+# XGBoost is core; extras cover optional frameworks.
+ARG POETRY_EXTRAS="aws catboost"
 COPY pyproject.toml poetry.lock /code/
-RUN poetry install --only=main --no-root --extras aws
+RUN poetry install --only=main --no-root --extras "${POETRY_EXTRAS}"
 
 # Application code
 COPY plexe/ /code/plexe/

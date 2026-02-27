@@ -17,7 +17,13 @@ from sklearn.metrics import accuracy_score, f1_score, mean_squared_error, r2_sco
 if TYPE_CHECKING:
     from pyspark.sql import SparkSession
 
-from plexe.config import ModelType, StandardMetric, DEFAULT_MODEL_TYPES, TASK_COMPATIBLE_MODELS
+from plexe.config import (
+    DEFAULT_MODEL_TYPES,
+    TASK_COMPATIBLE_MODELS,
+    ModelType,
+    StandardMetric,
+    detect_installed_frameworks,
+)
 from plexe.models import DataLayout
 
 logger = logging.getLogger(__name__)
@@ -47,6 +53,13 @@ def select_viable_model_types(data_layout: DataLayout, selected_frameworks: list
         selected = DEFAULT_MODEL_TYPES
         logger.info(f"Using default model types: {selected}")
     else:
+        # Validate that user-selected frameworks are actually installed
+        installed = detect_installed_frameworks()
+        not_installed = [f for f in selected_frameworks if f not in installed]
+        if not_installed:
+            raise ValueError(
+                f"Requested model types {not_installed} are not installed. " f"Installed frameworks: {installed}"
+            )
         selected = selected_frameworks
         logger.info(f"User-selected model types: {selected}")
 
