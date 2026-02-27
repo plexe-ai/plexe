@@ -499,6 +499,10 @@ class CoreMetricsReport:
     metric_confidence_intervals: dict[str, tuple[float, float]] | None  # Optional CIs for other metrics
     statistical_notes: str  # Agent's interpretation
     visualizations: dict[str, str] | None  # {plot_name: base64_png} - optional
+    roc_auc_from_proba: float | None = None
+    brier_score: float | None = None
+    calibration_data: dict | None = None
+    roc_curve_data: dict | None = None
 
 
 @dataclass_json

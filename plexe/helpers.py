@@ -149,8 +149,40 @@ def evaluate_on_sample(
         predictor = PyTorchPredictor(str(model_artifacts_path))
 
     # Predict and compute metric on predictions
-    predictions = predictor.predict(X_sample)["prediction"].values
-    performance = compute_metric(y_sample, predictions, metric, group_ids=group_ids)
+    metric_key = metric.lower().strip()
+    proba_metrics = {
+        StandardMetric.ROC_AUC.value,
+        StandardMetric.ROC_AUC_OVR.value,
+        StandardMetric.ROC_AUC_OVO.value,
+        StandardMetric.LOG_LOSS.value,
+        "brier_score",
+        "brier",
+        "brier_score_loss",
+    }
+
+    performance = None
+    if metric_key in proba_metrics:
+        if not hasattr(predictor, "predict_proba"):
+            logger.info(
+                "Predictor of type %s does not support predict_proba; falling back to labels for %s.",
+                type(predictor).__name__,
+                metric,
+            )
+        else:
+            try:
+                proba_df = predictor.predict_proba(X_sample)
+                performance = compute_metric_proba(y_sample, proba_df, metric)
+            except (AttributeError, ValueError, TypeError) as exc:
+                logger.warning(
+                    "Probability metric computation failed (%s); falling back to labels. Error: %s",
+                    metric,
+                    exc,
+                    exc_info=True,
+                )
+
+    if performance is None:
+        predictions = predictor.predict(X_sample)["prediction"].values
+        performance = compute_metric(y_sample, predictions, metric, group_ids=group_ids)
 
     logger.info(f"Sample performance ({metric}): {performance:.4f}")
 
@@ -275,6 +307,81 @@ def compute_metric_hardcoded(y_true, y_pred, metric_name: str) -> float:
             f"Supported: {[m.value for m in StandardMetric]}. "
             f"For custom metrics, use MetricImplementationAgent."
         )
+
+
+def compute_metric_proba(y_true, y_proba, metric_name: str) -> float:
+    """
+    Compute metrics that require probability estimates.
+
+    Args:
+        y_true: True labels
+        y_proba: Predicted probabilities (array-like or DataFrame)
+        metric_name: Metric name
+
+    Returns:
+        Metric value
+    """
+    from sklearn.metrics import roc_auc_score, log_loss, brier_score_loss
+
+    metric = metric_name.lower().strip()
+    y_true_arr = np.asarray(y_true)
+
+    labels = None
+    if isinstance(y_proba, pd.DataFrame):
+        proba_df = y_proba
+        proba = proba_df.values
+        if all(col.startswith("proba_") for col in proba_df.columns):
+            label_strs = [col[len("proba_") :] for col in proba_df.columns]
+            if np.issubdtype(y_true_arr.dtype, np.integer):
+                try:
+                    labels = [int(label) for label in label_strs]
+                except ValueError:
+                    labels = label_strs
+            elif np.issubdtype(y_true_arr.dtype, np.floating):
+                try:
+                    labels = [float(label) for label in label_strs]
+                except ValueError:
+                    labels = label_strs
+            else:
+                labels = label_strs
+    else:
+        proba = np.asarray(y_proba)
+
+    if proba.ndim == 1:
+        proba = proba.reshape(-1, 1)
+
+    if proba.shape[1] == 1:
+        proba = np.column_stack([1 - proba[:, 0], proba[:, 0]])
+
+    n_classes = len(np.unique(y_true_arr))
+
+    if metric in [StandardMetric.ROC_AUC.value, StandardMetric.ROC_AUC_OVR.value, StandardMetric.ROC_AUC_OVO.value]:
+        if n_classes == 2:
+            return float(roc_auc_score(y_true_arr, proba[:, 1]))
+
+        multi_class = "ovr" if metric in [StandardMetric.ROC_AUC.value, StandardMetric.ROC_AUC_OVR.value] else "ovo"
+        return float(roc_auc_score(y_true_arr, proba, multi_class=multi_class, labels=labels))
+
+    if metric == StandardMetric.LOG_LOSS.value:
+        return float(log_loss(y_true_arr, proba, labels=labels))
+
+    if metric in ["brier_score", "brier", "brier_score_loss"]:
+        if n_classes == 2:
+            return float(brier_score_loss(y_true_arr, proba[:, 1]))
+
+        classes = labels if labels is not None else np.unique(y_true_arr)
+        class_to_index = {label: idx for idx, label in enumerate(classes)}
+        try:
+            indices = np.array([class_to_index[label] for label in y_true_arr])
+        except KeyError:
+            classes = np.unique(y_true_arr)
+            class_to_index = {label: idx for idx, label in enumerate(classes)}
+            indices = np.array([class_to_index[label] for label in y_true_arr])
+        one_hot = np.zeros_like(proba)
+        one_hot[np.arange(len(indices)), indices] = 1
+        return float(np.mean(np.sum((proba - one_hot) ** 2, axis=1)))
+
+    raise ValueError(f"Unsupported probability metric: '{metric_name}'")
 
 
 def compute_metric(y_true, y_pred, metric_name: str, group_ids=None) -> float:

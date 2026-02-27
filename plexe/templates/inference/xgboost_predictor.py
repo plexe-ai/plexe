@@ -5,10 +5,13 @@ This file is copied as-is into model artifacts.
 Can be used standalone with just: xgboost, scikit-learn, pandas.
 """
 
+import logging
 from pathlib import Path
 
 import joblib
 import pandas as pd
+
+logger = logging.getLogger(__name__)
 
 
 class XGBoostPredictor:
@@ -60,6 +63,46 @@ class XGBoostPredictor:
             predictions = self.label_encoder.inverse_transform(predictions)
 
         return pd.DataFrame({"prediction": predictions})
+
+    def _proba_columns(self, n_classes: int) -> list[str]:
+        if self.label_encoder is not None and hasattr(self.label_encoder, "classes_"):
+            classes = list(self.label_encoder.classes_)
+        else:
+            classes = list(range(n_classes))
+
+        if len(classes) != n_classes:
+            logger.warning(
+                "Label encoder classes length (%s) does not match probability columns (%s); "
+                "falling back to index labels.",
+                len(classes),
+                n_classes,
+            )
+            classes = list(range(n_classes))
+
+        return [f"proba_{cls}" for cls in classes]
+
+    def predict_proba(self, x: pd.DataFrame) -> pd.DataFrame:
+        """
+        Predict per-class probabilities on input DataFrame.
+
+        Args:
+            x: Input features DataFrame (assumes correct dtypes)
+
+        Returns:
+            DataFrame with per-class probability columns
+        """
+        import numpy as np
+
+        # Apply feature pipeline and make probability prediction
+        probabilities = self.model.predict_proba(self.pipeline.transform(x))
+        probabilities = np.asarray(probabilities)
+
+        # Ensure 2D (binary models may return shape (n_samples,))
+        if probabilities.ndim == 1:
+            probabilities = np.column_stack([1 - probabilities, probabilities])
+
+        columns = self._proba_columns(probabilities.shape[1])
+        return pd.DataFrame(probabilities, columns=columns)
 
 
 # ============================================

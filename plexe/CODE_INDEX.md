@@ -1,6 +1,6 @@
 # Code Index: plexe
 
-> Generated on 2026-02-26 19:02:04
+> Generated on 2026-02-27 14:44:45
 
 Code structure and public interface documentation for the **plexe** package.
 
@@ -154,6 +154,7 @@ Configuration for plexe.
 - `parse_otel_headers_from_env(self) -> 'Config'` - Parse OTEL_EXPORTER_OTLP_HEADERS (comma-separated key=value pairs).
 
 **Functions:**
+- `detect_installed_frameworks() -> list[str]` - Detect which ML frameworks are installed and importable.
 - `get_routing_for_model(config: RoutingConfig | None, model_id: str) -> tuple[str | None, dict[str, str]]` - Get routing configuration for a specific model ID.
 - `setup_logging(config: Config) -> logging.Logger` - Configure logging for the plexe package.
 - `setup_litellm(config: Config) -> None` - Configure LiteLLM global settings.
@@ -222,6 +223,7 @@ Helper functions for workflow.
 - `select_viable_model_types(data_layout: DataLayout, selected_frameworks: list[str] | None) -> list[str]` - Select viable model types using three-tier filtering.
 - `evaluate_on_sample(spark: SparkSession, sample_uri: str, model_artifacts_path: Path, model_type: str, metric: str, target_columns: list[str], group_column: str | None) -> float` - Evaluate model on sample (fast).
 - `compute_metric_hardcoded(y_true, y_pred, metric_name: str) -> float` - Compute metric using hardcoded sklearn implementations.
+- `compute_metric_proba(y_true, y_proba, metric_name: str) -> float` - Compute metrics that require probability estimates.
 - `compute_metric(y_true, y_pred, metric_name: str, group_ids) -> float` - Compute metric value.
 
 ---
@@ -442,6 +444,7 @@ Standard CatBoost predictor - NO Plexe dependencies.
 **`CatBoostPredictor`** - Standalone CatBoost predictor.
 - `__init__(self, model_dir: str)`
 - `predict(self, x: pd.DataFrame) -> pd.DataFrame` - Make predictions on input DataFrame.
+- `predict_proba(self, x: pd.DataFrame) -> pd.DataFrame` - Predict per-class probabilities on input DataFrame.
 
 ---
 ## `templates/inference/keras_predictor.py`
@@ -450,6 +453,7 @@ Standard Keras predictor - NO Plexe dependencies.
 **`KerasPredictor`** - Standalone Keras predictor.
 - `__init__(self, model_dir: str)`
 - `predict(self, x: pd.DataFrame) -> pd.DataFrame` - Make predictions on input DataFrame.
+- `predict_proba(self, x: pd.DataFrame) -> pd.DataFrame` - Predict per-class probabilities on input DataFrame.
 
 ---
 ## `templates/inference/lightgbm_predictor.py`
@@ -458,6 +462,7 @@ Standard LightGBM predictor - NO Plexe dependencies.
 **`LightGBMPredictor`** - Standalone LightGBM predictor.
 - `__init__(self, model_dir: str)`
 - `predict(self, x: pd.DataFrame) -> pd.DataFrame` - Make predictions on input DataFrame.
+- `predict_proba(self, x: pd.DataFrame) -> pd.DataFrame` - Predict per-class probabilities on input DataFrame.
 
 ---
 ## `templates/inference/pytorch_predictor.py`
@@ -466,6 +471,7 @@ Standard PyTorch predictor - NO Plexe dependencies.
 **`PyTorchPredictor`** - Standalone PyTorch predictor.
 - `__init__(self, model_dir: str)`
 - `predict(self, x: pd.DataFrame) -> pd.DataFrame` - Make predictions on input DataFrame.
+- `predict_proba(self, x: pd.DataFrame) -> pd.DataFrame` - Predict per-class probabilities on input DataFrame.
 
 ---
 ## `templates/inference/xgboost_predictor.py`
@@ -474,6 +480,7 @@ Standard XGBoost predictor - NO Plexe dependencies.
 **`XGBoostPredictor`** - Standalone XGBoost predictor.
 - `__init__(self, model_dir: str)`
 - `predict(self, x: pd.DataFrame) -> pd.DataFrame` - Make predictions on input DataFrame.
+- `predict_proba(self, x: pd.DataFrame) -> pd.DataFrame` - Predict per-class probabilities on input DataFrame.
 
 ---
 ## `templates/training/train_catboost.py`

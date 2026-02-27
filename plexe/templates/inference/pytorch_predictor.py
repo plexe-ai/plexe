@@ -91,6 +91,38 @@ class PyTorchPredictor:
 
         return pd.DataFrame({"prediction": predictions})
 
+    def predict_proba(self, x: pd.DataFrame) -> pd.DataFrame:
+        """
+        Predict per-class probabilities on input DataFrame.
+
+        Applies sigmoid for single-logit binary models, otherwise softmax.
+        """
+        # Transform features through pipeline
+        x_transformed = self.pipeline.transform(x)
+
+        # Handle sparse matrix output (e.g. from OneHotEncoder, CountVectorizer)
+        if scipy.sparse.issparse(x_transformed):
+            x_transformed = x_transformed.toarray()
+
+        x_tensor = torch.tensor(np.array(x_transformed, dtype=np.float32))
+
+        with torch.no_grad():
+            raw_output = self.model(x_tensor)
+
+        raw_output = raw_output.detach().cpu()
+        if raw_output.ndim == 1:
+            raw_output = raw_output.unsqueeze(1)
+
+        if raw_output.shape[1] == 1:
+            proba_pos = torch.sigmoid(raw_output).squeeze(1)
+            probabilities = torch.stack([1 - proba_pos, proba_pos], dim=1)
+        else:
+            probabilities = torch.softmax(raw_output, dim=1)
+
+        probabilities = probabilities.numpy()
+        columns = [f"proba_{i}" for i in range(probabilities.shape[1])]
+        return pd.DataFrame(probabilities, columns=columns)
+
 
 # ============================================
 # Example Usage

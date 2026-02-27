@@ -1,6 +1,6 @@
 # Code Index: tests
 
-> Generated on 2026-02-26 19:02:04
+> Generated on 2026-02-27 14:44:45
 
 Test suite structure and test case documentation.
 
@@ -74,6 +74,14 @@ Unit tests for config helpers.
 - `test_get_routing_for_model_mapping_and_default()` - Mapped models use provider config; others use default.
 
 ---
+## `unit/test_evaluate_on_sample.py`
+Tests for evaluate_on_sample probability handling.
+
+**Functions:**
+- `test_evaluate_on_sample_uses_proba(monkeypatch)` - No description
+- `test_evaluate_on_sample_falls_back_without_proba(monkeypatch)` - No description
+
+---
 ## `unit/test_helpers.py`
 Unit tests for workflow helper functions.
 
@@ -113,6 +121,32 @@ Unit tests for core model dataclasses.
 
 **Functions:**
 - `test_build_context_update_and_unknown_key()` - Update should set known fields and reject unknown keys.
+
+---
+## `unit/test_predictors_proba.py`
+Tests for predictor predict_proba implementations.
+
+**Functions:**
+- `test_tree_predictors_predict_proba_binary(predictor_cls)` - No description
+- `test_tree_predictors_predict_proba_multiclass(predictor_cls)` - No description
+- `test_catboost_predictor_predict_proba_binary()` - No description
+- `test_catboost_predictor_predict_proba_multiclass()` - No description
+- `test_keras_predictor_predict_proba_binary()` - No description
+- `test_keras_predictor_predict_proba_multiclass()` - No description
+- `test_pytorch_predictor_predict_proba_binary()` - No description
+- `test_pytorch_predictor_predict_proba_multiclass()` - No description
+
+---
+## `unit/test_proba_metrics.py`
+Tests for probability-based metric computation.
+
+**Functions:**
+- `test_compute_metric_proba_roc_auc_binary()` - No description
+- `test_compute_metric_proba_log_loss()` - No description
+- `test_compute_metric_proba_brier_score()` - No description
+- `test_compute_metric_proba_roc_auc_ovr_multiclass()` - No description
+- `test_compute_metric_proba_roc_auc_ovo_multiclass()` - No description
+- `test_compute_metric_proba_brier_score_multiclass_dataframe_order()` - No description
 
 ---
 ## `unit/test_submission_pytorch.py`

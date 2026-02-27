@@ -82,6 +82,27 @@ class KerasPredictor:
 
         return pd.DataFrame({"prediction": predictions})
 
+    def predict_proba(self, x: pd.DataFrame) -> pd.DataFrame:
+        """
+        Predict per-class probabilities on input DataFrame.
+
+        Returns raw model outputs (sigmoid/softmax values) without argmax.
+        """
+        import numpy as np
+
+        x_transformed = self.pipeline.transform(x)
+        raw_predictions = self.model.predict(x_transformed, verbose=0)
+
+        probabilities = np.asarray(raw_predictions)
+        if probabilities.ndim == 1:
+            probabilities = probabilities.reshape(-1, 1)
+
+        if probabilities.shape[1] == 1:
+            probabilities = np.column_stack([1 - probabilities[:, 0], probabilities[:, 0]])
+
+        columns = [f"proba_{i}" for i in range(probabilities.shape[1])]
+        return pd.DataFrame(probabilities, columns=columns)
+
 
 # ============================================
 # Example Usage

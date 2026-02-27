@@ -111,7 +111,9 @@ class ModelEvaluatorAgent:
                 f"{phase_prompt}\\n\\n"
                 "CRITICAL: Always register your results using the specified tool.\\n"
                 "CRITICAL: Provide interpretation, not just numbers.\\n"
-                "IMPORTANT: Do not create plots or visualizations (headless environment).\\n"
+                "IMPORTANT: In the probability analysis phase, if the predictor has predict_proba(), compute ROC "
+                "curve data, calibration curve, and Brier score. Use matplotlib with Agg backend to generate plots, "
+                "encode as base64 PNG, and include in the visualizations field.\\n"
             ),
             model=PlexeLiteLLMModel(
                 model_id=self.llm_model,
@@ -122,7 +124,18 @@ class ModelEvaluatorAgent:
             tools=tools,
             add_base_tools=False,
             additional_authorized_imports=self.config.allowed_base_imports
-            + ["collections", "pandas", "pandas.*", "numpy", "numpy.*", "sklearn", "sklearn.*"],
+            + [
+                "collections",
+                "pandas",
+                "pandas.*",
+                "numpy",
+                "numpy.*",
+                "sklearn",
+                "sklearn.*",
+                "matplotlib",
+                "matplotlib.*",
+                "base64",
+            ],
             max_steps=20,
             planning_interval=5,
         )
@@ -212,6 +225,19 @@ class ModelEvaluatorAgent:
         if not success:
             logger.error("Core Metrics phase failed - cannot continue evaluation")
             return None
+
+        # Phase 1.5: Probability Analysis
+        core_metrics = self.context.scratch.get("_core_metrics_report")
+        proba_args = {**additional_args, "core_metrics_report": core_metrics}
+        success = self._run_phase(
+            phase_name="ProbabilityAnalysis",
+            phase_prompt=self._get_phase_probability_prompt(self.context.intent),
+            tools=[get_register_core_metrics_tool(self.context)],
+            additional_args=proba_args,
+            registry_key="_core_metrics_report",
+        )
+        if not success:
+            logger.warning("Probability analysis phase failed - continuing with partial evaluation")
 
         # Phase 2: Error Analysis
         success = self._run_phase(
@@ -335,10 +361,53 @@ class ModelEvaluatorAgent:
             f"    all_metrics={{...}},\\n"
             f"    statistical_notes='Your interpretation',\\n"
             f"    metric_confidence_intervals=None,  # Optional\\n"
-            f"    visualizations=None  # Optional (headless)\\n"
+            f"    visualizations=None  # Optional\\n"
             f")\\n\\n"
             f"After successful registration, call final_answer('Phase 1 complete').\\n\\n"
             f"IMPORTANT: Focus on rigorous computation and thoughtful interpretation."
+        )
+
+    @staticmethod
+    def _get_phase_probability_prompt(task: str) -> str:
+        return (
+            f"PHASE 1.5: PROBABILITY ANALYSIS\\n\\n"
+            f"Task Context: {task}\\n\\n"
+            f"Your mission: Use probability outputs to assess model calibration and discrimination.\\n\\n"
+            f"You have access to core_metrics_report from Phase 1 (reuse its fields).\\n"
+            f"If the task is classification AND predictor has predict_proba(), compute:\\n"
+            f"1. ROC curve data (fpr, tpr, thresholds)\\n"
+            f"2. Calibration curve data (prob_true, prob_pred, n_bins)\\n"
+            f"3. Brier score\\n"
+            f"4. ROC AUC computed from probabilities\\n"
+            f"5. ROC + calibration plots (matplotlib Agg backend), base64-encode PNGs\\n"
+            f"   (set matplotlib.use('Agg') before importing pyplot)\\n\\n"
+            f"Data prep reminder:\\n"
+            f"- feature_cols = [col for col in test_sample_df.columns if col not in output_targets]\\n"
+            f"- X_test = test_sample_df[feature_cols]\\n"
+            f"- y_true = test_sample_df[output_targets[0]].values\\n"
+            f"- y_proba_df = predictor.predict_proba(X_test)\\n\\n"
+            f"Recommended data format:\\n"
+            f"- roc_curve_data={{'fpr': [...], 'tpr': [...], 'thresholds': [...]}}\\n"
+            f"- calibration_data={{'prob_true': [...], 'prob_pred': [...], 'n_bins': 10}}\\n\\n"
+            f"If task is regression or predict_proba is unavailable, keep probability fields as None.\\n"
+            f"Always merge new visualizations into existing core_metrics_report.visualizations if present.\\n\\n"
+            f"Register using:\\n"
+            f"register_core_metrics_report(\\n"
+            f"    task_type=core_metrics_report.task_type,\\n"
+            f"    primary_metric_name=core_metrics_report.primary_metric_name,\\n"
+            f"    primary_metric_value=core_metrics_report.primary_metric_value,\\n"
+            f"    primary_metric_ci_lower=core_metrics_report.primary_metric_ci_lower,\\n"
+            f"    primary_metric_ci_upper=core_metrics_report.primary_metric_ci_upper,\\n"
+            f"    all_metrics=core_metrics_report.all_metrics,\\n"
+            f"    statistical_notes=core_metrics_report.statistical_notes,\\n"
+            f"    metric_confidence_intervals=core_metrics_report.metric_confidence_intervals,\\n"
+            f"    visualizations=merged_visualizations,\\n"
+            f"    roc_auc_from_proba=...,\\n"
+            f"    brier_score=...,\\n"
+            f"    calibration_data={{...}},\\n"
+            f"    roc_curve_data={{...}}\\n"
+            f")\\n\\n"
+            f"After successful registration, call final_answer('Probability analysis complete').\\n"
         )
 
     @staticmethod

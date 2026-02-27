@@ -1415,6 +1415,10 @@ def get_register_core_metrics_tool(context: BuildContext):
         statistical_notes: str,
         metric_confidence_intervals: dict[str, tuple[float, float]] | None = None,
         visualizations: dict[str, str] | None = None,
+        roc_auc_from_proba: float | None = None,
+        brier_score: float | None = None,
+        calibration_data: dict | None = None,
+        roc_curve_data: dict | None = None,
     ) -> str:
         """
         Submit your core metrics evaluation report.
@@ -1429,6 +1433,10 @@ def get_register_core_metrics_tool(context: BuildContext):
             statistical_notes: Your interpretation of the results
             metric_confidence_intervals: Optional CIs for other metrics {metric: (lower, upper)}
             visualizations: Optional visualizations {plot_name: base64_png}
+            roc_auc_from_proba: Optional ROC AUC computed from probabilities
+            brier_score: Optional Brier score
+            calibration_data: Optional calibration curve data
+            roc_curve_data: Optional ROC curve data
 
         Returns:
             Confirmation message
@@ -1445,6 +1453,10 @@ def get_register_core_metrics_tool(context: BuildContext):
             metric_confidence_intervals=metric_confidence_intervals,
             statistical_notes=statistical_notes,
             visualizations=visualizations,
+            roc_auc_from_proba=roc_auc_from_proba,
+            brier_score=brier_score,
+            calibration_data=calibration_data,
+            roc_curve_data=roc_curve_data,
         )
 
         context.scratch["_core_metrics_report"] = report
