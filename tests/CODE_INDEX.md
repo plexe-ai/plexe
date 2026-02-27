@@ -1,6 +1,6 @@
 # Code Index: tests
 
-> Generated on 2026-02-27 15:11:29
+> Generated on 2026-03-02 12:38:31
 
 Test suite structure and test case documentation.
 
@@ -168,6 +168,18 @@ Unit tests for validation functions.
 - `test_validate_model_definition_unknown_type()` - Test unknown model type fails validation.
 - `test_validate_metric_function_object_success()` - Callable with correct signature should pass.
 - `test_validate_metric_function_object_bad_signature()` - Callable with wrong arg names should fail.
+
+---
+## `unit/workflow/test_column_exclusion.py`
+Tests for column exclusion pipeline.
+
+**Functions:**
+- `spark()` - No description
+- `test_exclude_problematic_columns_drops_columns_and_returns_new_uri(spark, tmp_path)` - No description
+- `test_exclude_problematic_columns_noop_when_empty(spark, tmp_path)` - No description
+- `test_build_context_round_trip_with_excluded_columns(tmp_path)` - No description
+- `test_exclude_problematic_columns_never_drops_target(spark, tmp_path)` - No description
+- `test_exclude_problematic_columns_never_drops_primary_input(spark, tmp_path)` - No description
 
 ---
 ## `unit/workflow/test_model_card.py`

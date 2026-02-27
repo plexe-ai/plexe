@@ -86,6 +86,7 @@ class BuildContext:
     compute_metric: Any | None = None  # Function for computing metric (callable)
     output_targets: list[str] = field(default_factory=list)  # Target column(s) identified by MLTaskAnalyser
     group_column: str | None = None  # For ranking: query_id, session_id, user_id (group identifier)
+    excluded_columns: list[dict] = field(default_factory=list)  # Columns removed before downstream phases
 
     # Data preparation phase
     train_uri: str | None = None
@@ -156,6 +157,7 @@ class BuildContext:
             ),
             "output_targets": self.output_targets,
             "group_column": self.group_column,
+            "excluded_columns": self.excluded_columns,
             # Phase 2 fields
             "train_uri": self.train_uri,
             "val_uri": self.val_uri,
@@ -207,6 +209,7 @@ class BuildContext:
             compute_metric=compute_metric,
             output_targets=d.get("output_targets", []),
             group_column=d.get("group_column"),
+            excluded_columns=d.get("excluded_columns", []),
             train_uri=d.get("train_uri"),
             val_uri=d.get("val_uri"),
             test_uri=d.get("test_uri"),

@@ -21,6 +21,7 @@ class ScratchKeys:
     SAVED_MODEL = "_saved_model"
     STATISTICAL_PROFILE = "_statistical_profile"
     EDA_REPORT = "_eda_report"
+    PROBLEMATIC_COLUMNS = "_problematic_columns"
 
     # Dataset URIs
     TRAIN_URI = "_train_uri"

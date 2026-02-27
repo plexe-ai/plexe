@@ -13,7 +13,7 @@ from plexe.utils.tooling import agentinspectable
 from sklearn.pipeline import Pipeline
 from smolagents import tool
 
-from plexe.constants import DirNames
+from plexe.constants import DirNames, ScratchKeys
 from plexe.models import BuildContext, Metric, Hypothesis, UnifiedPlan
 from plexe.search.insight_store import InsightStore
 from plexe.utils.tracing import tool_span
@@ -668,6 +668,7 @@ def get_register_eda_report_tool(context: BuildContext):
         key_insights: list[str],
         recommended_split: dict[str, Any],
         feature_relationships: dict[str, Any] | None = None,
+        problematic_columns: list[dict] | None = None,
         group_column: str | None = None,
     ) -> str:
         """
@@ -685,6 +686,7 @@ def get_register_eda_report_tool(context: BuildContext):
             key_insights: Important ML findings relevant to the task
             recommended_split: Split strategy dict with: ratios (dict), temporal_reasoning (str explaining if/why chronological split needed), stratification_reasoning (str explaining if/why stratified split needed)
             feature_relationships: Optional dict with feature-target relationships (only when computable, e.g., correlations for tabular data)
+            problematic_columns: Optional list of dicts with {"column": str, "reason": str, "category": str} where category in {"leakage", "constant", "identifier", "irrelevant"}
             group_column: Optional group/query ID column for ranking tasks (e.g., "session_id", "query_id", "user_id")
 
         Example (Tabular):
@@ -697,7 +699,8 @@ def get_register_eda_report_tool(context: BuildContext):
                 preprocessing_recommendations=["Impute missing values", "Encode categorical features"],
                 key_insights=["CryoSleep is highly predictive based on correlation"],
                 recommended_split={"ratios": {"train": 0.7, "val": 0.15, "test": 0.15}, "temporal_reasoning": "No chronological split needed - this is cross-sectional classification of records, not forecasting future events", "stratification_reasoning": "Stratified split recommended due to class imbalance to maintain balance across splits"},
-                feature_relationships={"correlations_with_target": {"CryoSleep": 0.42, "Age": -0.15}}
+                feature_relationships={"correlations_with_target": {"CryoSleep": 0.42, "Age": -0.15}},
+                problematic_columns=[{"column": "leak_col", "reason": "Correlation > 0.95 with target", "category": "leakage"}]
             )
 
         Example (Image):
@@ -744,6 +747,9 @@ def get_register_eda_report_tool(context: BuildContext):
             Confirmation message
         """
 
+        if problematic_columns is None:
+            problematic_columns = []
+
         # Build structured report
         report = {
             "task_type": task_type,
@@ -755,11 +761,13 @@ def get_register_eda_report_tool(context: BuildContext):
             "key_insights": key_insights,
             "recommended_split": recommended_split,
             "feature_relationships": feature_relationships,
+            "problematic_columns": problematic_columns,
             "group_column": group_column,
         }
 
         # Save to context
         context.scratch["_eda_report"] = report
+        context.scratch[ScratchKeys.PROBLEMATIC_COLUMNS] = problematic_columns
 
         # Also save group_column directly to context for ranking tasks
         if group_column:
