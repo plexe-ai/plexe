@@ -276,7 +276,7 @@ run-titanic: build
 			--user-id dev_user \
 			--intent "predict whether a passenger was transported" \
 			--experiment-id titanic \
-			--max-iterations 10 \
+			--max-iterations 5 \
 			--work-dir /workdir/titanic/$(TIMESTAMP) \
 			--spark-mode local \
 			--enable-final-evaluation
@@ -302,7 +302,7 @@ run-house-prices: build
 			--user-id dev_user \
 			--intent "predict house sale price" \
 			--experiment-id house_prices \
-			--max-iterations 10 \
+			--max-iterations 5 \
 			--work-dir /workdir/house_prices/$(TIMESTAMP) \
 			--spark-mode local \
 			--enable-final-evaluation
