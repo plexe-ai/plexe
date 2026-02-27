@@ -4,6 +4,8 @@
 # Quick reference for developers:
 #   make help              Show all available commands
 #   make test-quick        Fast test (~30s, 1 iteration)
+#   make test-integration  Staged pytest integration suite
+#   make test-integration-verbose  Staged suite with live logs
 #   make test-xgboost      Test XGBoost only
 #   make test-catboost     Test CatBoost only
 #   make test-all-models   Test all model types
@@ -36,6 +38,8 @@ help:
 	@echo "  make test-lightgbm      Test LightGBM model type"
 	@echo "  make test-pytorch       Test PyTorch model type"
 	@echo "  make test-keras         Test Keras model type"
+	@echo "  make test-integration   Run staged pytest integration suite"
+	@echo "  make test-integration-verbose  Run staged suite with live logs"
 	@echo "  make test-all-models    Test all model types (sequential)"
 	@echo "  make test-full          Full test run (3 iterations + evaluation)"
 	@echo ""
@@ -60,6 +64,28 @@ help:
 # ============================================
 # Quick Development Tests
 # ============================================
+
+# Staged pytest-native integration suite (seed -> search -> eval).
+# Optional: make test-integration INTEGRATION_RUN_ID=my_run_id
+.PHONY: test-integration
+test-integration:
+	@echo "🧪 Running staged pytest integration suite..."
+	@if [ -n "$(INTEGRATION_RUN_ID)" ]; then \
+		echo "Using integration run id: $(INTEGRATION_RUN_ID)"; \
+		PLEXE_IT_RUN_ID="$(INTEGRATION_RUN_ID)" bash scripts/tests/run_integration_staged.sh; \
+	else \
+		bash scripts/tests/run_integration_staged.sh; \
+	fi
+
+.PHONY: test-integration-verbose
+test-integration-verbose:
+	@echo "🧪 Running staged pytest integration suite (verbose)..."
+	@if [ -n "$(INTEGRATION_RUN_ID)" ]; then \
+		echo "Using integration run id: $(INTEGRATION_RUN_ID)"; \
+		PLEXE_IT_RUN_ID="$(INTEGRATION_RUN_ID)" PLEXE_IT_VERBOSE=1 bash scripts/tests/run_integration_staged.sh; \
+	else \
+		PLEXE_IT_VERBOSE=1 bash scripts/tests/run_integration_staged.sh; \
+	fi
 
 # Fast sanity check - 1 iteration, minimal config
 .PHONY: test-quick

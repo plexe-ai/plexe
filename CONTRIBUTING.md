@@ -91,6 +91,21 @@ To set up the development environment:
    poetry run pytest
    ```
 
+4. **Run staged integration tests before opening a PR**:
+
+   ```bash
+   # Requires ANTHROPIC_API_KEY and local Spark/Java setup
+   bash scripts/tests/run_integration_staged.sh
+   ```
+
+   The staged suite runs three pytest phases with hard barriers:
+   - `integration_seed`: builds reusable checkpoints through phase 3
+   - `integration_search`: resumes from seeds and runs model search
+   - `integration_eval`: resumes from search checkpoints, runs evaluation, and validates predictor inference
+
+   This `tests/integration` suite is the primary pre-PR integration workflow.
+   Makefile Docker targets remain optional/manual end-to-end checks.
+
 Ensure all tests pass before making contributions.
 
 ## Style Guides

@@ -5,12 +5,15 @@ Verifies that agents properly receive and incorporate user feedback into their p
 """
 
 import pytest
+import importlib.util
 from pathlib import Path
 from unittest.mock import MagicMock
 
 from plexe.agents.utils import format_user_feedback_for_prompt
 from plexe.models import BuildContext, Metric
 from plexe.config import Config
+
+PYSPARK_AVAILABLE = importlib.util.find_spec("pyspark") is not None
 
 
 class TestFeedbackFormatting:
@@ -77,6 +80,7 @@ class TestFeedbackFormatting:
         assert result == ""
 
 
+@pytest.mark.skipif(not PYSPARK_AVAILABLE, reason="pyspark is required for agent prompt integration tests")
 class TestAgentFeedbackIntegration:
     """Test that agents properly integrate feedback into their prompts."""
 
@@ -99,7 +103,10 @@ class TestAgentFeedbackIntegration:
     @pytest.fixture
     def mock_config(self):
         """Create a mock Config for testing."""
-        return Config()
+        config = Config()
+        if importlib.util.find_spec("pyspark") is None:
+            config.allowed_base_imports = [imp for imp in config.allowed_base_imports if not imp.startswith("pyspark")]
+        return config
 
     def test_statistical_analyser_includes_feedback(self, mock_context, mock_config):
         """StatisticalAnalyserAgent should include feedback in instructions."""

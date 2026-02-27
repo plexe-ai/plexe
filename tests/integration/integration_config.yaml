@@ -1,0 +1,28 @@
+max_search_iterations: 1
+max_parallel_variants: 1
+
+train_sample_size: 2000
+val_sample_size: 1000
+
+nn_default_epochs: 2
+nn_max_epochs: 2
+nn_default_batch_size: 32
+
+spark_mode: local
+spark_local_cores: 2
+spark_driver_memory: "4g"
+
+agent_verbosity_level: 0
+log_level: INFO
+
+statistical_analysis_llm: "anthropic/claude-sonnet-4-5-20250929"
+ml_task_analysis_llm: "anthropic/claude-sonnet-4-5-20250929"
+metric_selection_llm: "anthropic/claude-sonnet-4-5-20250929"
+dataset_splitting_llm: "anthropic/claude-sonnet-4-5-20250929"
+baseline_builder_llm: "anthropic/claude-sonnet-4-5-20250929"
+feature_processor_llm: "anthropic/claude-sonnet-4-5-20250929"
+model_definer_llm: "anthropic/claude-sonnet-4-5-20250929"
+evaluation_llm: "anthropic/claude-sonnet-4-5-20250929"
+hypothesiser_llm: "anthropic/claude-sonnet-4-5-20250929"
+planner_llm: "anthropic/claude-sonnet-4-5-20250929"
+insight_extractor_llm: "anthropic/claude-sonnet-4-5-20250929"

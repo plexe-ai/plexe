@@ -81,6 +81,8 @@ make build-databricks         # Databricks Connect
 
 # Run tests
 poetry run pytest tests/unit/
+make test-integration          # Staged pytest integration suite (seed -> search -> eval)
+make test-integration-verbose  # Same suite with live test logs in terminal
 
 # Format and lint
 poetry run black .

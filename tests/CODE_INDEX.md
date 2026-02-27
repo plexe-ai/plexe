@@ -4,7 +4,48 @@
 
 Test suite structure and test case documentation.
 
-## `integration/test_feedback.py`
+## `integration/conftest.py`
+Shared fixtures and helpers for staged integration tests.
+
+**Functions:**
+- `repo_root() -> Path` - Return repository root path.
+- `run_id() -> str` - Return deterministic run identifier for staged artifacts.
+- `artifact_root(repo_root: Path, run_id: str) -> Path` - Return base path for staged integration artifacts.
+- `configure_integration_environment(repo_root: Path) -> None` - Set environment variables needed by the integration suite.
+- `cleanup_spark_session() -> None` - Stop Spark session after tests complete.
+- `seed_path(artifact_root: Path, dataset_kind: str) -> Path` - Return seed directory path for a dataset kind.
+- `model_run_path(artifact_root: Path, model_type: str) -> Path` - Return model-specific run directory path.
+- `checkpoint_file(work_dir: Path, phase_name: str) -> Path` - Return path to a checkpoint file.
+- `copy_seed_to_model_run(seed_dir: Path, model_dir: Path) -> None` - Copy a seed workdir into a model run workdir and rewrite checkpoint paths.
+- `assert_stage_prereqs(stage: str, artifact_root: Path) -> None` - Assert required artifacts from prior stages exist.
+- `build_seed_workflow(work_dir: Path, dataset_input: Path, intent: str, experiment_id: str) -> Any` - Run stages 1-3 and pause after baseline creation.
+- `resume_workflow(work_dir: Path, allowed_model_types: list[str], pause_points: list[str] | None, enable_final_evaluation: bool, max_iterations: int) -> Any` - Resume a staged integration workflow from existing checkpoints.
+- `load_predictor_class(model_dir: Path, model_type: str) -> type` - Load predictor class from packaged model/predictor.py.
+- `load_prediction_input(repo_root: Path, dataset_kind: str, n_rows: int) -> pd.DataFrame` - Load a small feature sample used for predictor checks.
+
+---
+## `integration/test_stage1_seed.py`
+Stage 1 integration tests: build reusable checkpoints through phase 3.
+
+**Functions:**
+- `test_build_seed_checkpoint(dataset_kind: str, artifact_root, repo_root) -> None` - Build a seed run and pause after baseline creation.
+
+---
+## `integration/test_stage2_search.py`
+Stage 2 integration tests: resume from seeds and pause after phase 4.
+
+**Functions:**
+- `test_resume_from_seed_and_run_search_only(model_type: str, artifact_root) -> None` - Copy a seed, resume from checkpoints, and pause after search models.
+
+---
+## `integration/test_stage3_eval_predict.py`
+Stage 3 integration tests: run evaluation/packaging and validate predictors.
+
+**Functions:**
+- `test_resume_and_run_eval_then_predict(model_type: str, artifact_root, repo_root) -> None` - Resume from stage 2 checkpoints, run to completion, and validate predictor inference.
+
+---
+## `unit/agents/test_feedback.py`
 Tests for user feedback integration in agents.
 
 **`TestFeedbackFormatting`** - Test the format_user_feedback_for_prompt helper function.
