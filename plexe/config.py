@@ -53,15 +53,14 @@ class ModelType:
 def detect_installed_frameworks() -> list[str]:
     """Detect which ML frameworks are installed and importable.
 
-    XGBoost is always available (core dependency). Other frameworks are
+    XGBoost and Keras are always available (core dependencies). Other frameworks are
     checked via importlib.util.find_spec() which is fast and has no side effects.
     """
-    available = [ModelType.XGBOOST]  # Always available (core dependency)
+    available = [ModelType.XGBOOST, ModelType.KERAS]  # Always available (core dependencies)
 
     _OPTIONAL_FRAMEWORKS = [
         ("catboost", ModelType.CATBOOST),
         ("lightgbm", ModelType.LIGHTGBM),
-        ("keras", ModelType.KERAS),
         ("torch", ModelType.PYTORCH),
     ]
     for module_name, model_type in _OPTIONAL_FRAMEWORKS:
