@@ -8,7 +8,7 @@ from __future__ import annotations
 
 import logging
 from pathlib import Path
-from typing import TYPE_CHECKING
+from typing import Any, TYPE_CHECKING
 
 import numpy as np
 import pandas as pd
@@ -116,7 +116,7 @@ def evaluate_on_sample(
     val_performance = _evaluate_predictor(spark, predictor, sample_uri, metric, target_columns, group_column)
     logger.info(f"Val sample performance ({metric}): {val_performance:.4f}")
 
-    # TODO: Computing additional metrics per solution during search would be valuable future work.
+    # TODO: Computing secondary metrics (e.g. per-class breakdown, calibration) per solution during search.
     train_performance = None
     if train_sample_uri:
         train_performance = _evaluate_predictor(
@@ -128,7 +128,7 @@ def evaluate_on_sample(
     return val_performance, train_performance
 
 
-def _load_predictor(model_artifacts_path: Path, model_type: str):
+def _load_predictor(model_artifacts_path: Path, model_type: str) -> Any:
     """Load the appropriate predictor for a model type."""
     if model_type == ModelType.XGBOOST:
         from plexe.templates.inference.xgboost_predictor import XGBoostPredictor
