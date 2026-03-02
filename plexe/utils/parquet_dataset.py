@@ -164,6 +164,7 @@ def parquet_batch_generator(
     uri: str,
     target_column: str,
     batch_size: int = 1024,
+    task_type: str | None = None,
 ) -> Iterator[tuple[np.ndarray, np.ndarray]]:
     """Streaming parquet batch generator for Keras/TensorFlow.
 
@@ -175,6 +176,7 @@ def parquet_batch_generator(
         uri: Path to parquet file or directory of parquet files
         target_column: Name of the target column
         batch_size: Number of rows per batch
+        task_type: Canonical task type used to choose y dtype
 
     Yields:
         (features_array, target_array) tuples of numpy arrays
@@ -188,7 +190,8 @@ def parquet_batch_generator(
         for batch in pf.iter_batches(batch_size=batch_size, columns=columns + [target_column]):
             df = batch.to_pandas()
             X = df[columns].values.astype(np.float32)
-            y = df[target_column].values.astype(np.float32)
+            y_dtype = np.int64 if task_type == "multiclass_classification" else np.float32
+            y = df[target_column].values.astype(y_dtype)
             yield X, y
 
 

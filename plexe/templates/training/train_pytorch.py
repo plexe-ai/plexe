@@ -9,6 +9,7 @@ Supports:
 """
 
 import argparse
+import inspect
 import json
 import logging
 import os
@@ -288,6 +289,8 @@ def train_pytorch(
         with open(history_path, "w") as f:
             json.dump(history, f, indent=2)
 
+        init_params = set(inspect.signature(type(optimizer).__init__).parameters.keys())
+
         # Save metadata
         metadata = {
             "model_type": "pytorch",
@@ -303,7 +306,7 @@ def train_pytorch(
             "final_train_loss": history["train_loss"][-1],
             "final_val_loss": history["val_loss"][-1],
             "optimizer_class": type(optimizer).__name__,
-            "optimizer_config": {k: v for k, v in optimizer.defaults.items()},
+            "optimizer_config": {k: v for k, v in optimizer.defaults.items() if k in init_params},
             "loss_class": type(loss_fn).__name__,
             "gpu_count": gpu_count,
             "mixed_precision": use_mixed_precision,

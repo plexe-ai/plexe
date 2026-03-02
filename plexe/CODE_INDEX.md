@@ -1,6 +1,6 @@
 # Code Index: plexe
 
-> Generated on 2026-03-02 21:24:01
+> Generated on 2026-03-02 21:24:57
 
 Code structure and public interface documentation for the **plexe** package.
 
@@ -652,7 +652,7 @@ Streaming parquet data loading utilities for large-dataset training.
 **Functions:**
 - `get_parquet_row_count(uri: str) -> int` - Get total row count from parquet metadata without reading data.
 - `get_dataset_size_bytes(uri: str) -> int` - Get dataset size in bytes for a local file or directory of parquet files.
-- `parquet_batch_generator(uri: str, target_column: str, batch_size: int) -> Iterator[tuple[np.ndarray, np.ndarray]]` - Streaming parquet batch generator for Keras/TensorFlow.
+- `parquet_batch_generator(uri: str, target_column: str, batch_size: int, task_type: str | None) -> Iterator[tuple[np.ndarray, np.ndarray]]` - Streaming parquet batch generator for Keras/TensorFlow.
 - `get_parquet_feature_count(uri: str, target_column: str) -> int` - Get number of feature columns (total columns minus target).
 - `get_steps_per_epoch(uri: str, batch_size: int) -> int` - Compute number of steps per epoch for a parquet dataset.
 

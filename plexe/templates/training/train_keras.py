@@ -38,7 +38,12 @@ _STREAMING_THRESHOLD_BYTES = 1_000_000_000  # 1 GB
 
 
 def _create_tf_dataset(
-    uri: str, target_column: str, batch_size: int, n_features: int, total_rows: int
+    uri: str,
+    target_column: str,
+    batch_size: int,
+    n_features: int,
+    total_rows: int,
+    task_type: str | None = None,
 ) -> tf.data.Dataset:
     """Create a tf.data.Dataset from parquet files.
 
@@ -49,13 +54,16 @@ def _create_tf_dataset(
 
     from plexe.utils.parquet_dataset import get_dataset_size_bytes
 
+    y_np_dtype = np.int32 if task_type == "multiclass_classification" else np.float32
+    y_tf_dtype = tf.int32 if task_type == "multiclass_classification" else tf.float32
+
     dataset_bytes = get_dataset_size_bytes(uri)
     if total_rows < _STREAMING_THRESHOLD_ROWS and dataset_bytes < _STREAMING_THRESHOLD_BYTES:
         # Small dataset: load fully into memory (fast, avoids TF generator threading issues)
         df = pd.read_parquet(uri)
         feature_cols = [c for c in df.columns if c != target_column]
         X = df[feature_cols].values.astype(np.float32)
-        y = df[target_column].values.astype(np.float32)
+        y = df[target_column].values.astype(y_np_dtype)
         dataset = tf.data.Dataset.from_tensor_slices((X, y))
         return dataset.batch(batch_size).prefetch(tf.data.AUTOTUNE)
     else:
@@ -70,7 +78,7 @@ def _create_tf_dataset(
                 for batch in parquet_file.iter_batches(batch_size=4096, columns=columns + [target_column]):
                     batch_df = batch.to_pandas()
                     X_batch = batch_df[columns].values.astype(np.float32)
-                    y_batch = batch_df[target_column].values.astype(np.float32)
+                    y_batch = batch_df[target_column].values.astype(y_np_dtype)
                     for i in range(len(X_batch)):
                         yield X_batch[i], y_batch[i]
 
@@ -78,7 +86,7 @@ def _create_tf_dataset(
             row_generator,
             output_signature=(
                 tf.TensorSpec(shape=(n_features,), dtype=tf.float32),
-                tf.TensorSpec(shape=(), dtype=tf.float32),
+                tf.TensorSpec(shape=(), dtype=y_tf_dtype),
             ),
         )
         return dataset.batch(batch_size).prefetch(tf.data.AUTOTUNE)
@@ -150,8 +158,9 @@ def train_keras(
         loss_class = getattr(keras.losses, training_config["loss_class"])
         loss = loss_class.from_config(training_config["loss_config"])
 
-        logger.info(f"Optimizer: {type(optimizer).__name__}, Loss: {type(loss).__name__}")
-        model.compile(optimizer=optimizer, loss=loss, metrics=["accuracy"], jit_compile=False)
+        metrics = None if task_type == "regression" else ["accuracy"]
+        logger.info(f"Optimizer: {type(optimizer).__name__}, Loss: {type(loss).__name__}, Metrics: {metrics}")
+        model.compile(optimizer=optimizer, loss=loss, metrics=metrics, jit_compile=False)
         return model
 
     if strategy is not None:
@@ -179,8 +188,8 @@ def train_keras(
     logger.info(f"Training data: {train_rows} rows, {n_features} features (streaming)")
     logger.info(f"Validation data: {val_rows} rows (streaming)")
 
-    train_dataset = _create_tf_dataset(train_uri, target_column, batch_size, n_features, train_rows)
-    val_dataset = _create_tf_dataset(val_uri, target_column, batch_size, n_features, val_rows)
+    train_dataset = _create_tf_dataset(train_uri, target_column, batch_size, n_features, train_rows, task_type)
+    val_dataset = _create_tf_dataset(val_uri, target_column, batch_size, n_features, val_rows, task_type)
 
     # ============================================
     # Step 5: Train with EarlyStopping
