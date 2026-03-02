@@ -76,6 +76,33 @@ logger = logging.getLogger(__name__)
 # ============================================
 
 
+def _apply_allowed_model_types_on_resume(context: BuildContext, config: Config, start_phase: int) -> None:
+    """Restrict checkpoint-resumed model types to config.allowed_model_types when provided."""
+    if start_phase <= 1 or not config.allowed_model_types:
+        return
+
+    allowed_types = list(dict.fromkeys(config.allowed_model_types))
+    if not context.viable_model_types:
+        context.viable_model_types = allowed_types
+        logger.info(f"Checkpoint missing viable model types; using allowed model types: {allowed_types}")
+        return
+
+    filtered_model_types = [m for m in context.viable_model_types if m in allowed_types]
+    if not filtered_model_types:
+        raise ValueError(
+            "No model types remain after applying allowed_model_types on resume: "
+            f"checkpoint={context.viable_model_types}, allowed={allowed_types}"
+        )
+
+    if filtered_model_types != context.viable_model_types:
+        logger.info(
+            "Restricting resumed model types from checkpoint %s to %s",
+            context.viable_model_types,
+            filtered_model_types,
+        )
+        context.viable_model_types = filtered_model_types
+
+
 def build_model(
     spark: SparkSession,
     train_dataset_uri: str,
@@ -181,6 +208,8 @@ def build_model(
     if user_feedback:
         context.scratch["_user_feedback"] = user_feedback
         logger.info("📝 User feedback injected - agents will incorporate guidance into their work")
+
+    _apply_allowed_model_types_on_resume(context, config, start_phase)
 
     # Wrap entire workflow in top-level trace span
     with tracer.start_as_current_span("ModelBuilder") as root_span:

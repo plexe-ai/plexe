@@ -7,11 +7,17 @@ import shutil
 import pytest
 
 from plexe.constants import PhaseNames
-from tests.integration.conftest import DATASET_SPECS, build_seed_workflow, checkpoint_file, seed_path
+from tests.integration.conftest import (
+    DATASET_SPECS,
+    REQUIRED_SEED_DATASET_KINDS,
+    build_seed_workflow,
+    checkpoint_file,
+    seed_path,
+)
 
 
 @pytest.mark.integration_seed
-@pytest.mark.parametrize("dataset_kind", ["classification", "regression"])
+@pytest.mark.parametrize("dataset_kind", REQUIRED_SEED_DATASET_KINDS)
 def test_build_seed_checkpoint(dataset_kind: str, artifact_root, repo_root) -> None:
     """Build a seed run and pause after baseline creation."""
     dataset_spec = DATASET_SPECS[dataset_kind]

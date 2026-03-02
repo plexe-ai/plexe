@@ -14,7 +14,7 @@ import pandas as pd
 import pytest
 
 from plexe.checkpointing import load_checkpoint
-from plexe.config import get_config, setup_litellm, setup_logging
+from plexe.config import detect_installed_frameworks, get_config, setup_litellm, setup_logging
 from plexe.constants import DirNames, PhaseNames
 from plexe.execution.dataproc.dataset_io import DatasetNormalizer
 from plexe.execution.dataproc.session import get_or_create_spark_session, stop_spark_session
@@ -37,11 +37,13 @@ DATASET_SPECS: dict[str, dict[str, str]] = {
     },
 }
 
+# Integration test matrix: keep this list explicit and simple.
+INTEGRATION_MODEL_CANDIDATES = ["xgboost", "catboost", "lightgbm", "pytorch"]
+
 MODEL_DATASET_KIND = {
     "xgboost": "classification",
     "catboost": "classification",
     "lightgbm": "classification",
-    "keras": "classification",
     "pytorch": "regression",
 }
 
@@ -49,11 +51,32 @@ PREDICTOR_CLASS_BY_MODEL = {
     "xgboost": "XGBoostPredictor",
     "catboost": "CatBoostPredictor",
     "lightgbm": "LightGBMPredictor",
-    "keras": "KerasPredictor",
     "pytorch": "PyTorchPredictor",
 }
 
-ALL_MODEL_TYPES = ["xgboost", "catboost", "lightgbm", "keras", "pytorch"]
+_installed_frameworks = set(detect_installed_frameworks())
+INSTALLED_MODEL_TYPES = [m for m in INTEGRATION_MODEL_CANDIDATES if m in _installed_frameworks]
+REQUIRED_SEED_DATASET_KINDS = list(dict.fromkeys(MODEL_DATASET_KIND[m] for m in INSTALLED_MODEL_TYPES))
+
+
+def _build_model_type_params() -> list[Any]:
+    """Return model-type params with explicit skips for missing optional frameworks."""
+    params = []
+    for model_type in INTEGRATION_MODEL_CANDIDATES:
+        if model_type in _installed_frameworks:
+            params.append(pytest.param(model_type, id=model_type))
+        else:
+            params.append(
+                pytest.param(
+                    model_type,
+                    id=model_type,
+                    marks=pytest.mark.skip(reason=f"{model_type} not installed"),
+                )
+            )
+    return params
+
+
+MODEL_TYPE_PARAMS = _build_model_type_params()
 
 
 @pytest.fixture(scope="session")
@@ -81,6 +104,9 @@ def configure_integration_environment(repo_root: Path) -> None:
     """Set environment variables needed by the integration suite."""
     config_path = repo_root / "tests" / "integration" / "integration_config.yaml"
     os.environ["CONFIG_FILE"] = str(config_path)
+
+    if not INSTALLED_MODEL_TYPES:
+        pytest.skip("No supported integration model frameworks are installed", allow_module_level=True)
 
     if not os.getenv("ANTHROPIC_API_KEY"):
         pytest.skip("ANTHROPIC_API_KEY is required for tests/integration", allow_module_level=True)
@@ -151,7 +177,7 @@ def assert_stage_prereqs(stage: str, artifact_root: Path) -> None:
     """Assert required artifacts from prior stages exist."""
     if stage == "search":
         missing = []
-        for dataset_kind in ("classification", "regression"):
+        for dataset_kind in REQUIRED_SEED_DATASET_KINDS:
             required = checkpoint_file(seed_path(artifact_root, dataset_kind), PhaseNames.BUILD_BASELINES)
             if not required.exists():
                 missing.append(str(required))
@@ -162,7 +188,7 @@ def assert_stage_prereqs(stage: str, artifact_root: Path) -> None:
 
     if stage == "eval":
         missing = []
-        for model_type in ALL_MODEL_TYPES:
+        for model_type in INSTALLED_MODEL_TYPES:
             required = checkpoint_file(model_run_path(artifact_root, model_type), PhaseNames.SEARCH_MODELS)
             if not required.exists():
                 missing.append(str(required))
@@ -205,7 +231,7 @@ def _normalize_dataset_uri_if_needed(
 
 def build_seed_workflow(work_dir: Path, dataset_input: Path, intent: str, experiment_id: str) -> Any:
     """Run stages 1-3 and pause after baseline creation."""
-    config = _build_runtime_config(max_iterations=1, allowed_model_types=None)
+    config = _build_runtime_config(max_iterations=1, allowed_model_types=INSTALLED_MODEL_TYPES)
     setup_logging(config)
     setup_litellm(config)
     setup_opentelemetry(config)

@@ -7,6 +7,7 @@ import pytest
 from plexe.constants import PhaseNames
 from tests.integration.conftest import (
     MODEL_DATASET_KIND,
+    MODEL_TYPE_PARAMS,
     assert_stage_prereqs,
     checkpoint_file,
     copy_seed_to_model_run,
@@ -17,7 +18,7 @@ from tests.integration.conftest import (
 
 
 @pytest.mark.integration_search
-@pytest.mark.parametrize("model_type", ["xgboost", "catboost", "lightgbm", "keras", "pytorch"])
+@pytest.mark.parametrize("model_type", MODEL_TYPE_PARAMS)
 def test_resume_from_seed_and_run_search_only(model_type: str, artifact_root) -> None:
     """Copy a seed, resume from checkpoints, and pause after search models."""
     assert_stage_prereqs("search", artifact_root)

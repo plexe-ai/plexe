@@ -6,6 +6,7 @@ import pytest
 
 from tests.integration.conftest import (
     MODEL_DATASET_KIND,
+    MODEL_TYPE_PARAMS,
     assert_stage_prereqs,
     load_prediction_input,
     load_predictor_class,
@@ -15,7 +16,7 @@ from tests.integration.conftest import (
 
 
 @pytest.mark.integration_eval
-@pytest.mark.parametrize("model_type", ["xgboost", "catboost", "lightgbm", "keras", "pytorch"])
+@pytest.mark.parametrize("model_type", MODEL_TYPE_PARAMS)
 def test_resume_and_run_eval_then_predict(model_type: str, artifact_root, repo_root) -> None:
     """Resume from stage 2 checkpoints, run to completion, and validate predictor inference."""
     assert_stage_prereqs("eval", artifact_root)
