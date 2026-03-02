@@ -1,9 +1,11 @@
 """Unit tests for config helpers."""
 
+import logging
+
 import pytest
 import yaml
 
-from plexe.config import Config, RoutingConfig, RoutingProviderConfig, get_routing_for_model
+from plexe.config import Config, RoutingConfig, RoutingProviderConfig, get_routing_for_model, setup_logging
 
 
 def test_get_routing_for_model_mapping_and_default():
@@ -72,3 +74,12 @@ def test_get_temperature_resolves_override_and_default():
 
     assert config.get_temperature("hypothesiser") == pytest.approx(0.7)
     assert config.get_temperature("layout_detector") == pytest.approx(0.2)
+
+
+def test_setup_logging_disables_propagation():
+    """Plexe logger should not propagate to root to avoid duplicate log lines."""
+    logger = setup_logging(Config(log_level="INFO"))
+
+    assert logger.name == "plexe"
+    assert logger.propagate is False
+    assert any(isinstance(h, logging.StreamHandler) for h in logger.handlers)

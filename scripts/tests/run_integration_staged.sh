@@ -28,6 +28,16 @@ else
   WORKERS="auto"
 fi
 PYTEST_PARALLEL_ARGS=(-n "$WORKERS")
+PYTEST_LOG_DISABLE_ARGS=(
+  --log-disable=LiteLLM
+  --log-disable=litellm
+  --log-disable=httpx
+  --log-disable=httpcore
+  --log-disable=urllib3
+  --log-disable=py4j
+  --log-disable=py4j.clientserver
+  --log-disable=py4j.java_gateway
+)
 
 run_stage() {
   local stage_name="$1"
@@ -35,7 +45,7 @@ run_stage() {
   local cmd=(poetry run pytest tests/integration -m "$marker" "${PYTEST_PARALLEL_ARGS[@]}" --maxfail=1)
 
   if [[ "${PLEXE_IT_VERBOSE:-0}" == "1" ]]; then
-    cmd+=(-s -vv -o log_cli=true -o log_cli_level=INFO --capture=tee-sys)
+    cmd+=(-s -vv -o log_cli=true -o log_cli_level=INFO --capture=tee-sys "${PYTEST_LOG_DISABLE_ARGS[@]}")
   fi
 
   PLEXE_IT_STAGE="$stage_name" "${cmd[@]}"

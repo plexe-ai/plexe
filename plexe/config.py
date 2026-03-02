@@ -562,6 +562,9 @@ def setup_logging(config: Config) -> logging.Logger:
     # Get package root logger
     package_logger = logging.getLogger("plexe")
     package_logger.setLevel(getattr(logging, config.log_level.upper()))
+    # Avoid duplicate output when external handlers (e.g., pytest live logging)
+    # are attached to the root logger.
+    package_logger.propagate = False
 
     # Clear existing handlers to avoid duplicates
     package_logger.handlers = []

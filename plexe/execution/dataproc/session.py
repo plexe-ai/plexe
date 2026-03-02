@@ -109,8 +109,8 @@ def _create_local_spark(config) -> SparkSession:
             logger.info("Using pre-bundled Spark JARs from /opt/spark-jars/")
             builder = builder.config("spark.jars", spark_jars_env)
         else:
-            # Fallback: Download JARs at runtime via Maven (local development)
-            logger.info("Downloading Spark JARs from Maven Central (first run may take ~40s)")
+            # Fallback: Resolve JARs via Maven (download occurs only on cache miss)
+            logger.info("Resolving Spark JARs via Maven Central (download only on first run/cache miss)")
             builder = builder.config(
                 "spark.jars.packages",
                 "org.apache.hadoop:hadoop-aws:3.3.6,com.amazonaws:aws-java-sdk-bundle:1.12.367",
