@@ -6,6 +6,7 @@ Can be used standalone with just: catboost, scikit-learn, pandas.
 """
 
 import logging
+import json
 from pathlib import Path
 
 import joblib
@@ -54,6 +55,28 @@ class CatBoostPredictor:
         # Load label encoder (for classification with non-contiguous labels)
         encoder_path = artifacts_dir / "label_encoder.pkl"
         self.label_encoder = joblib.load(encoder_path) if encoder_path.exists() else None
+        self.task_type = None
+        metadata_path = artifacts_dir / "metadata.json"
+        if metadata_path.exists():
+            with open(metadata_path) as f:
+                self.task_type = json.load(f).get("task_type")
+
+    @staticmethod
+    def _is_classification_task(task_type: str | None) -> bool:
+        # TODO(task-type-enum): Switch this helper to the canonical TaskType enum once merged.
+        if not task_type:
+            return False
+        normalized = str(task_type).strip().lower()
+        return normalized in {"classification", "binary_classification", "multiclass_classification"}
+
+    def _ensure_classification_for_proba(self):
+        task_type = getattr(self, "task_type", None)
+        if self._is_classification_task(task_type):
+            return
+        raise NotImplementedError(
+            f"{type(self).__name__}.predict_proba() is only available for classification models. "
+            f"Detected task_type='{task_type}'."
+        )
 
     def predict(self, x: pd.DataFrame) -> pd.DataFrame:
         """
@@ -102,6 +125,8 @@ class CatBoostPredictor:
             DataFrame with per-class probability columns
         """
         import numpy as np
+
+        self._ensure_classification_for_proba()
 
         probabilities = self.model.predict_proba(self.pipeline.transform(x))
         probabilities = np.asarray(probabilities)

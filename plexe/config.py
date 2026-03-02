@@ -122,6 +122,7 @@ class StandardMetric(str, Enum):
     ROC_AUC_OVR = "roc_auc_ovr"
     ROC_AUC_OVO = "roc_auc_ovo"
     LOG_LOSS = "log_loss"
+    BRIER_SCORE = "brier_score"
 
     # Classification - Other
     MATTHEWS_CORRCOEF = "matthews_corrcoef"

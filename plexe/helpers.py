@@ -28,6 +28,44 @@ from plexe.models import DataLayout
 
 logger = logging.getLogger(__name__)
 
+_METRIC_ALIASES = {
+    "brier": StandardMetric.BRIER_SCORE.value,
+    "brier_score_loss": StandardMetric.BRIER_SCORE.value,
+    "r2": StandardMetric.R2_SCORE.value,
+}
+
+_PROBABILITY_METRICS = {
+    StandardMetric.ROC_AUC.value,
+    StandardMetric.ROC_AUC_OVR.value,
+    StandardMetric.ROC_AUC_OVO.value,
+    StandardMetric.LOG_LOSS.value,
+    StandardMetric.BRIER_SCORE.value,
+}
+
+_RANKING_METRICS = {
+    StandardMetric.NDCG.value,
+    StandardMetric.MAP.value,
+    StandardMetric.MRR.value,
+}
+
+_METRIC_INPUT_KIND = {metric.value: "label" for metric in StandardMetric}
+for _metric_name in _PROBABILITY_METRICS:
+    _METRIC_INPUT_KIND[_metric_name] = "probability"
+for _metric_name in _RANKING_METRICS:
+    _METRIC_INPUT_KIND[_metric_name] = "ranking"
+
+
+def normalize_metric_name(metric_name: str) -> str:
+    """Normalize aliases to canonical metric names."""
+    metric_key = metric_name.lower().strip()
+    return _METRIC_ALIASES.get(metric_key, metric_key)
+
+
+def get_metric_input_kind(metric_name: str) -> str:
+    """Return required input kind for a metric: label, probability, or ranking."""
+    metric_key = normalize_metric_name(metric_name)
+    return _METRIC_INPUT_KIND.get(metric_key, "label")
+
 
 def select_viable_model_types(data_layout: DataLayout, selected_frameworks: list[str] | None = None) -> list[str]:
     """
@@ -148,41 +186,29 @@ def evaluate_on_sample(
 
         predictor = PyTorchPredictor(str(model_artifacts_path))
 
-    # Predict and compute metric on predictions
-    metric_key = metric.lower().strip()
-    proba_metrics = {
-        StandardMetric.ROC_AUC.value,
-        StandardMetric.ROC_AUC_OVR.value,
-        StandardMetric.ROC_AUC_OVO.value,
-        StandardMetric.LOG_LOSS.value,
-        "brier_score",
-        "brier",
-        "brier_score_loss",
-    }
+    # Predict and compute metric according to required input kind
+    metric_name = normalize_metric_name(metric)
+    metric_input_kind = get_metric_input_kind(metric_name)
 
-    performance = None
-    if metric_key in proba_metrics:
-        if not hasattr(predictor, "predict_proba"):
-            logger.info(
-                "Predictor of type %s does not support predict_proba; falling back to labels for %s.",
-                type(predictor).__name__,
-                metric,
+    if metric_input_kind == "probability":
+        proba_fn = getattr(predictor, "predict_proba", None)
+        if not callable(proba_fn):
+            raise ValueError(
+                f"Metric '{metric_name}' requires probability outputs, but predictor "
+                f"'{type(predictor).__name__}' does not implement predict_proba()."
             )
-        else:
-            try:
-                proba_df = predictor.predict_proba(X_sample)
-                performance = compute_metric_proba(y_sample, proba_df, metric)
-            except (AttributeError, ValueError, TypeError) as exc:
-                logger.warning(
-                    "Probability metric computation failed (%s); falling back to labels. Error: %s",
-                    metric,
-                    exc,
-                    exc_info=True,
-                )
 
-    if performance is None:
+        try:
+            proba_df = proba_fn(X_sample)
+            performance = compute_metric_proba(y_sample, proba_df, metric_name)
+        except Exception as exc:
+            raise ValueError(
+                f"Metric '{metric_name}' requires valid probability outputs. Failed with "
+                f"predictor '{type(predictor).__name__}': {exc}"
+            ) from exc
+    else:
         predictions = predictor.predict(X_sample)["prediction"].values
-        performance = compute_metric(y_sample, predictions, metric, group_ids=group_ids)
+        performance = compute_metric(y_sample, predictions, metric_name, group_ids=group_ids)
 
     logger.info(f"Sample performance ({metric}): {performance:.4f}")
 
@@ -209,7 +235,6 @@ def compute_metric_hardcoded(y_true, y_pred, metric_name: str) -> float:
     from sklearn.metrics import (
         precision_score,
         recall_score,
-        log_loss,
         hamming_loss,
         matthews_corrcoef,
         cohen_kappa_score,
@@ -218,12 +243,11 @@ def compute_metric_hardcoded(y_true, y_pred, metric_name: str) -> float:
         median_absolute_error,
         max_error,
         explained_variance_score,
-        roc_auc_score,
     )
     import numpy as np
 
-    # Normalize to lowercase
-    metric = metric_name.lower().strip()
+    # Normalize aliases to canonical metric names
+    metric = normalize_metric_name(metric_name)
 
     # Classification - Simple
     if metric == StandardMetric.ACCURACY.value:
@@ -253,19 +277,14 @@ def compute_metric_hardcoded(y_true, y_pred, metric_name: str) -> float:
     elif metric == StandardMetric.RECALL_MICRO.value:
         return float(recall_score(y_true, y_pred, average="micro", zero_division=0))
 
-    # Classification - ROC AUC variants
-    elif metric in [StandardMetric.ROC_AUC.value, StandardMetric.ROC_AUC_OVR.value]:
-        n_classes = len(np.unique(y_true))
-        if n_classes == 2:
-            return float(roc_auc_score(y_true, y_pred))
-        else:
-            return float(roc_auc_score(y_true, y_pred, multi_class="ovr"))
-    elif metric == StandardMetric.ROC_AUC_OVO.value:
-        return float(roc_auc_score(y_true, y_pred, multi_class="ovo"))
+    # Classification - Probability-based (requires predict_proba outputs)
+    elif metric in _PROBABILITY_METRICS:
+        raise ValueError(
+            f"Metric '{metric_name}' requires probability estimates. "
+            f"Use compute_metric_proba(y_true, y_proba, metric_name)."
+        )
 
     # Classification - Other
-    elif metric == StandardMetric.LOG_LOSS.value:
-        return float(log_loss(y_true, y_pred))
     elif metric == StandardMetric.HAMMING_LOSS.value:
         return float(hamming_loss(y_true, y_pred))
     elif metric == StandardMetric.MATTHEWS_CORRCOEF.value:
@@ -282,7 +301,7 @@ def compute_metric_hardcoded(y_true, y_pred, metric_name: str) -> float:
         return float(mean_squared_error(y_true, y_pred))
     elif metric == StandardMetric.MAE.value:
         return float(mean_absolute_error(y_true, y_pred))
-    elif metric in [StandardMetric.R2_SCORE.value, "r2"]:
+    elif metric == StandardMetric.R2_SCORE.value:
         return float(r2_score(y_true, y_pred))
     elif metric == StandardMetric.MAPE.value:
         return float(mean_absolute_percentage_error(y_true, y_pred))
@@ -323,7 +342,13 @@ def compute_metric_proba(y_true, y_proba, metric_name: str) -> float:
     """
     from sklearn.metrics import roc_auc_score, log_loss, brier_score_loss
 
-    metric = metric_name.lower().strip()
+    metric = normalize_metric_name(metric_name)
+    if metric not in _PROBABILITY_METRICS:
+        raise ValueError(
+            f"Metric '{metric_name}' does not require probability estimates. "
+            f"Use compute_metric(y_true, y_pred, metric_name) for label-based metrics."
+        )
+
     y_true_arr = np.asarray(y_true)
 
     labels = None
@@ -353,11 +378,32 @@ def compute_metric_proba(y_true, y_proba, metric_name: str) -> float:
     if proba.shape[1] == 1:
         proba = np.column_stack([1 - proba[:, 0], proba[:, 0]])
 
+    if proba.shape[0] != len(y_true_arr):
+        raise ValueError(f"y_proba row count ({proba.shape[0]}) does not match y_true length ({len(y_true_arr)})")
+
+    if proba.shape[1] < 2:
+        raise ValueError("Probability outputs must have at least two class columns")
+
+    if not np.isfinite(proba).all():
+        raise ValueError("Probability outputs contain NaN or infinite values")
+
+    if (proba < 0).any() or (proba > 1).any():
+        raise ValueError("Probability outputs must be in [0, 1]")
+
+    if not np.allclose(proba.sum(axis=1), 1.0, atol=1e-3):
+        raise ValueError("Each probability row must sum to 1")
+
     n_classes = len(np.unique(y_true_arr))
 
     if metric in [StandardMetric.ROC_AUC.value, StandardMetric.ROC_AUC_OVR.value, StandardMetric.ROC_AUC_OVO.value]:
         if n_classes == 2:
-            return float(roc_auc_score(y_true_arr, proba[:, 1]))
+            classes = labels if labels is not None else sorted(np.unique(y_true_arr).tolist())
+            if len(classes) != 2:
+                raise ValueError(f"Expected exactly 2 classes for binary ROC AUC, got {len(classes)}")
+            class_to_index = {label: idx for idx, label in enumerate(classes)}
+            indices = np.array([class_to_index[label] for label in y_true_arr])
+            y_true_binary = (indices == 1).astype(int)
+            return float(roc_auc_score(y_true_binary, proba[:, 1]))
 
         multi_class = "ovr" if metric in [StandardMetric.ROC_AUC.value, StandardMetric.ROC_AUC_OVR.value] else "ovo"
         return float(roc_auc_score(y_true_arr, proba, multi_class=multi_class, labels=labels))
@@ -365,9 +411,15 @@ def compute_metric_proba(y_true, y_proba, metric_name: str) -> float:
     if metric == StandardMetric.LOG_LOSS.value:
         return float(log_loss(y_true_arr, proba, labels=labels))
 
-    if metric in ["brier_score", "brier", "brier_score_loss"]:
+    if metric == StandardMetric.BRIER_SCORE.value:
         if n_classes == 2:
-            return float(brier_score_loss(y_true_arr, proba[:, 1]))
+            classes = labels if labels is not None else sorted(np.unique(y_true_arr).tolist())
+            if len(classes) != 2:
+                raise ValueError(f"Expected exactly 2 classes for binary Brier score, got {len(classes)}")
+            class_to_index = {label: idx for idx, label in enumerate(classes)}
+            indices = np.array([class_to_index[label] for label in y_true_arr])
+            y_true_binary = (indices == 1).astype(int)
+            return float(brier_score_loss(y_true_binary, proba[:, 1]))
 
         classes = labels if labels is not None else np.unique(y_true_arr)
         class_to_index = {label: idx for idx, label in enumerate(classes)}
@@ -397,9 +449,16 @@ def compute_metric(y_true, y_pred, metric_name: str, group_ids=None) -> float:
     Returns:
         Metric value
     """
-    # Handle ranking metrics separately (require grouping)
-    metric = metric_name.lower().strip()
+    metric = normalize_metric_name(metric_name)
+    metric_input_kind = get_metric_input_kind(metric)
 
+    if metric_input_kind == "probability":
+        raise ValueError(
+            f"Metric '{metric_name}' requires probability estimates. "
+            f"Use compute_metric_proba(y_true, y_proba, metric_name)."
+        )
+
+    # Handle ranking metrics separately (require grouping)
     if metric == StandardMetric.NDCG.value:
         if group_ids is None:
             # No grouping - treat as single query (fallback)

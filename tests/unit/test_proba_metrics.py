@@ -49,6 +49,15 @@ def test_compute_metric_proba_brier_score():
     assert result == pytest.approx(expected)
 
 
+def test_compute_metric_proba_brier_aliases():
+    y_true = np.array([0, 1, 0, 1])
+    y_proba = np.array([0.1, 0.8, 0.4, 0.9])
+
+    expected = brier_score_loss(y_true, y_proba)
+    assert compute_metric_proba(y_true, y_proba, "brier") == pytest.approx(expected)
+    assert compute_metric_proba(y_true, y_proba, "brier_score_loss") == pytest.approx(expected)
+
+
 def test_compute_metric_proba_roc_auc_ovr_multiclass():
     y_true = np.array([0, 1, 2, 0, 1, 2])
     y_proba = np.array(

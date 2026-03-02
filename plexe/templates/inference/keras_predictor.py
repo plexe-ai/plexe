@@ -5,6 +5,8 @@ This file is copied as-is into model artifacts.
 Can be used standalone with just: keras, scikit-learn, pandas, cloudpickle.
 """
 
+import json
+import logging
 import os
 from pathlib import Path
 
@@ -13,6 +15,8 @@ os.environ["KERAS_BACKEND"] = "tensorflow"
 
 import cloudpickle
 import pandas as pd
+
+logger = logging.getLogger(__name__)
 
 
 class KerasPredictor:
@@ -46,6 +50,29 @@ class KerasPredictor:
         # Load feature pipeline (custom functions available if code was exec'd)
         with open(artifacts_dir / "pipeline.pkl", "rb") as f:
             self.pipeline = cloudpickle.load(f)
+
+        self.task_type = None
+        metadata_path = artifacts_dir / "metadata.json"
+        if metadata_path.exists():
+            with open(metadata_path) as f:
+                self.task_type = json.load(f).get("task_type")
+
+    @staticmethod
+    def _is_classification_task(task_type: str | None) -> bool:
+        # TODO(task-type-enum): Switch this helper to the canonical TaskType enum once merged.
+        if not task_type:
+            return False
+        normalized = str(task_type).strip().lower()
+        return normalized in {"classification", "binary_classification", "multiclass_classification"}
+
+    def _ensure_classification_for_proba(self):
+        task_type = getattr(self, "task_type", None)
+        if self._is_classification_task(task_type):
+            return
+        raise NotImplementedError(
+            f"{type(self).__name__}.predict_proba() is only available for classification models. "
+            f"Detected task_type='{task_type}'."
+        )
 
     def predict(self, x: pd.DataFrame) -> pd.DataFrame:
         """
@@ -89,6 +116,8 @@ class KerasPredictor:
         Returns raw model outputs (sigmoid/softmax values) without argmax.
         """
         import numpy as np
+
+        self._ensure_classification_for_proba()
 
         x_transformed = self.pipeline.transform(x)
         raw_predictions = self.model.predict(x_transformed, verbose=0)

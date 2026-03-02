@@ -42,6 +42,7 @@ def test_tree_predictors_predict_proba_binary(predictor_cls):
     predictor.model = _DummyProbaModel(proba)
     predictor.pipeline = _DummyPipeline()
     predictor.label_encoder = _DummyEncoder(["no", "yes"])
+    predictor.task_type = "classification"
 
     df = predictor.predict_proba(pd.DataFrame({"f1": [1, 2], "f2": [3, 4]}))
 
@@ -56,6 +57,7 @@ def test_tree_predictors_predict_proba_multiclass(predictor_cls):
     predictor.model = _DummyProbaModel(proba)
     predictor.pipeline = _DummyPipeline()
     predictor.label_encoder = _DummyEncoder(["class_a", "class_b", "class_c"])
+    predictor.task_type = "classification"
 
     df = predictor.predict_proba(pd.DataFrame({"f1": [1, 2], "f2": [3, 4]}))
 
@@ -72,6 +74,7 @@ def test_catboost_predictor_predict_proba_binary():
     predictor.model = _DummyProbaModel(proba)
     predictor.pipeline = _DummyPipeline()
     predictor.label_encoder = _DummyEncoder(["neg", "pos"])
+    predictor.task_type = "classification"
 
     df = predictor.predict_proba(pd.DataFrame({"f1": [1, 2], "f2": [3, 4]}))
 
@@ -88,6 +91,7 @@ def test_catboost_predictor_predict_proba_multiclass():
     predictor.model = _DummyProbaModel(proba)
     predictor.pipeline = _DummyPipeline()
     predictor.label_encoder = _DummyEncoder(["neg", "neutral", "pos"])
+    predictor.task_type = "classification"
 
     df = predictor.predict_proba(pd.DataFrame({"f1": [1, 2], "f2": [3, 4]}))
 
@@ -106,6 +110,7 @@ def test_keras_predictor_predict_proba_binary():
     predictor = KerasPredictor.__new__(KerasPredictor)
     predictor.model = DummyKerasModel(np.array([[0.2], [0.8]]))
     predictor.pipeline = _DummyPipeline()
+    predictor.task_type = "classification"
 
     df = predictor.predict_proba(pd.DataFrame({"f1": [1, 2]}))
 
@@ -125,6 +130,7 @@ def test_keras_predictor_predict_proba_multiclass():
     predictor = KerasPredictor.__new__(KerasPredictor)
     predictor.model = DummyKerasModel(outputs)
     predictor.pipeline = _DummyPipeline()
+    predictor.task_type = "classification"
 
     df = predictor.predict_proba(pd.DataFrame({"f1": [1, 2]}))
 
@@ -143,6 +149,7 @@ def test_pytorch_predictor_predict_proba_binary():
     predictor = PyTorchPredictor.__new__(PyTorchPredictor)
     predictor.model = DummyTorchModel()
     predictor.pipeline = _DummyPipeline()
+    predictor.task_type = "classification"
 
     df = predictor.predict_proba(pd.DataFrame({"f1": [1, 2]}))
 
@@ -161,8 +168,28 @@ def test_pytorch_predictor_predict_proba_multiclass():
     predictor = PyTorchPredictor.__new__(PyTorchPredictor)
     predictor.model = DummyTorchModel()
     predictor.pipeline = _DummyPipeline()
+    predictor.task_type = "classification"
 
     df = predictor.predict_proba(pd.DataFrame({"f1": [1, 2]}))
 
     assert list(df.columns) == ["proba_0", "proba_1", "proba_2"]
     _assert_proba_df(df, expected_rows=2, expected_cols=3)
+
+
+@pytest.mark.parametrize("predictor_cls", [XGBoostPredictor, KerasPredictor])
+def test_predict_proba_raises_for_non_classification(predictor_cls):
+    predictor = predictor_cls.__new__(predictor_cls)
+    predictor.task_type = "regression"
+    predictor.pipeline = _DummyPipeline()
+
+    class DummyModel:
+        def predict_proba(self, x):
+            return np.array([[0.1, 0.9]])
+
+        def predict(self, x, verbose=0):
+            return np.array([[0.1], [0.9]])
+
+    predictor.model = DummyModel()
+
+    with pytest.raises(NotImplementedError, match="only available for classification models"):
+        predictor.predict_proba(pd.DataFrame({"f1": [1, 2]}))

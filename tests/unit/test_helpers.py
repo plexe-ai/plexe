@@ -58,6 +58,15 @@ def test_compute_metric_unknown_raises():
         compute_metric(y_true, y_pred, "unknown_metric")
 
 
+def test_compute_metric_proba_metric_raises():
+    """Probability metrics should require probability outputs."""
+    y_true = np.array([0, 1, 0, 1])
+    y_pred = np.array([0, 1, 0, 1])
+
+    with pytest.raises(ValueError, match="requires probability estimates"):
+        compute_metric(y_true, y_pred, "roc_auc")
+
+
 def test_select_viable_model_types_defaults_image():
     """Default model types intersect with IMAGE_PATH."""
     result = select_viable_model_types(DataLayout.IMAGE_PATH)

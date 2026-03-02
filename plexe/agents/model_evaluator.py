@@ -9,6 +9,7 @@ from __future__ import annotations
 import logging
 from typing import Any, TYPE_CHECKING
 
+import numpy as np
 import pandas as pd
 from plexe.utils.litellm_wrapper import PlexeLiteLLMModel
 from smolagents import CodeAgent
@@ -66,6 +67,63 @@ class ModelEvaluatorAgent:
         self.context = context
         self.config = config
         self.llm_model = config.evaluation_llm
+
+    @staticmethod
+    def _is_classification_task(task_type: str | None) -> bool:
+        """Check whether a task type string represents classification."""
+        # TODO(task-type-enum): Switch this helper to the canonical TaskType enum once merged.
+        if not task_type:
+            return False
+        normalized = task_type.strip().lower()
+        return normalized in {"classification", "binary_classification", "multiclass_classification"}
+
+    def _can_run_probability_analysis(self, predictor: Any, test_sample_df: pd.DataFrame) -> tuple[bool, str]:
+        """Fail-closed gate for probability analysis phase."""
+        task_type = (self.context.task_analysis or {}).get("task_type")
+        if not self._is_classification_task(task_type):
+            return False, f"task_type '{task_type}' is not classification"
+
+        proba_fn = getattr(predictor, "predict_proba", None)
+        if not callable(proba_fn):
+            return False, f"predictor '{type(predictor).__name__}' has no callable predict_proba()"
+
+        if not self.context.output_targets:
+            return False, "output_targets is empty"
+        target_col = self.context.output_targets[0]
+        if target_col not in test_sample_df.columns:
+            return False, f"target column '{target_col}' missing from test sample"
+
+        feature_cols = [col for col in test_sample_df.columns if col not in self.context.output_targets]
+        if not feature_cols:
+            return False, "no feature columns available for probability analysis"
+
+        smoke_df = test_sample_df.head(min(16, len(test_sample_df)))
+        if smoke_df.empty:
+            return False, "test sample is empty"
+
+        try:
+            proba_df = proba_fn(smoke_df[feature_cols])
+        except Exception as exc:
+            return False, f"predict_proba smoke test failed: {exc}"
+
+        if not isinstance(proba_df, pd.DataFrame):
+            return False, "predict_proba output is not a pandas DataFrame"
+        if len(proba_df) != len(smoke_df):
+            return False, "predict_proba output row count does not match input rows"
+        if proba_df.shape[1] < 2:
+            return False, "predict_proba output must have at least two probability columns"
+        if not all(str(col).startswith("proba_") for col in proba_df.columns):
+            return False, "predict_proba columns must start with 'proba_'"
+
+        proba_vals = proba_df.to_numpy(dtype=float)
+        if not np.isfinite(proba_vals).all():
+            return False, "predict_proba output contains NaN/Inf"
+        if (proba_vals < 0).any() or (proba_vals > 1).any():
+            return False, "predict_proba output contains values outside [0, 1]"
+        if not np.allclose(proba_vals.sum(axis=1), 1.0, atol=1e-3):
+            return False, "predict_proba rows do not sum to 1"
+
+        return True, "gate checks passed"
 
     def _build_agent(self, phase_name: str, phase_prompt: str, tools: list) -> CodeAgent:
         """
@@ -227,17 +285,21 @@ class ModelEvaluatorAgent:
             return None
 
         # Phase 1.5: Probability Analysis
-        core_metrics = self.context.scratch.get("_core_metrics_report")
-        proba_args = {**additional_args, "core_metrics_report": core_metrics}
-        success = self._run_phase(
-            phase_name="ProbabilityAnalysis",
-            phase_prompt=self._get_phase_probability_prompt(self.context.intent),
-            tools=[get_register_core_metrics_tool(self.context)],
-            additional_args=proba_args,
-            registry_key="_core_metrics_report",
-        )
-        if not success:
-            logger.warning("Probability analysis phase failed - continuing with partial evaluation")
+        should_run_proba_phase, skip_reason = self._can_run_probability_analysis(predictor, test_sample_df)
+        if should_run_proba_phase:
+            core_metrics = self.context.scratch.get("_core_metrics_report")
+            proba_args = {**additional_args, "core_metrics_report": core_metrics}
+            success = self._run_phase(
+                phase_name="ProbabilityAnalysis",
+                phase_prompt=self._get_phase_probability_prompt(self.context.intent),
+                tools=[get_register_core_metrics_tool(self.context)],
+                additional_args=proba_args,
+                registry_key="_core_metrics_report",
+            )
+            if not success:
+                logger.warning("Probability analysis phase failed - continuing with partial evaluation")
+        else:
+            logger.info(f"Skipping ProbabilityAnalysis phase: {skip_reason}")
 
         # Phase 2: Error Analysis
         success = self._run_phase(

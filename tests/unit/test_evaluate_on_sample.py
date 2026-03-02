@@ -5,6 +5,7 @@ Tests for evaluate_on_sample probability handling.
 from pathlib import Path
 
 import pandas as pd
+import pytest
 
 from plexe import helpers
 from plexe.config import ModelType
@@ -81,13 +82,43 @@ def test_evaluate_on_sample_falls_back_without_proba(monkeypatch):
     monkeypatch.setattr(helpers, "compute_metric_proba", lambda *args, **kwargs: 0.77)
     monkeypatch.setattr(helpers, "compute_metric", lambda *args, **kwargs: 0.11)
 
+    with pytest.raises(ValueError, match="requires probability outputs"):
+        evaluate_on_sample(
+            spark=spark,
+            sample_uri="dummy",
+            model_artifacts_path=Path("."),
+            model_type=ModelType.XGBOOST,
+            metric="roc_auc",
+            target_columns=["target"],
+        )
+
+
+def test_evaluate_on_sample_uses_label_path_for_label_metrics(monkeypatch):
+    sample_df = pd.DataFrame({"feature": [1, 2, 3], "target": [0, 1, 0]})
+    spark = _DummySpark(sample_df)
+
+    class DummyPredictor:
+        def __init__(self, model_dir: str):
+            pass
+
+        def predict(self, x):
+            return pd.DataFrame({"prediction": [0, 1, 0]})
+
+        def predict_proba(self, x):
+            raise AssertionError("predict_proba should not be called for label metrics")
+
+    import plexe.templates.inference.xgboost_predictor as xgb_module
+
+    monkeypatch.setattr(xgb_module, "XGBoostPredictor", DummyPredictor)
+    monkeypatch.setattr(helpers, "compute_metric", lambda *args, **kwargs: 0.42)
+
     result = evaluate_on_sample(
         spark=spark,
         sample_uri="dummy",
         model_artifacts_path=Path("."),
         model_type=ModelType.XGBOOST,
-        metric="roc_auc",
+        metric="accuracy",
         target_columns=["target"],
     )
 
-    assert result == 0.11
+    assert result == 0.42
