@@ -71,21 +71,23 @@ help:
 .PHONY: test-integration
 test-integration:
 	@echo "🧪 Running staged pytest integration suite..."
+	@echo "Using DATALOADER_WORKERS=$${DATALOADER_WORKERS:-0}"
 	@if [ -n "$(INTEGRATION_RUN_ID)" ]; then \
 		echo "Using integration run id: $(INTEGRATION_RUN_ID)"; \
-		PLEXE_IT_RUN_ID="$(INTEGRATION_RUN_ID)" bash scripts/tests/run_integration_staged.sh; \
+		DATALOADER_WORKERS="$${DATALOADER_WORKERS:-0}" PLEXE_IT_RUN_ID="$(INTEGRATION_RUN_ID)" bash scripts/tests/run_integration_staged.sh; \
 	else \
-		bash scripts/tests/run_integration_staged.sh; \
+		DATALOADER_WORKERS="$${DATALOADER_WORKERS:-0}" bash scripts/tests/run_integration_staged.sh; \
 	fi
 
 .PHONY: test-integration-verbose
 test-integration-verbose:
 	@echo "🧪 Running staged pytest integration suite (verbose)..."
+	@echo "Using DATALOADER_WORKERS=$${DATALOADER_WORKERS:-0}"
 	@if [ -n "$(INTEGRATION_RUN_ID)" ]; then \
 		echo "Using integration run id: $(INTEGRATION_RUN_ID)"; \
-		PLEXE_IT_RUN_ID="$(INTEGRATION_RUN_ID)" PLEXE_IT_VERBOSE=1 bash scripts/tests/run_integration_staged.sh; \
+		DATALOADER_WORKERS="$${DATALOADER_WORKERS:-0}" PLEXE_IT_RUN_ID="$(INTEGRATION_RUN_ID)" PLEXE_IT_VERBOSE=1 bash scripts/tests/run_integration_staged.sh; \
 	else \
-		PLEXE_IT_VERBOSE=1 bash scripts/tests/run_integration_staged.sh; \
+		DATALOADER_WORKERS="$${DATALOADER_WORKERS:-0}" PLEXE_IT_VERBOSE=1 bash scripts/tests/run_integration_staged.sh; \
 	fi
 
 # Fast sanity check - 1 iteration, minimal config

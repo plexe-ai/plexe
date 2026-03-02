@@ -1,6 +1,6 @@
 # Code Index: tests
 
-> Generated on 2026-03-02 21:24:57
+> Generated on 2026-03-02 21:25:06
 
 Test suite structure and test case documentation.
 
@@ -146,6 +146,16 @@ Unit tests for pipeline_runner feature name resolution.
 - `test_resolve_feature_names_uses_pipeline_minus_last()` - Falls back to pipeline[:-1] when last step lacks get_feature_names_out.
 - `test_resolve_feature_names_falls_back_on_mismatch()` - Returns generic names when resolved names don't match output count.
 - `test_resolve_feature_names_falls_back_when_unavailable()` - Returns generic names when no get_feature_names_out is available.
+
+---
+## `unit/templates/training/test_train_pytorch_worker_fallback.py`
+Unit tests for PyTorch DataLoader worker fallback behavior.
+
+**Functions:**
+- `test_resolve_num_workers_zero_is_unchanged() -> None` - Requested zero workers should remain zero.
+- `test_resolve_num_workers_falls_back_on_darwin_spawn(monkeypatch) -> None` - On macOS spawn, requested workers should fall back to zero.
+- `test_resolve_num_workers_uses_context_when_start_method_is_none(monkeypatch) -> None` - When get_start_method returns None, context start method should be used.
+- `test_resolve_num_workers_kept_on_non_darwin_spawn(monkeypatch) -> None` - Spawn on non-macOS should keep the requested worker count.
 
 ---
 ## `unit/test_config.py`

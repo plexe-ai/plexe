@@ -12,6 +12,7 @@ import argparse
 import inspect
 import json
 import logging
+import multiprocessing as mp
 import os
 import sys
 from pathlib import Path
@@ -46,6 +47,27 @@ def _is_rank0(use_ddp: bool) -> bool:
     if not use_ddp:
         return True
     return dist.get_rank() == 0
+
+
+def _resolve_num_workers(requested_workers: int) -> int:
+    """Resolve safe DataLoader worker count for the current runtime."""
+    if requested_workers <= 0:
+        return 0
+
+    start_method = mp.get_start_method(allow_none=True)
+    if start_method is None:
+        start_method = mp.get_context().get_start_method()
+
+    if sys.platform == "darwin" and start_method == "spawn":
+        logger.warning(
+            "Falling back DataLoader workers from %s to 0 on platform=%s start_method=%s",
+            requested_workers,
+            sys.platform,
+            start_method,
+        )
+        return 0
+
+    return requested_workers
 
 
 def train_pytorch(
@@ -151,16 +173,18 @@ def train_pytorch(
     train_dataset = ParquetIterableDataset(train_uri, target_column, task_type)
     val_dataset = ParquetIterableDataset(val_uri, target_column, task_type)
 
+    effective_num_workers = _resolve_num_workers(num_workers)
+
     train_loader = torch.utils.data.DataLoader(
         train_dataset,
         batch_size=batch_size,
-        num_workers=num_workers,
+        num_workers=effective_num_workers,
         pin_memory=device.type == "cuda",
     )
     val_loader = torch.utils.data.DataLoader(
         val_dataset,
         batch_size=batch_size,
-        num_workers=num_workers,
+        num_workers=effective_num_workers,
         pin_memory=device.type == "cuda",
     )
 
@@ -172,6 +196,7 @@ def train_pytorch(
         logger.info("Using ParquetIterableDataset for streaming data loading")
         logger.info(f"Training data: {train_rows} rows, {n_features} features (streaming)")
         logger.info(f"Validation data: {val_rows} rows (streaming)")
+        logger.info(f"DataLoader workers: requested={num_workers}, effective={effective_num_workers}")
 
     # ============================================
     # Step 6: Setup mixed precision
