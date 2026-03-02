@@ -1,6 +1,6 @@
 # Code Index: tests
 
-> Generated on 2026-03-02 22:03:39
+> Generated on 2026-03-02 23:19:34
 
 Test suite structure and test case documentation.
 
@@ -122,6 +122,8 @@ Unit tests for SearchJournal.
 - `test_journal_get_history()` - Test history returns recent entries.
 - `test_journal_improvement_trend_improving()` - Test improvement trend with steadily improving solutions.
 - `test_journal_improvement_trend_insufficient_data()` - Test improvement trend with fewer than 2 successful solutions.
+- `test_journal_get_history_includes_train_performance()` - get_history should include train_performance when set on a solution.
+- `test_journal_get_history_train_performance_none()` - get_history should include train_performance=None when not set.
 
 ---
 ## `unit/search/test_tree_policy_determinism.py`
@@ -208,6 +210,10 @@ Unit tests for core model dataclasses.
 
 **Functions:**
 - `test_build_context_update_and_unknown_key()` - Update should set known fields and reject unknown keys.
+- `test_solution_train_performance_defaults_to_none()` - New field should default to None for backward compatibility.
+- `test_solution_to_dict_includes_train_performance()` - to_dict should serialize train_performance.
+- `test_solution_from_dict_backward_compatible()` - Old checkpoints missing train_performance should deserialize cleanly.
+- `test_solution_from_dict_with_train_performance()` - Checkpoints with train_performance should round-trip correctly.
 
 ---
 ## `unit/test_submission_pytorch.py`

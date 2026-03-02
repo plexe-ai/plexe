@@ -209,7 +209,10 @@ class InsightExtractorAgent:
                 if perf_delta is not None:
                     perf_pct = (perf_delta / parent_perf * 100) if parent_perf else 0
                     perf_str += f" ({perf_delta:+.4f}, {perf_pct:+.1f}%)"
-                summary += f"    Performance: {perf_str}\n"
+                summary += f"    Val Performance: {perf_str}\n"
+                if sol.train_performance is not None:
+                    gap = sol.train_performance - sol.performance
+                    summary += f"    Train Performance: {sol.train_performance:.4f} (train-val gap: {gap:+.4f})\n"
             else:
                 summary += f"    Status: {status}\n"
 

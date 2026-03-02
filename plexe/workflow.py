@@ -499,6 +499,11 @@ def build_model(
                 logger.error("No search journal or good nodes available for fallback")
                 logger.error("Proceeding with failed model (will be marked as FAILED)")
 
+        # TODO(EVAL_REFINEMENT_LOOP): When verdict is CONDITIONAL_PASS or FAIL with actionable
+        # HIGH-priority recommendations, summarize evaluation findings into structured feedback,
+        # loop back to search_models() for 1-3 targeted iterations, then re-evaluate.
+        # This creates a closed loop: search -> evaluate -> refine -> re-evaluate.
+
         # Phase 6: Package Final Deliverables
         if start_phase <= 6:
             with tracer.start_as_current_span("Phase 6: Package Final Model"):
@@ -1260,7 +1265,7 @@ def _execute_variant(
             (src_dir / "__init__.py").write_text("# Auto-generated\n")
 
         # Evaluate
-        performance = evaluate_on_sample(
+        performance, train_performance = evaluate_on_sample(
             spark=spark,
             sample_uri=variant_context.val_sample_uri,
             model_artifacts_path=model_artifacts_path,
@@ -1268,11 +1273,13 @@ def _execute_variant(
             metric=variant_context.metric.name,
             target_columns=variant_context.output_targets,
             group_column=variant_context.group_column,
+            train_sample_uri=variant_context.train_sample_uri,
         )
 
         # Update solution
         new_solution.model_artifacts_path = model_artifacts_path
         new_solution.performance = float(performance)
+        new_solution.train_performance = float(train_performance) if train_performance is not None else None
         new_solution.training_time = time.time() - start_time
         new_solution.is_buggy = False
 
@@ -1405,6 +1412,17 @@ def search_models(
 
                     logger.info(f"Generated {len(plans)} bootstrap plan(s)")
 
+                    # Synthetic hypothesis for insight extraction on bootstrap results
+                    hypothesis = Hypothesis(
+                        expand_solution_id=-1,
+                        focus="both",
+                        vary="bootstrap_initial_solutions",
+                        num_variants=len(plans),
+                        rationale="Initial diverse solutions to seed the search tree",
+                        keep_from_parent=[],
+                        expected_impact="Establish baseline performance range across strategies",
+                    )
+
                 except Exception as e:
                     logger.error(f"Bootstrap planning failed: {e}")
                     continue  # Skip this iteration
@@ -1506,10 +1524,9 @@ def search_models(
             solution_id_counter += len(variant_ids)
 
             # ============================================
-            # Step 2e: Extract Insights from Variants (skip in bootstrap mode)
+            # Step 2e: Extract Insights from Variants
             # ============================================
-            if variant_solutions and expand_solution_id is not None:
-                # Only extract insights when we have a hypothesis to learn from
+            if variant_solutions:
                 try:
                     InsightExtractorAgent(
                         hypothesis=hypothesis,
@@ -1699,7 +1716,7 @@ def retrain_on_full_dataset(
     # ============================================
     logger.info("Evaluating final model on full validation set...")
 
-    final_val_performance = evaluate_on_sample(
+    final_val_performance, _ = evaluate_on_sample(
         spark=spark,
         sample_uri=context.val_uri,  # ← FULL validation set
         model_artifacts_path=final_artifacts_path,

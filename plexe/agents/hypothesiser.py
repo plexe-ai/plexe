@@ -189,7 +189,13 @@ class HypothesiserAgent:
         if not node:
             return "No node"
 
-        summary = f"  Performance: {node.performance:.4f}\n" if node.performance else "  Performance: N/A\n"
+        if node.performance is not None:
+            summary = f"  Val Performance: {node.performance:.4f}\n"
+            if node.train_performance is not None:
+                gap = node.train_performance - node.performance
+                summary += f"  Train Performance: {node.train_performance:.4f} (train-val gap: {gap:+.4f})\n"
+        else:
+            summary = "  Performance: N/A\n"
 
         if node.plan:
             summary += f"  Features: {node.plan.features.strategy}\n"
@@ -235,6 +241,11 @@ class HypothesiserAgent:
 
             status = f"✓ {perf:.4f}" if success and perf else ("✗ FAILED" if not success else "pending")
             summary += f"  Solution {solution_id} ({stage}): {status}\n"
+
+            train_perf = entry.get("train_performance")
+            if success and perf and train_perf is not None:
+                gap = train_perf - perf
+                summary += f"    Train/val gap: {gap:+.4f}\n"
 
             if entry.get("error"):
                 summary += f"    Error: {entry['error'][:80]}\n"

@@ -294,7 +294,8 @@ class Solution:
 
     # Execution Results
     model_artifacts_path: Path | None = None
-    performance: float | None = None
+    performance: float | None = None  # Validation set metric
+    train_performance: float | None = None  # Training set metric (for overfitting/underfitting detection)
     training_time: float | None = None
 
     # Tree Structure
@@ -359,6 +360,7 @@ class Solution:
             "parent_solution_id": self.parent.solution_id if self.parent else None,
             "child_solution_ids": [c.solution_id for c in self.children],
             "performance": self.performance,
+            "train_performance": self.train_performance,
             "training_time": self.training_time,
             "is_buggy": self.is_buggy,
             "error": self.error,
@@ -398,6 +400,7 @@ class Solution:
             model_type=d["model_type"],
             model_artifacts_path=Path(d["model_artifacts_path"]) if d.get("model_artifacts_path") else None,
             performance=d.get("performance"),
+            train_performance=d.get("train_performance"),
             training_time=d.get("training_time"),
             parent=None,  # Will be linked in second pass
             children=[],  # Will be linked in second pass
