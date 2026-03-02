@@ -4,6 +4,20 @@ set -euo pipefail
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 cd "$ROOT_DIR"
 
+CATBOOST_INFO_DIR="$ROOT_DIR/catboost_info"
+
+cleanup_catboost_info() {
+  if [[ "${PLEXE_IT_KEEP_CATBOOST_INFO:-0}" == "1" ]]; then
+    return
+  fi
+  rm -rf "$CATBOOST_INFO_DIR"
+}
+
+# Remove stale CatBoost local artifacts from previous runs.
+cleanup_catboost_info
+# Keep repo clean even if a stage fails midway.
+trap cleanup_catboost_info EXIT
+
 if [[ -z "${PLEXE_IT_RUN_ID:-}" ]]; then
   PLEXE_IT_RUN_ID="$(date +%Y%m%d_%H%M%S)"
 fi
