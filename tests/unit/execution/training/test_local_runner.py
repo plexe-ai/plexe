@@ -1,6 +1,7 @@
 """Tests for LocalProcessRunner GPU detection and command construction."""
 
 import builtins
+import sys
 from unittest.mock import MagicMock, patch
 
 import pytest
@@ -120,26 +121,28 @@ class TestCommandConstruction:
         self.runner = LocalProcessRunner(work_dir="/tmp/test_runner")
 
     def test_pytorch_no_gpu_uses_python(self):
-        """PyTorch with 0 GPUs should use 'python' launcher, no GPU flags."""
+        """PyTorch with 0 GPUs should use the current Python launcher, no GPU flags."""
         cmd = _run_and_capture_cmd(self.runner, "train_pytorch", gpu_count=0)
         assert cmd is not None
-        assert cmd[0] == "python"
+        assert cmd[0] == sys.executable
         assert "--ddp" not in cmd
         assert "--mixed-precision" not in cmd
 
     def test_pytorch_single_gpu_no_ddp(self):
-        """PyTorch with 1 GPU should use 'python' (no DDP), but get --mixed-precision."""
+        """PyTorch with 1 GPU should use current Python (no DDP), but get --mixed-precision."""
         cmd = _run_and_capture_cmd(self.runner, "train_pytorch", gpu_count=1)
         assert cmd is not None
-        assert cmd[0] == "python"
+        assert cmd[0] == sys.executable
         assert "--ddp" not in cmd
         assert "--mixed-precision" in cmd
 
-    def test_pytorch_multi_gpu_uses_torchrun(self):
-        """PyTorch with >1 GPU should use 'torchrun' with --ddp and --mixed-precision."""
+    def test_pytorch_multi_gpu_uses_distributed_run(self):
+        """PyTorch with >1 GPU should use torch.distributed.run with --ddp and --mixed-precision."""
         cmd = _run_and_capture_cmd(self.runner, "train_pytorch", gpu_count=4)
         assert cmd is not None
-        assert cmd[0] == "torchrun"
+        assert cmd[0] == sys.executable
+        assert "-m" in cmd
+        assert "torch.distributed.run" in cmd
         assert "--nproc_per_node=auto" in cmd
         assert "--standalone" in cmd
         assert "--ddp" in cmd

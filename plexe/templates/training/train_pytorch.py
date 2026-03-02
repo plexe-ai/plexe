@@ -53,7 +53,7 @@ def train_pytorch(
     val_uri: str,
     output_dir: Path,
     target_column: str,
-    epochs: int = 50,
+    epochs: int = 10,
     batch_size: int = 32,
     num_workers: int = 0,
     use_ddp: bool = False,
@@ -332,7 +332,7 @@ if __name__ == "__main__":
     parser.add_argument("--val-uri", required=True, help="Validation data URI")
     parser.add_argument("--target-column", required=True, help="Target column name")
     parser.add_argument("--output", required=True, help="Output directory")
-    parser.add_argument("--epochs", type=int, default=50, help="Number of epochs")
+    parser.add_argument("--epochs", type=int, default=10, help="Number of epochs")
     parser.add_argument("--batch-size", type=int, default=32, help="Batch size")
     parser.add_argument("--num-workers", type=int, default=0, help="DataLoader worker processes")
     parser.add_argument("--ddp", action="store_true", help="Enable DDP (set by torchrun)")

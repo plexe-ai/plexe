@@ -210,7 +210,7 @@ def get_save_model_fn(context: BuildContext, model_type: str, max_epochs: int = 
                 model: Keras model instance (keras.Model)
                 optimizer: Optimizer instance (keras.optimizers.Optimizer)
                 loss: Loss instance (keras.losses.Loss)
-                epochs: Number of training epochs (e.g., 50)
+                epochs: Number of training epochs (e.g., 10)
                 batch_size: Batch size for training (e.g., 32)
 
             Returns:
@@ -259,7 +259,7 @@ def get_save_model_fn(context: BuildContext, model_type: str, max_epochs: int = 
                 model: PyTorch model instance (torch.nn.Module)
                 optimizer: Optimizer instance (torch.optim.Optimizer)
                 loss: Loss instance (torch.nn.Module)
-                epochs: Number of training epochs (e.g., 50)
+                epochs: Number of training epochs (e.g., 10)
                 batch_size: Batch size for training (e.g., 32)
 
             Returns:

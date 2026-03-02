@@ -1,6 +1,6 @@
 # Code Index: tests
 
-> Generated on 2026-03-02 21:19:35
+> Generated on 2026-03-02 21:24:01
 
 Test suite structure and test case documentation.
 
@@ -87,9 +87,9 @@ Tests for LocalProcessRunner GPU detection and command construction.
 
 **`TestCommandConstruction`** - Test that the runner builds the right command for different GPU configurations.
 - `setup_method(self)` - No description
-- `test_pytorch_no_gpu_uses_python(self)` - PyTorch with 0 GPUs should use 'python' launcher, no GPU flags.
-- `test_pytorch_single_gpu_no_ddp(self)` - PyTorch with 1 GPU should use 'python' (no DDP), but get --mixed-precision.
-- `test_pytorch_multi_gpu_uses_torchrun(self)` - PyTorch with >1 GPU should use 'torchrun' with --ddp and --mixed-precision.
+- `test_pytorch_no_gpu_uses_python(self)` - PyTorch with 0 GPUs should use the current Python launcher, no GPU flags.
+- `test_pytorch_single_gpu_no_ddp(self)` - PyTorch with 1 GPU should use current Python (no DDP), but get --mixed-precision.
+- `test_pytorch_multi_gpu_uses_distributed_run(self)` - PyTorch with >1 GPU should use torch.distributed.run with --ddp and --mixed-precision.
 - `test_pytorch_num_workers_passed(self)` - PyTorch should pass --num-workers when dataloader_workers > 0.
 - `test_pytorch_no_mixed_precision_when_disabled(self)` - PyTorch with GPU but mixed_precision=False should not get --mixed-precision.
 

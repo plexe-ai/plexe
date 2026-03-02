@@ -34,8 +34,8 @@
 
 # Default epochs for neural network training (Keras, PyTorch)
 # Type: integer
-# Default: 25
-# nn_default_epochs: 25
+# Default: 10
+# nn_default_epochs: 10
 
 # Maximum epochs for neural network training (Keras, PyTorch)
 # Type: integer

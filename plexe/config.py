@@ -309,7 +309,7 @@ class Config(BaseSettings):
     # Training settings
     training_timeout: int = Field(default=1800, description="Timeout for training runs (seconds)", gt=0)
     nn_default_epochs: int = Field(
-        default=25, description="Default epochs for neural network training (Keras, PyTorch)"
+        default=10, description="Default epochs for neural network training (Keras, PyTorch)"
     )
     nn_max_epochs: int = Field(default=50, description="Maximum epochs for neural network training (Keras, PyTorch)")
     nn_default_batch_size: int = Field(

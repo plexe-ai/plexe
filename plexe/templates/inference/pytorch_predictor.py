@@ -42,9 +42,7 @@ class PyTorchPredictor:
         else:
             raw_task_type = ""
 
-        # Normalize legacy task_type values to canonical form
-        _legacy_map = {"binary": "binary_classification", "classification": "multiclass_classification"}
-        self._task_type = _legacy_map.get(raw_task_type, raw_task_type)
+        self._task_type = raw_task_type
 
         # Execute pipeline code (defines custom FunctionTransformer functions)
         code_path = model_dir / "src" / "pipeline.py"

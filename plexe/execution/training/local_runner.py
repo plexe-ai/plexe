@@ -7,6 +7,7 @@ import json
 import logging
 import os
 import subprocess
+import sys
 import time
 import uuid
 from pathlib import Path
@@ -48,7 +49,7 @@ class LocalProcessRunner(TrainingRunner):
     """
     Runs training in local subprocess.
 
-    Supports single-GPU, multi-GPU (DDP via torchrun for PyTorch,
+    Supports single-GPU, multi-GPU (DDP via torch.distributed.run for PyTorch,
     MirroredStrategy for Keras), and CPU training.
     """
 
@@ -207,16 +208,18 @@ class LocalProcessRunner(TrainingRunner):
                 gpu_count = 0
             use_torchrun = "pytorch" in template and gpu_count > 1
 
-            # Build command - use torchrun for multi-GPU PyTorch DDP
+            # Build command - use torch.distributed.run for multi-GPU PyTorch DDP
             if use_torchrun:
                 cmd = [
-                    "torchrun",
+                    sys.executable,
+                    "-m",
+                    "torch.distributed.run",
                     "--nproc_per_node=auto",
                     "--standalone",
                     str(template_script),
                 ]
             else:
-                cmd = ["python", str(template_script)]
+                cmd = [sys.executable, str(template_script)]
 
             cmd.extend(
                 [
