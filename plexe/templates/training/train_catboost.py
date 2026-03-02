@@ -34,6 +34,7 @@ def train_catboost(
     val_uri: str,
     output_dir: Path,
     target_column: str,
+    task_type: str | None = None,
 ) -> dict:
     """
     Train CatBoost model directly (no Spark).
@@ -158,6 +159,9 @@ def train_catboost(
         logger.info(f"LabelEncoder saved to {shorten(str(encoder_path), 30)}")
 
     # Step 8: Save Metadata
+    if not task_type:
+        task_type = "binary_classification" if is_classification else "regression"
+
     metadata = {
         "model_type": "catboost",
         "training_mode": "direct",
@@ -166,7 +170,7 @@ def train_catboost(
         "best_score": model.best_score_,  # Nested dict - save as-is (JSON handles this fine)
         "n_features": X_train.shape[1],
         "target_column": target_column,
-        "task_type": "classification" if is_classification else "regression",
+        "task_type": task_type,
         "train_samples": len(X_train),
         "val_samples": len(X_val),
     }
@@ -191,6 +195,7 @@ def main():
     parser.add_argument("--val-uri", required=True, help="Validation data URI")
     parser.add_argument("--target-column", required=True, help="Target column name")
     parser.add_argument("--output", required=True, help="Output directory")
+    parser.add_argument("--task-type", required=False, default=None, help="Canonical task type")
 
     args = parser.parse_args()
 
@@ -204,6 +209,7 @@ def main():
         val_uri=args.val_uri,
         output_dir=Path(args.output),
         target_column=args.target_column,
+        task_type=args.task_type,
     )
 
     logger.info("Training complete!")

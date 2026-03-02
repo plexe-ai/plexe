@@ -1,27 +1,50 @@
 """
-Hardcoded robust PyTorch training loop.
+PyTorch training template with streaming data loading, multi-GPU (DDP), and mixed precision.
 
-Trains PyTorch models directly with DataLoader-based batching.
+Supports:
+- Streaming parquet data via ParquetIterableDataset (handles 100GB+ datasets)
+- Single GPU, multi-GPU (DDP via torchrun), and CPU training
+- Mixed precision (FP16) for faster training and lower memory usage
+- Best model checkpointing to disk (not memory)
 """
 
 import argparse
-import copy
-import inspect
 import json
 import logging
+import os
 import sys
 from pathlib import Path
 
 import cloudpickle
-import pandas as pd
 import torch
+import torch.distributed as dist
 import torch.nn as nn
-from torch.utils.data import DataLoader, TensorDataset
 
+from plexe.utils.parquet_dataset import (
+    ParquetIterableDataset,
+    get_parquet_feature_count,
+    get_parquet_row_count,
+)
 from plexe.utils.s3 import download_s3_uri
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] %(message)s", stream=sys.stdout)
 logger = logging.getLogger(__name__)
+
+
+def _infer_task_type(loss_fn: nn.Module) -> str:
+    """Infer task type from loss function (legacy fallback when --task-type not provided)."""
+    if isinstance(loss_fn, nn.CrossEntropyLoss):
+        return "multiclass_classification"
+    elif isinstance(loss_fn, nn.BCEWithLogitsLoss):
+        return "binary_classification"
+    return "regression"
+
+
+def _is_rank0(use_ddp: bool) -> bool:
+    """Check if this is rank 0 (or non-distributed)."""
+    if not use_ddp:
+        return True
+    return dist.get_rank() == 0
 
 
 def train_pytorch(
@@ -30,120 +53,143 @@ def train_pytorch(
     val_uri: str,
     output_dir: Path,
     target_column: str,
-    epochs: int = 25,
+    epochs: int = 50,
     batch_size: int = 32,
+    num_workers: int = 0,
+    use_ddp: bool = False,
+    use_mixed_precision: bool = False,
+    task_type: str | None = None,
 ) -> dict:
     """
-    Train PyTorch model directly.
+    Train PyTorch model with streaming data, optional DDP, and mixed precision.
 
     Args:
         untrained_model_path: Path to untrained model (pkl via torch.save)
-        train_uri: Training data parquet
-        val_uri: Validation data parquet
+        train_uri: Training data parquet (file or directory)
+        val_uri: Validation data parquet (file or directory)
         output_dir: Where to save outputs
         target_column: Target column name
         epochs: Number of training epochs
         batch_size: Batch size for DataLoader
-
-    Returns:
-        Training metadata
+        num_workers: Number of DataLoader worker processes
+        use_ddp: Whether DDP is active (set by torchrun launcher)
+        use_mixed_precision: Whether to use FP16 mixed precision
     """
     output_dir.mkdir(parents=True, exist_ok=True)
 
-    # Step 1: Load untrained model
-    logger.info(f"Loading untrained model from {untrained_model_path}...")
-    model = torch.load(untrained_model_path, weights_only=False)
-    logger.info(f"Model loaded: {type(model).__name__}")
+    # ============================================
+    # Step 1: Setup device and distributed training
+    # ============================================
+    if use_ddp:
+        if not torch.cuda.is_available():
+            raise RuntimeError("DDP requires CUDA but no GPU is available. Remove --ddp to train on CPU.")
+        dist.init_process_group(backend="nccl")
+        local_rank = int(os.environ.get("LOCAL_RANK", 0))
+        device = torch.device(f"cuda:{local_rank}")
+        torch.cuda.set_device(device)
+        gpu_count = dist.get_world_size()
+        logger.info(f"DDP initialized: rank {dist.get_rank()}/{gpu_count}, device {device}")
+    elif torch.cuda.is_available():
+        device = torch.device("cuda:0")
+        gpu_count = torch.cuda.device_count()
+        logger.info(f"Single GPU training on {device} ({gpu_count} GPU(s) available)")
+    else:
+        device = torch.device("cpu")
+        gpu_count = 0
+        use_mixed_precision = False  # AMP requires CUDA
+        logger.info("Training on CPU")
 
-    # Step 2: Load optimizer/loss config
+    rank0 = _is_rank0(use_ddp)
+
+    # ============================================
+    # Step 2: Load untrained model
+    # ============================================
+    if rank0:
+        logger.info(f"Loading untrained model from {untrained_model_path}...")
+    model = torch.load(untrained_model_path, weights_only=False, map_location="cpu")
+    model = model.to(device)
+
+    if use_ddp:
+        model = torch.nn.parallel.DistributedDataParallel(model, device_ids=[local_rank])
+
+    if rank0:
+        logger.info(f"Model loaded: {type(model).__name__}")
+
+    # ============================================
+    # Step 3: Load optimizer/loss config
+    # ============================================
     config_path = untrained_model_path.parent / "training_config.json"
-    logger.info(f"Loading training config from {config_path}...")
     with open(config_path) as f:
         training_config = json.load(f)
 
-    # Recreate optimizer (needs model.parameters())
+    # Recreate optimizer (needs model.parameters() — works with DDP wrapper)
     optimizer_class = getattr(torch.optim, training_config["optimizer_class"])
     optimizer_config = training_config.get("optimizer_config", {})
-    if optimizer_config:
-        signature = inspect.signature(optimizer_class.__init__)
-        params = signature.parameters
-        accepts_kwargs = any(param.kind == inspect.Parameter.VAR_KEYWORD for param in params.values())
-        if not accepts_kwargs:
-            allowed = {name for name in params if name not in ("self", "params")}
-            filtered_config = {key: value for key, value in optimizer_config.items() if key in allowed}
-            dropped_keys = sorted(set(optimizer_config) - set(filtered_config))
-            if dropped_keys:
-                logger.warning(
-                    "Dropping unsupported optimizer args for %s: %s",
-                    optimizer_class.__name__,
-                    dropped_keys,
-                )
-            optimizer_config = filtered_config
     optimizer = optimizer_class(model.parameters(), **optimizer_config)
-    logger.info(f"Optimizer: {type(optimizer).__name__}")
 
     # Recreate loss
     loss_class = getattr(nn, training_config["loss_class"])
     loss_fn = loss_class()
-    logger.info(f"Loss: {type(loss_fn).__name__}")
 
-    # Step 3: Download from S3 if needed
+    if not task_type:
+        task_type = _infer_task_type(loss_fn)
+    if rank0:
+        logger.info(f"Optimizer: {type(optimizer).__name__}, Loss: {type(loss_fn).__name__}, Task: {task_type}")
+
+    # ============================================
+    # Step 4: Download from S3 if needed
+    # ============================================
     if train_uri.startswith("s3://"):
         train_uri = download_s3_uri(train_uri)
     if val_uri.startswith("s3://"):
         val_uri = download_s3_uri(val_uri)
 
-    # Step 4: Load data and convert to tensors
-    logger.info(f"Loading training data from {train_uri}...")
-    train_df = pd.read_parquet(train_uri)
-    logger.info(f"Training data shape: {train_df.shape}")
+    # ============================================
+    # Step 5: Create streaming DataLoaders
+    # ============================================
+    train_dataset = ParquetIterableDataset(train_uri, target_column, task_type)
+    val_dataset = ParquetIterableDataset(val_uri, target_column, task_type)
 
-    X_train = torch.tensor(train_df.drop(columns=[target_column]).values, dtype=torch.float32)
-    y_train_raw = train_df[target_column].values
+    train_loader = torch.utils.data.DataLoader(
+        train_dataset,
+        batch_size=batch_size,
+        num_workers=num_workers,
+        pin_memory=device.type == "cuda",
+    )
+    val_loader = torch.utils.data.DataLoader(
+        val_dataset,
+        batch_size=batch_size,
+        num_workers=num_workers,
+        pin_memory=device.type == "cuda",
+    )
 
-    logger.info(f"Loading validation data from {val_uri}...")
-    val_df = pd.read_parquet(val_uri)
-    logger.info(f"Validation data shape: {val_df.shape}")
+    n_features = get_parquet_feature_count(train_uri, target_column)
+    train_rows = get_parquet_row_count(train_uri)
+    val_rows = get_parquet_row_count(val_uri)
 
-    X_val = torch.tensor(val_df.drop(columns=[target_column]).values, dtype=torch.float32)
-    y_val_raw = val_df[target_column].values
+    if rank0:
+        logger.info("Using ParquetIterableDataset for streaming data loading")
+        logger.info(f"Training data: {train_rows} rows, {n_features} features (streaming)")
+        logger.info(f"Validation data: {val_rows} rows (streaming)")
 
-    # Determine task type from loss function and target values
-    is_classification = isinstance(loss_fn, nn.CrossEntropyLoss)
-    is_binary = isinstance(loss_fn, nn.BCEWithLogitsLoss)
+    # ============================================
+    # Step 6: Setup mixed precision
+    # ============================================
+    scaler = torch.amp.GradScaler("cuda") if use_mixed_precision else None
+    autocast_ctx = torch.amp.autocast("cuda") if use_mixed_precision else torch.amp.autocast("cpu", enabled=False)
 
-    if is_classification:
-        # CrossEntropyLoss expects long targets
-        y_train = torch.tensor(y_train_raw, dtype=torch.long)
-        y_val = torch.tensor(y_val_raw, dtype=torch.long)
-        task_type = "classification"
-    elif is_binary:
-        y_train = torch.tensor(y_train_raw, dtype=torch.float32).unsqueeze(1)
-        y_val = torch.tensor(y_val_raw, dtype=torch.float32).unsqueeze(1)
-        task_type = "classification"
-    else:
-        # Regression
-        y_train = torch.tensor(y_train_raw, dtype=torch.float32).unsqueeze(1)
-        y_val = torch.tensor(y_val_raw, dtype=torch.float32).unsqueeze(1)
-        task_type = "regression"
+    if rank0 and use_mixed_precision:
+        logger.info("Mixed precision (FP16) enabled")
 
-    # Step 5: Create DataLoaders
-    train_dataset = TensorDataset(X_train, y_train)
-    val_dataset = TensorDataset(X_val, y_val)
-
-    train_loader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True)
-    val_loader = DataLoader(val_dataset, batch_size=batch_size, shuffle=False)
-
-    # Step 6: Training loop
-    logger.info(f"Training for {epochs} epochs, batch_size={batch_size}...")
-
-    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-    model = model.to(device)
-    logger.info(f"Training on device: {device}")
+    # ============================================
+    # Step 7: Training loop
+    # ============================================
+    if rank0:
+        logger.info(f"Training for {epochs} epochs, batch_size={batch_size}...")
 
     history = {"train_loss": [], "val_loss": []}
     best_val_loss = float("inf")
-    best_model_state = None
+    best_checkpoint_path = None
 
     for epoch in range(epochs):
         # Train
@@ -155,15 +201,22 @@ def train_pytorch(
             X_batch, y_batch = X_batch.to(device), y_batch.to(device)
 
             optimizer.zero_grad()
-            output = model(X_batch)
-            loss = loss_fn(output, y_batch)
-            loss.backward()
-            optimizer.step()
+            with autocast_ctx:
+                output = model(X_batch)
+                loss = loss_fn(output, y_batch)
+
+            if scaler is not None:
+                scaler.scale(loss).backward()
+                scaler.step(optimizer)
+                scaler.update()
+            else:
+                loss.backward()
+                optimizer.step()
 
             train_loss_sum += loss.item()
             train_batches += 1
 
-        avg_train_loss = train_loss_sum / train_batches
+        avg_train_loss = train_loss_sum / max(train_batches, 1)
 
         # Validate
         model.eval()
@@ -173,78 +226,101 @@ def train_pytorch(
         with torch.no_grad():
             for X_batch, y_batch in val_loader:
                 X_batch, y_batch = X_batch.to(device), y_batch.to(device)
-                output = model(X_batch)
-                loss = loss_fn(output, y_batch)
+                with autocast_ctx:
+                    output = model(X_batch)
+                    loss = loss_fn(output, y_batch)
                 val_loss_sum += loss.item()
                 val_batches += 1
 
-        avg_val_loss = val_loss_sum / val_batches
+        avg_val_loss = val_loss_sum / max(val_batches, 1)
 
         history["train_loss"].append(avg_train_loss)
         history["val_loss"].append(avg_val_loss)
 
-        # Track best model
-        if avg_val_loss < best_val_loss:
+        # Track best model — save checkpoint to disk instead of memory.
+        # Note: only rank 0 updates best_val_loss and saves checkpoints. Non-rank-0
+        # processes retain best_val_loss=inf, which is intentional — only rank 0's
+        # history and artifacts are used downstream.
+        if avg_val_loss < best_val_loss and rank0:
             best_val_loss = avg_val_loss
-            best_model_state = copy.deepcopy(model.state_dict())
+            # Get the underlying model (unwrap DDP if needed)
+            raw_model = model.module if use_ddp else model
+            best_checkpoint_path = output_dir / "_best_checkpoint.pt"
+            torch.save(raw_model.state_dict(), best_checkpoint_path)
 
-        if (epoch + 1) % 5 == 0 or epoch == 0:
+        if rank0 and ((epoch + 1) % 5 == 0 or epoch == 0):
             logger.info(
                 f"  Epoch {epoch + 1}/{epochs} - train_loss: {avg_train_loss:.4f}, val_loss: {avg_val_loss:.4f}"
             )
 
-    logger.info("Training complete!")
+    if rank0:
+        logger.info("Training complete!")
 
-    # Restore best model weights
-    if best_model_state is not None:
-        model.load_state_dict(best_model_state)
-        logger.info(f"Restored best model (val_loss: {best_val_loss:.4f})")
+    # ============================================
+    # Step 8: Save artifacts (rank 0 only)
+    # ============================================
+    metadata = {}
+    if rank0:
+        artifacts_dir = output_dir / "artifacts"
+        artifacts_dir.mkdir(exist_ok=True)
 
-    # Step 7: Save artifacts
-    artifacts_dir = output_dir / "artifacts"
-    artifacts_dir.mkdir(exist_ok=True)
+        # Restore best model weights
+        raw_model = model.module if use_ddp else model
+        if best_checkpoint_path and best_checkpoint_path.exists():
+            raw_model.load_state_dict(torch.load(best_checkpoint_path, weights_only=True, map_location=device))
+            best_checkpoint_path.unlink()  # Clean up temp checkpoint
+            logger.info(f"Restored best model (val_loss: {best_val_loss:.4f})")
 
-    # Save model state dict
-    model_path = artifacts_dir / "model.pt"
-    model_cpu = model.to("cpu")
-    torch.save(model_cpu.state_dict(), model_path)
-    logger.info(f"Model state dict saved to {model_path}")
+        # Save model state dict
+        model_cpu = raw_model.to("cpu")
+        model_path = artifacts_dir / "model.pt"
+        torch.save(model_cpu.state_dict(), model_path)
+        logger.info(f"Model state dict saved to {model_path}")
 
-    # Save model class definition via cloudpickle (needed to reconstruct at inference)
-    model_class_path = artifacts_dir / "model_class.pkl"
-    with open(model_class_path, "wb") as f:
-        cloudpickle.dump(model_cpu, f)
-    logger.info(f"Model class saved to {model_class_path}")
+        # Save model class definition via cloudpickle (needed to reconstruct at inference)
+        model_class_path = artifacts_dir / "model_class.pkl"
+        with open(model_class_path, "wb") as f:
+            cloudpickle.dump(model_cpu, f)
+        logger.info(f"Model class saved to {model_class_path}")
 
-    # Save training history
-    history_path = artifacts_dir / "history.json"
-    with open(history_path, "w") as f:
-        json.dump(history, f, indent=2)
-    logger.info(f"History saved to {history_path}")
+        # Save training history
+        history_path = artifacts_dir / "history.json"
+        with open(history_path, "w") as f:
+            json.dump(history, f, indent=2)
 
-    # Save metadata (includes optimizer/loss config for faithful retraining)
-    metadata = {
-        "model_type": "pytorch",
-        "training_mode": "direct",
-        "epochs": epochs,
-        "batch_size": batch_size,
-        "best_val_loss": best_val_loss,
-        "n_features": X_train.shape[1],
-        "target_column": target_column,
-        "task_type": task_type,
-        "train_samples": len(X_train),
-        "val_samples": len(X_val),
-        "final_train_loss": history["train_loss"][-1],
-        "final_val_loss": history["val_loss"][-1],
-        "optimizer_class": type(optimizer).__name__,
-        "optimizer_config": {k: v for k, v in optimizer.defaults.items()},
-        "loss_class": type(loss_fn).__name__,
-    }
+        # Save metadata
+        metadata = {
+            "model_type": "pytorch",
+            "training_mode": "direct",
+            "epochs": epochs,
+            "batch_size": batch_size,
+            "best_val_loss": best_val_loss,
+            "n_features": n_features,
+            "target_column": target_column,
+            "task_type": task_type,
+            "train_samples": train_rows,
+            "val_samples": val_rows,
+            "final_train_loss": history["train_loss"][-1],
+            "final_val_loss": history["val_loss"][-1],
+            "optimizer_class": type(optimizer).__name__,
+            "optimizer_config": {k: v for k, v in optimizer.defaults.items()},
+            "loss_class": type(loss_fn).__name__,
+            "gpu_count": gpu_count,
+            "mixed_precision": use_mixed_precision,
+            "device": str(device),
+            "distributed": use_ddp,
+        }
 
-    metadata_path = artifacts_dir / "metadata.json"
-    with open(metadata_path, "w") as f:
-        json.dump(metadata, f, indent=2)
-    logger.info(f"Metadata saved to {metadata_path}")
+        metadata_path = artifacts_dir / "metadata.json"
+        with open(metadata_path, "w") as f:
+            json.dump(metadata, f, indent=2)
+        logger.info(f"Metadata saved to {metadata_path}")
+
+    # ============================================
+    # Step 9: Cleanup distributed training
+    # ============================================
+    if use_ddp:
+        dist.destroy_process_group()
 
     return metadata
 
@@ -256,8 +332,12 @@ if __name__ == "__main__":
     parser.add_argument("--val-uri", required=True, help="Validation data URI")
     parser.add_argument("--target-column", required=True, help="Target column name")
     parser.add_argument("--output", required=True, help="Output directory")
-    parser.add_argument("--epochs", type=int, default=25, help="Number of epochs")
+    parser.add_argument("--epochs", type=int, default=50, help="Number of epochs")
     parser.add_argument("--batch-size", type=int, default=32, help="Batch size")
+    parser.add_argument("--num-workers", type=int, default=0, help="DataLoader worker processes")
+    parser.add_argument("--ddp", action="store_true", help="Enable DDP (set by torchrun)")
+    parser.add_argument("--mixed-precision", action="store_true", help="Enable FP16 mixed precision")
+    parser.add_argument("--task-type", required=False, default=None, help="Canonical task type")
 
     args = parser.parse_args()
 
@@ -269,6 +349,10 @@ if __name__ == "__main__":
         target_column=args.target_column,
         epochs=args.epochs,
         batch_size=args.batch_size,
+        num_workers=args.num_workers,
+        use_ddp=args.ddp,
+        use_mixed_precision=args.mixed_precision,
+        task_type=args.task_type,
     )
 
     logger.info("Script complete!")

@@ -3,20 +3,47 @@
 #   base      → shared dependencies (no Spark provider)
 #   pyspark   → local PySpark execution (DEFAULT)
 #   databricks→ remote Databricks Connect execution
+#   VARIANT=cpu (default) or VARIANT=gpu
 #
 # Usage:
 #   docker build .                        # default: pyspark
 #   docker build --target databricks .    # databricks-connect
+#   docker build --build-arg VARIANT=gpu .  # GPU-enabled PySpark image (amd64 only)
+
+# ============================================
+# Stage: base selection (cpu/gpu)
+# ============================================
+ARG PYTHON_VERSION=3.12
+ARG VARIANT=cpu
+
+FROM python:${PYTHON_VERSION}-slim-bookworm AS base-cpu
+
+FROM nvidia/cuda:12.9.0-runtime-ubuntu24.04 AS base-gpu
+ARG PYTHON_VERSION=3.12
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    software-properties-common \
+    && add-apt-repository ppa:deadsnakes/ppa \
+    && apt-get update && apt-get install -y --no-install-recommends \
+        python${PYTHON_VERSION} \
+        python${PYTHON_VERSION}-venv \
+        python${PYTHON_VERSION}-dev \
+        python3-pip \
+    && ln -sf /usr/bin/python${PYTHON_VERSION} /usr/bin/python3 \
+    && ln -sf /usr/bin/python3 /usr/bin/python \
+    && rm -rf /var/lib/apt/lists/* \
+    && rm -f /usr/lib/python${PYTHON_VERSION}/EXTERNALLY-MANAGED
 
 # ============================================
 # Stage: base (shared across all variants)
 # ============================================
+FROM base-${VARIANT} AS base
+ARG TARGETARCH
+ARG VARIANT=cpu
 ARG PYTHON_VERSION=3.12
-FROM python:${PYTHON_VERSION}-slim-bookworm AS base
-
-WORKDIR /code
 
 # System dependencies
+WORKDIR /code
+
 RUN apt-get update && apt-get install -y \
     build-essential \
     gcc \
@@ -29,14 +56,17 @@ RUN curl https://sh.rustup.rs -sSf | bash -s -- -y
 ENV PATH="/root/.cargo/bin:${PATH}"
 
 # Python tooling
-RUN pip install --no-cache-dir --upgrade pip && \
+RUN rm -rf /usr/lib/python3/dist-packages/*.dist-info 2>/dev/null; \
+    pip install --no-cache-dir pip && \
     pip install --no-cache-dir poetry && \
     poetry config virtualenvs.create false
 
 # Install large stable dependencies before poetry to maximize build cache reuse.
-# INSTALL_PYTORCH controls whether CPU-only PyTorch is installed.
+# INSTALL_PYTORCH controls whether PyTorch is installed.
 ARG INSTALL_PYTORCH="true"
-RUN if [ "$INSTALL_PYTORCH" = "true" ]; then \
+RUN if [ "$VARIANT" = "gpu" ] && [ "$INSTALL_PYTORCH" = "true" ]; then \
+        pip install --no-cache-dir torch==2.7.1; \
+    elif [ "$INSTALL_PYTORCH" = "true" ]; then \
         pip install --no-cache-dir torch==2.7.1 \
             --index-url https://download.pytorch.org/whl/cpu \
             --extra-index-url https://pypi.org/simple; \
@@ -101,6 +131,10 @@ RUN mkdir -p /opt/spark-jars && \
 
 # Spark configuration for local mode
 ARG PYTHON_VERSION=3.12
+# GPU variant (Ubuntu) may install to dist-packages. Symlink ensures stable SPARK_HOME.
+RUN mkdir -p /usr/local/lib/python${PYTHON_VERSION}/site-packages && \
+    ln -sf $(python3 -c "import pyspark; print(pyspark.__path__[0])") \
+    /usr/local/lib/python${PYTHON_VERSION}/site-packages/pyspark 2>/dev/null || true
 ENV SPARK_HOME="/usr/local/lib/python${PYTHON_VERSION}/site-packages/pyspark"
 ENV PYSPARK_PYTHON="python3"
 ENV PYSPARK_DRIVER_PYTHON="python3"

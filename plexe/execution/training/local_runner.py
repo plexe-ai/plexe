@@ -2,11 +2,11 @@
 Local process runner - executes training in subprocess.
 """
 
+import inspect
 import json
 import logging
 import os
 import subprocess
-import sys
 import time
 import uuid
 from pathlib import Path
@@ -21,14 +21,35 @@ from plexe.models import TrainingError
 logger = logging.getLogger(__name__)
 
 
+def _detect_gpu_count() -> int:
+    """Detect number of available CUDA GPUs via PyTorch. Returns 0 if torch or CUDA unavailable."""
+    try:
+        import torch
+
+        if torch.cuda.is_available():
+            return torch.cuda.device_count()
+    except Exception:
+        pass
+    return 0
+
+
+def _detect_tf_gpu_count() -> int:
+    """Detect number of available GPUs via TensorFlow. Returns 0 if TF or GPUs unavailable."""
+    try:
+        import tensorflow as tf
+
+        return len(tf.config.list_physical_devices("GPU"))
+    except Exception:
+        pass
+    return 0
+
+
 class LocalProcessRunner(TrainingRunner):
     """
     Runs training in local subprocess.
 
-    Suitable for:
-    - Development/testing
-    - Small datasets that fit on single machine
-    - When external compute (SageMaker, EMR) is not needed
+    Supports single-GPU, multi-GPU (DDP via torchrun for PyTorch,
+    MirroredStrategy for Keras), and CPU training.
     """
 
     def __init__(self, work_dir: str = "/tmp/model_training"):
@@ -50,11 +71,14 @@ class LocalProcessRunner(TrainingRunner):
         val_uri: str,
         timeout: int,
         target_columns: list[str],
+        task_type: str = "",
         optimizer: Any = None,
         loss: Any = None,
         epochs: int = None,
         batch_size: int = None,
         group_column: str | None = None,
+        mixed_precision: bool = False,
+        dataloader_workers: int = 0,
     ) -> Path:
         """
         Execute training in subprocess.
@@ -138,9 +162,15 @@ class LocalProcessRunner(TrainingRunner):
                 torch.save(model, untrained_model_path)
 
                 # Save optimizer and loss configs as JSON (mirror Keras pattern)
+                # Filter optimizer.defaults to only include params accepted by __init__,
+                # since defaults can contain internal state (e.g. decoupled_weight_decay)
+                # that causes TypeError when passed back to the constructor.
+                init_params = set(inspect.signature(type(optimizer).__init__).parameters.keys())
+                optimizer_config = {k: v for k, v in optimizer.defaults.items() if k in init_params}
+
                 training_config = {
                     "optimizer_class": type(optimizer).__name__,
-                    "optimizer_config": {k: v for k, v in optimizer.defaults.items()},
+                    "optimizer_config": optimizer_config,
                     "loss_class": type(loss).__name__,
                 }
 
@@ -168,20 +198,44 @@ class LocalProcessRunner(TrainingRunner):
             # Note: Currently only single-target supported
             target_column = target_columns[0] if target_columns else "target"
 
-            cmd = [
-                sys.executable,
-                str(template_script),
-                "--untrained-model",
-                str(untrained_model_path),
-                "--train-uri",
-                train_uri,
-                "--val-uri",
-                val_uri,
-                "--target-column",
-                target_column,
-                "--output",
-                str(output_dir),
-            ]
+            # Detect GPU availability for neural network templates (use framework-specific detection)
+            if "keras" in template:
+                gpu_count = _detect_tf_gpu_count()
+            elif "pytorch" in template:
+                gpu_count = _detect_gpu_count()
+            else:
+                gpu_count = 0
+            use_torchrun = "pytorch" in template and gpu_count > 1
+
+            # Build command - use torchrun for multi-GPU PyTorch DDP
+            if use_torchrun:
+                cmd = [
+                    "torchrun",
+                    "--nproc_per_node=auto",
+                    "--standalone",
+                    str(template_script),
+                ]
+            else:
+                cmd = ["python", str(template_script)]
+
+            cmd.extend(
+                [
+                    "--untrained-model",
+                    str(untrained_model_path),
+                    "--train-uri",
+                    train_uri,
+                    "--val-uri",
+                    val_uri,
+                    "--target-column",
+                    target_column,
+                    "--output",
+                    str(output_dir),
+                ]
+            )
+
+            # Pass task type if provided (avoids re-inference in templates)
+            if task_type:
+                cmd.extend(["--task-type", task_type])
 
             # Add neural network training params if provided (Keras and PyTorch)
             if "keras" in template or "pytorch" in template:
@@ -189,6 +243,20 @@ class LocalProcessRunner(TrainingRunner):
                     cmd.extend(["--epochs", str(epochs)])
                 if batch_size is not None:
                     cmd.extend(["--batch-size", str(batch_size)])
+
+                # GPU flags
+                if "pytorch" in template:
+                    if use_torchrun:
+                        cmd.append("--ddp")
+                    if gpu_count > 0 and mixed_precision:
+                        cmd.append("--mixed-precision")
+                    if dataloader_workers > 0:
+                        cmd.extend(["--num-workers", str(dataloader_workers)])
+                elif "keras" in template:
+                    if gpu_count > 1:
+                        cmd.append("--multi-gpu")
+                    if gpu_count > 0 and mixed_precision:
+                        cmd.append("--mixed-precision")
 
             # Add ranking-specific params if provided
             if group_column is not None:

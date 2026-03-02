@@ -5,6 +5,7 @@ This file is copied as-is into model artifacts.
 Can be used standalone with just: keras, scikit-learn, pandas, cloudpickle.
 """
 
+import json
 import os
 from pathlib import Path
 
@@ -29,10 +30,24 @@ class KerasPredictor:
         Args:
             model_dir: Path to model package directory
         """
+
         import keras
 
         model_dir = Path(model_dir)
         artifacts_dir = model_dir / "artifacts"
+
+        # Load metadata for task_type-driven post-processing
+        metadata_path = artifacts_dir / "metadata.json"
+        if metadata_path.exists():
+            with open(metadata_path) as f:
+                metadata = json.load(f)
+            raw_task_type = metadata.get("task_type", "")
+        else:
+            raw_task_type = ""
+
+        # Normalize legacy task_type values to canonical form
+        _legacy_map = {"binary": "binary_classification", "classification": "multiclass_classification"}
+        self._task_type = _legacy_map.get(raw_task_type, raw_task_type)
 
         # Execute pipeline code (defines custom FunctionTransformer functions)
         code_path = model_dir / "src" / "pipeline.py"
@@ -65,22 +80,39 @@ class KerasPredictor:
         # Keras predict returns probabilities/values
         raw_predictions = self.model.predict(x_transformed, verbose=0)
 
-        # For classification: argmax to get class
-        if len(raw_predictions.shape) > 1 and raw_predictions.shape[1] > 1:
-            # Multi-class classification
+        # Post-process based on task_type from metadata
+        if self._task_type == "binary_classification":
+            # Keras outputs probabilities — threshold at 0.5
+            predictions = raw_predictions.squeeze()
+            predictions = (predictions > 0.5).astype(int)
+        elif self._task_type == "multiclass_classification":
             predictions = np.argmax(raw_predictions, axis=1)
         else:
-            # Binary classification or regression
-            if raw_predictions.shape[-1] == 1:
-                # Single output - squeeze to 1D
-                predictions = raw_predictions.squeeze()
-                # For binary classification, threshold at 0.5
-                if predictions.max() <= 1.0 and predictions.min() >= 0.0:
-                    predictions = (predictions > 0.5).astype(int)
-            else:
-                predictions = raw_predictions
+            # Regression or unknown: return raw values
+            predictions = raw_predictions.squeeze()
 
         return pd.DataFrame({"prediction": predictions})
+
+    def predict_proba(self, x: pd.DataFrame) -> pd.DataFrame:
+        """
+        Predict per-class probabilities on input DataFrame.
+
+        Returns raw model outputs (sigmoid/softmax values) without argmax.
+        """
+        import numpy as np
+
+        x_transformed = self.pipeline.transform(x)
+        raw_predictions = self.model.predict(x_transformed, verbose=0)
+
+        probabilities = np.asarray(raw_predictions)
+        if probabilities.ndim == 1:
+            probabilities = probabilities.reshape(-1, 1)
+
+        if probabilities.shape[1] == 1:
+            probabilities = np.column_stack([1 - probabilities[:, 0], probabilities[:, 0]])
+
+        columns = [f"proba_{i}" for i in range(probabilities.shape[1])]
+        return pd.DataFrame(probabilities, columns=columns)
 
 
 # ============================================

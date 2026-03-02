@@ -315,6 +315,15 @@ class Config(BaseSettings):
     nn_default_batch_size: int = Field(
         default=32, description="Default batch size for neural network training (Keras, PyTorch)"
     )
+    nn_training_timeout: int = Field(
+        default=14400, description="Timeout for neural network training on full dataset (seconds)", gt=0
+    )
+    mixed_precision: bool = Field(
+        default=True, description="Use mixed precision (FP16) when GPU available (auto-disabled on CPU)"
+    )
+    dataloader_workers: int = Field(
+        default=4, description="Number of DataLoader worker processes for streaming data loading", ge=0
+    )
 
     # LLM settings (per agent role)
     statistical_analysis_llm: str = Field(

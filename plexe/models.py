@@ -32,6 +32,24 @@ class DataLayout(str, Enum):
     UNSUPPORTED = "unsupported"  # Data structure not supported (videos, audio, multi-column, etc.)
 
 
+class TaskType(str, Enum):
+    """
+    Canonical ML task type determined during Phase 1.
+
+    Single source of truth for task type across the entire pipeline:
+    training templates, predictors, evaluation, and validation.
+    """
+
+    BINARY_CLASSIFICATION = "binary_classification"
+    MULTICLASS_CLASSIFICATION = "multiclass_classification"
+    REGRESSION = "regression"
+    RANKING = "learning_to_rank"
+
+    @property
+    def is_classification(self) -> bool:
+        return self in (TaskType.BINARY_CLASSIFICATION, TaskType.MULTICLASS_CLASSIFICATION)
+
+
 # TODO(IMAGE_TEXT_SUPPORT): Add preprocessing config dataclasses here
 # See /IMAGE_TEXT_SUPPORT.md for implementation guide
 # Need: ImageAugmentationConfig, ImagePreprocessingConfig, TextPreprocessingConfig

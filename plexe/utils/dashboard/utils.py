@@ -36,9 +36,11 @@ def load_parquet_sample(uri: str, limit: int = 10) -> pd.DataFrame | None:
 
 
 def get_parquet_row_count(uri: str) -> int | None:
-    """Get row count from parquet file."""
+    """Get row count from parquet metadata without reading data."""
     try:
-        return len(pd.read_parquet(uri))
+        from plexe.utils.parquet_dataset import get_parquet_row_count as _count
+
+        return _count(uri)
     except Exception:
         return None
 

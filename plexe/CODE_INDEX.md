@@ -1,6 +1,6 @@
 # Code Index: plexe
 
-> Generated on 2026-03-02 19:57:53
+> Generated on 2026-03-02 21:19:35
 
 Code structure and public interface documentation for the **plexe** package.
 
@@ -207,14 +207,14 @@ Local process runner - executes training in subprocess.
 
 **`LocalProcessRunner`** - Runs training in local subprocess.
 - `__init__(self, work_dir: str)`
-- `run_training(self, template: str, model: Any, feature_pipeline: Pipeline, train_uri: str, val_uri: str, timeout: int, target_columns: list[str], optimizer: Any, loss: Any, epochs: int, batch_size: int, group_column: str | None) -> Path` - Execute training in subprocess.
+- `run_training(self, template: str, model: Any, feature_pipeline: Pipeline, train_uri: str, val_uri: str, timeout: int, target_columns: list[str], task_type: str, optimizer: Any, loss: Any, epochs: int, batch_size: int, group_column: str | None, mixed_precision: bool, dataloader_workers: int) -> Path` - Execute training in subprocess.
 
 ---
 ## `execution/training/runner.py`
 Training runner abstract base class.
 
 **`TrainingRunner`** - Abstract base class for training execution environments.
-- `run_training(self, template: str, model: Any, feature_pipeline: Pipeline, train_uri: str, val_uri: str, timeout: int, target_columns: list[str]) -> Path` - Execute model training and return path to artifacts.
+- `run_training(self, template: str, model: Any, feature_pipeline: Pipeline, train_uri: str, val_uri: str, timeout: int, target_columns: list[str], task_type: str) -> Path` - Execute model training and return path to artifacts.
 
 ---
 ## `helpers.py`
@@ -311,6 +311,9 @@ Universal entry point for plexe.
 Simple dataclasses for model building workflow.
 
 **`DataLayout`** - Physical structure of dataset (not semantic meaning).
+
+**`TaskType`** - Canonical ML task type determined during Phase 1.
+- `is_classification(self) -> bool` - No description
 
 **`Metric`** - Evaluation metric definition.
 
@@ -452,6 +455,7 @@ Standard Keras predictor - NO Plexe dependencies.
 **`KerasPredictor`** - Standalone Keras predictor.
 - `__init__(self, model_dir: str)`
 - `predict(self, x: pd.DataFrame) -> pd.DataFrame` - Make predictions on input DataFrame.
+- `predict_proba(self, x: pd.DataFrame) -> pd.DataFrame` - Predict per-class probabilities on input DataFrame.
 
 ---
 ## `templates/inference/lightgbm_predictor.py`
@@ -468,6 +472,7 @@ Standard PyTorch predictor - NO Plexe dependencies.
 **`PyTorchPredictor`** - Standalone PyTorch predictor.
 - `__init__(self, model_dir: str)`
 - `predict(self, x: pd.DataFrame) -> pd.DataFrame` - Make predictions on input DataFrame.
+- `predict_proba(self, x: pd.DataFrame) -> pd.DataFrame` - Predict per-class probabilities on input DataFrame.
 
 ---
 ## `templates/inference/xgboost_predictor.py`
@@ -489,37 +494,37 @@ Model card template generator.
 Hardcoded robust CatBoost training loop.
 
 **Functions:**
-- `train_catboost(untrained_model_path: Path, train_uri: str, val_uri: str, output_dir: Path, target_column: str) -> dict` - Train CatBoost model directly (no Spark).
+- `train_catboost(untrained_model_path: Path, train_uri: str, val_uri: str, output_dir: Path, target_column: str, task_type: str | None) -> dict` - Train CatBoost model directly (no Spark).
 - `main()` - No description
 
 ---
 ## `templates/training/train_keras.py`
-Hardcoded robust Keras training loop.
+Keras training template with streaming data loading, multi-GPU (MirroredStrategy), and mixed precision.
 
 **Functions:**
-- `train_keras(untrained_model_path: Path, train_uri: str, val_uri: str, output_dir: Path, target_column: str, epochs: int, batch_size: int) -> dict` - Train Keras model directly.
+- `train_keras(untrained_model_path: Path, train_uri: str, val_uri: str, output_dir: Path, target_column: str, epochs: int, batch_size: int, use_multi_gpu: bool, use_mixed_precision: bool, task_type: str | None) -> dict` - Train Keras model with streaming data, optional multi-GPU, and mixed precision.
 
 ---
 ## `templates/training/train_lightgbm.py`
 Hardcoded robust LightGBM training loop.
 
 **Functions:**
-- `train_lightgbm(untrained_model_path: Path, train_uri: str, val_uri: str, output_dir: Path, target_column: str, group_column: str | None) -> dict` - Train LightGBM model directly (no Spark).
+- `train_lightgbm(untrained_model_path: Path, train_uri: str, val_uri: str, output_dir: Path, target_column: str, group_column: str | None, task_type: str | None) -> dict` - Train LightGBM model directly (no Spark).
 - `main()` - No description
 
 ---
 ## `templates/training/train_pytorch.py`
-Hardcoded robust PyTorch training loop.
+PyTorch training template with streaming data loading, multi-GPU (DDP), and mixed precision.
 
 **Functions:**
-- `train_pytorch(untrained_model_path: Path, train_uri: str, val_uri: str, output_dir: Path, target_column: str, epochs: int, batch_size: int) -> dict` - Train PyTorch model directly.
+- `train_pytorch(untrained_model_path: Path, train_uri: str, val_uri: str, output_dir: Path, target_column: str, epochs: int, batch_size: int, num_workers: int, use_ddp: bool, use_mixed_precision: bool, task_type: str | None) -> dict` - Train PyTorch model with streaming data, optional DDP, and mixed precision.
 
 ---
 ## `templates/training/train_xgboost.py`
 Hardcoded robust XGBoost training loop.
 
 **Functions:**
-- `train_xgboost(untrained_model_path: Path, train_uri: str, val_uri: str, output_dir: Path, target_column: str, group_column: str | None) -> dict` - Train XGBoost model directly (no Spark).
+- `train_xgboost(untrained_model_path: Path, train_uri: str, val_uri: str, output_dir: Path, target_column: str, group_column: str | None, task_type: str | None) -> dict` - Train XGBoost model directly (no Spark).
 - `main()` - No description
 
 ---
@@ -624,7 +629,7 @@ Utility functions for dashboard data loading.
 - `load_report(exp_path: Path, report_name: str) -> dict | None` - Load YAML report from DirNames.BUILD_DIR/reports/.
 - `load_code_file(file_path: Path) -> str | None` - Load Python code file.
 - `load_parquet_sample(uri: str, limit: int) -> pd.DataFrame | None` - Load first N rows from parquet file.
-- `get_parquet_row_count(uri: str) -> int | None` - Get row count from parquet file.
+- `get_parquet_row_count(uri: str) -> int | None` - Get row count from parquet metadata without reading data.
 - `load_json_file(file_path: Path) -> dict | None` - Load JSON file.
 
 ---
@@ -635,6 +640,21 @@ LiteLLM model wrapper with retry logic and optional post-call hook.
 - `__init__(self, model_id: str, extra_headers: dict[str, str] | None, on_llm_call: Callable[[str, Any, int], None] | None)`
 - `generate(self)` - Generate with automatic retries, header injection, and post-call hook.
 - `chat(self)` - Chat with automatic retries, header injection, and post-call hook.
+
+---
+## `utils/parquet_dataset.py`
+Streaming parquet data loading utilities for large-dataset training.
+
+**`ParquetIterableDataset`** - Streaming parquet dataset for PyTorch DataLoader.
+- `__init__(self, uri: str, target_column: str, task_type: str)`
+- `total_rows(self) -> int` - No description
+
+**Functions:**
+- `get_parquet_row_count(uri: str) -> int` - Get total row count from parquet metadata without reading data.
+- `get_dataset_size_bytes(uri: str) -> int` - Get dataset size in bytes for a local file or directory of parquet files.
+- `parquet_batch_generator(uri: str, target_column: str, batch_size: int) -> Iterator[tuple[np.ndarray, np.ndarray]]` - Streaming parquet batch generator for Keras/TensorFlow.
+- `get_parquet_feature_count(uri: str, target_column: str) -> int` - Get number of feature columns (total columns minus target).
+- `get_steps_per_epoch(uri: str, batch_size: int) -> int` - Compute number of steps per epoch for a parquet dataset.
 
 ---
 ## `utils/reporting.py`

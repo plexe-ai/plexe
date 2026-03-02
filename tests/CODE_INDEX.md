@@ -1,9 +1,17 @@
 # Code Index: tests
 
-> Generated on 2026-03-02 19:57:53
+> Generated on 2026-03-02 21:19:35
 
 Test suite structure and test case documentation.
 
+## `conftest.py`
+Shared test fixtures for plexe tests.
+
+**Functions:**
+- `synthetic_parquet_classification(tmp_path)` - Create a 200-row binary classification parquet with 2 row groups.
+- `synthetic_parquet_regression(tmp_path)` - Create a 200-row regression parquet with 2 row groups.
+
+---
 ## `integration/conftest.py`
 Shared fixtures and helpers for staged integration tests.
 
@@ -66,6 +74,24 @@ Tests for user feedback integration in agents.
 - `test_baseline_builder_includes_feedback(self, mock_context, mock_config)` - BaselineBuilderAgent should include feedback in instructions.
 - `test_hypothesiser_includes_feedback(self, mock_context, mock_config)` - HypothesiserAgent should include feedback in instructions.
 - `test_agent_without_feedback_works(self, mock_context, mock_config)` - Agents should work normally when no feedback is provided.
+
+---
+## `unit/execution/training/test_local_runner.py`
+Tests for LocalProcessRunner GPU detection and command construction.
+
+**`TestGPUDetection`** - Tests for framework GPU detection helpers.
+- `test_no_torch(self)` - Returns 0 when torch is not importable.
+- `test_no_cuda(self)` - Returns 0 when CUDA is not available.
+- `test_with_cuda(self)` - Returns device count when CUDA is available.
+- `test_tf_gpu_detection_no_tf(self)` - Returns 0 when tensorflow is not importable.
+
+**`TestCommandConstruction`** - Test that the runner builds the right command for different GPU configurations.
+- `setup_method(self)` - No description
+- `test_pytorch_no_gpu_uses_python(self)` - PyTorch with 0 GPUs should use 'python' launcher, no GPU flags.
+- `test_pytorch_single_gpu_no_ddp(self)` - PyTorch with 1 GPU should use 'python' (no DDP), but get --mixed-precision.
+- `test_pytorch_multi_gpu_uses_torchrun(self)` - PyTorch with >1 GPU should use 'torchrun' with --ddp and --mixed-precision.
+- `test_pytorch_num_workers_passed(self)` - PyTorch should pass --num-workers when dataloader_workers > 0.
+- `test_pytorch_no_mixed_precision_when_disabled(self)` - PyTorch with GPU but mixed_precision=False should not get --mixed-precision.
 
 ---
 ## `unit/search/test_evolutionary_policy_determinism.py`
@@ -179,6 +205,33 @@ Unit tests for PyTorch model submission.
 
 **Functions:**
 - `test_save_model_pytorch(tmp_path)` - Test PyTorch model submission validation and context scratch storage.
+
+---
+## `unit/utils/test_parquet_dataset.py`
+Tests for streaming parquet data loading utilities.
+
+**`TestMetadataUtilities`** - Tests for parquet metadata helper functions.
+- `test_get_parquet_row_count(self, synthetic_parquet_classification)` - No description
+- `test_get_dataset_size_bytes_file(self, synthetic_parquet_classification)` - No description
+- `test_get_dataset_size_bytes_directory(self, tmp_path, synthetic_parquet_classification)` - No description
+- `test_get_dataset_size_bytes_nonexistent(self)` - No description
+- `test_get_parquet_feature_count(self, synthetic_parquet_classification)` - No description
+- `test_get_steps_per_epoch(self, synthetic_parquet_classification)` - No description
+
+**`TestParquetIterableDataset`** - Tests for streaming iterable dataset behavior.
+- `test_yields_all_rows_classification(self, synthetic_parquet_classification)` - No description
+- `test_yields_all_rows_regression(self, synthetic_parquet_regression)` - No description
+- `test_yields_all_rows_binary(self, synthetic_parquet_classification)` - No description
+- `test_directory_of_parquets(self, tmp_path, synthetic_parquet_classification)` - Test loading from a directory containing multiple parquet files.
+- `test_total_rows_property(self, synthetic_parquet_classification)` - No description
+- `test_ddp_sharding(self, synthetic_parquet_classification)` - Verify DDP sharding splits row groups across ranks.
+- `test_feature_values_match_source(self, synthetic_parquet_classification)` - Verify streamed data matches the original parquet content.
+
+**`TestParquetBatchGenerator`** - Tests for Keras/TensorFlow parquet batch generator.
+- `test_yields_all_rows(self, synthetic_parquet_classification)` - No description
+- `test_batch_size_respected(self, synthetic_parquet_classification)` - No description
+- `test_directory_input(self, tmp_path, synthetic_parquet_classification)` - Test generator with directory of parquet files.
+- `test_values_match_source(self, synthetic_parquet_classification)` - Verify batched data matches original parquet content.
 
 ---
 ## `unit/utils/test_reporting.py`

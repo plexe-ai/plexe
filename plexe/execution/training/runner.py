@@ -28,6 +28,7 @@ class TrainingRunner(ABC):
         val_uri: str,
         timeout: int,
         target_columns: list[str],
+        task_type: str = "",
     ) -> Path:
         """
         Execute model training and return path to artifacts.
@@ -40,6 +41,7 @@ class TrainingRunner(ABC):
             val_uri: URI to validation data
             timeout: Maximum training time (seconds)
             target_columns: List of target column names
+            task_type: Canonical task type (e.g. "binary_classification", "regression")
 
         Returns:
             Path to directory containing:

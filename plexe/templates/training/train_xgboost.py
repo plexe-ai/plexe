@@ -35,6 +35,7 @@ def train_xgboost(
     output_dir: Path,
     target_column: str,
     group_column: str | None = None,
+    task_type: str | None = None,
 ) -> dict:
     """
     Train XGBoost model directly (no Spark).
@@ -205,12 +206,13 @@ def train_xgboost(
         logger.info(f"LabelEncoder saved to {shorten(str(encoder_path), 30)}")
 
     # Step 8: Save Metadata
-    if isinstance(model, XGBRanker):
-        task_type = "ranking"
-    elif isinstance(model, XGBClassifier):
-        task_type = "classification"
-    else:
-        task_type = "regression"
+    if not task_type:
+        if isinstance(model, XGBRanker):
+            task_type = "learning_to_rank"
+        elif isinstance(model, XGBClassifier):
+            task_type = "binary_classification"
+        else:
+            task_type = "regression"
 
     metadata = {
         "model_type": "xgboost",
@@ -252,6 +254,7 @@ def main():
         "--group-column", required=False, default=None, help="Group column for ranking (query_id, session_id)"
     )
     parser.add_argument("--output", required=True, help="Output directory")
+    parser.add_argument("--task-type", required=False, default=None, help="Canonical task type")
 
     args = parser.parse_args()
 
@@ -266,6 +269,7 @@ def main():
         output_dir=Path(args.output),
         target_column=args.target_column,
         group_column=args.group_column,
+        task_type=args.task_type,
     )
 
     logger.info("Training complete!")

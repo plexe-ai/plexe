@@ -334,6 +334,7 @@ def retrain_model(
             val_uri=str(val_uri),
             timeout=config.training_timeout,
             target_columns=[target_column],
+            task_type=metadata.get("task_type", ""),
             **training_kwargs,
         )
 

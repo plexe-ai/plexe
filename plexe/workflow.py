@@ -1240,7 +1240,10 @@ def _execute_variant(
             val_uri=val_transformed_uri,
             timeout=config.training_timeout,
             target_columns=variant_context.output_targets,
+            task_type=variant_context.task_analysis.get("task_type", "") if variant_context.task_analysis else "",
             group_column=variant_context.group_column,
+            mixed_precision=config.mixed_precision,
+            dataloader_workers=config.dataloader_workers,
             **training_kwargs,
         )
 
@@ -1650,15 +1653,23 @@ def retrain_on_full_dataset(
         retrain_kwargs["epochs"] = best_solution.epochs
         retrain_kwargs["batch_size"] = best_solution.batch_size
 
+    # Use longer timeout for neural network full-dataset training
+    retrain_timeout = (
+        config.nn_training_timeout if best_solution.model_type in ("keras", "pytorch") else config.training_timeout
+    )
+
     final_artifacts_path = runner.run_training(
         template=f"train_{best_solution.model_type}",
         model=best_solution.model,  # ← Untrained model object
         feature_pipeline=fitted_pipeline,
         train_uri=final_train_transformed,  # ← FULL transformed data
         val_uri=final_val_transformed,
-        timeout=config.training_timeout,
+        timeout=retrain_timeout,
         target_columns=context.output_targets,
+        task_type=context.task_analysis.get("task_type", "") if context.task_analysis else "",
         group_column=context.group_column,
+        mixed_precision=config.mixed_precision,
+        dataloader_workers=config.dataloader_workers,
         **retrain_kwargs,
     )
 

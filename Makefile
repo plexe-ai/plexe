@@ -49,6 +49,7 @@ help:
 	@echo ""
 	@echo "🏗️  Building:"
 	@echo "  make build              Build default image (PySpark)"
+	@echo "  make build-gpu          Build GPU variant (CUDA + GPU PyTorch, amd64)"
 	@echo "  make build-databricks   Build Databricks variant"
 	@echo ""
 	@echo "🧹 Cleanup:"
@@ -367,6 +368,17 @@ build:
 		-t plexe:py$(PYTHON_VERSION) \
 		-f Dockerfile .
 	@echo "✅ Build complete: plexe:py$(PYTHON_VERSION)"
+
+# Build GPU variant (NVIDIA CUDA + CUDA-enabled PyTorch, amd64 only)
+.PHONY: build-gpu
+build-gpu:
+	@echo "🏗️  Building GPU variant (Python $(PYTHON_VERSION), CUDA)..."
+	docker buildx build --platform linux/amd64 --output type=docker --provenance=false \
+		--build-arg PYTHON_VERSION=$(PYTHON_VERSION) \
+		--build-arg VARIANT=gpu \
+		-t plexe:py$(PYTHON_VERSION)-gpu \
+		-f Dockerfile .
+	@echo "✅ Build complete: plexe:py$(PYTHON_VERSION)-gpu"
 
 
 # Build Databricks variant
