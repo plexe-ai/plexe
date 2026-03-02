@@ -178,6 +178,7 @@ def build_model(
             context = BuildContext.from_dict(checkpoint_data["context"])
             if checkpoint_data.get("search_journal"):
                 journal = SearchJournal.from_dict(checkpoint_data["search_journal"])
+                context.scratch["_search_journal"] = journal
                 logger.info(f"Restored SearchJournal with {len(journal.nodes)} solutions")
             if checkpoint_data.get("insight_store"):
                 insight_store = InsightStore.from_dict(checkpoint_data["insight_store"])
@@ -1462,6 +1463,9 @@ def search_models(
                     # NOTE: Only scratch is isolated per-variant; all other attributes are shared (read-only)
                     variant_context = copy.copy(context)
                     variant_context.scratch = {}  # Fresh scratch dict per variant
+                    if "_user_feedback" in context.scratch:
+                        # Preserve resume feedback while keeping per-variant scratch isolation.
+                        variant_context.scratch["_user_feedback"] = context.scratch["_user_feedback"]
 
                     futures.append(
                         executor.submit(
@@ -1848,8 +1852,15 @@ def evaluate_final(
         context.scratch["_evaluation_report"] = evaluation_report
 
         # Save checkpoint (with insight_store if available)
+        search_journal = context.scratch.get("_search_journal")
         insight_store = context.insight_store if hasattr(context, "insight_store") else None
-        _save_phase_checkpoint(PhaseNames.EVALUATE_FINAL, context, on_checkpoint_saved, insight_store=insight_store)
+        _save_phase_checkpoint(
+            PhaseNames.EVALUATE_FINAL,
+            context,
+            on_checkpoint_saved,
+            search_journal=search_journal,
+            insight_store=insight_store,
+        )
 
         return metrics
 
@@ -2222,8 +2233,15 @@ Refer to `evaluation/reports/evaluation.json` for detailed analysis.
     logger.info(f"  Archive: {tarball_path}")
 
     # Save checkpoint (with insight_store if available)
+    search_journal = context.scratch.get("_search_journal")
     insight_store = context.insight_store if hasattr(context, "insight_store") else None
-    _save_phase_checkpoint(PhaseNames.PACKAGE_FINAL_MODEL, context, on_checkpoint_saved, insight_store=insight_store)
+    _save_phase_checkpoint(
+        PhaseNames.PACKAGE_FINAL_MODEL,
+        context,
+        on_checkpoint_saved,
+        search_journal=search_journal,
+        insight_store=insight_store,
+    )
 
     return package_dir
 

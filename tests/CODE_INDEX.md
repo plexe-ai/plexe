@@ -1,6 +1,6 @@
 # Code Index: tests
 
-> Generated on 2026-03-02 12:38:31
+> Generated on 2026-03-02 19:57:53
 
 Test suite structure and test case documentation.
 
@@ -130,6 +130,7 @@ Unit tests for config helpers.
 - `test_temperature_fields_from_env(monkeypatch)` - No description
 - `test_temperature_fields_from_yaml(tmp_path, monkeypatch)` - No description
 - `test_get_temperature_resolves_override_and_default()` - No description
+- `test_setup_logging_disables_propagation()` - Plexe logger should not propagate to root to avoid duplicate log lines.
 
 ---
 ## `unit/test_helpers.py`
@@ -211,6 +212,15 @@ Unit tests for validation functions.
 - `test_validate_metric_function_object_bad_signature()` - Callable with wrong arg names should fail.
 
 ---
+## `unit/workflow/test_checkpoint_resume_feedback.py`
+Tests for checkpoint resume feedback and persisted search journal behavior.
+
+**Functions:**
+- `test_search_models_preserves_user_feedback_for_all_variants(monkeypatch, tmp_path)` - No description
+- `test_evaluate_final_checkpoint_persists_search_journal(monkeypatch, tmp_path)` - No description
+- `test_package_final_checkpoint_persists_search_journal(monkeypatch, tmp_path)` - No description
+
+---
 ## `unit/workflow/test_column_exclusion.py`
 Tests for column exclusion pipeline.
 
@@ -229,5 +239,15 @@ Unit tests for model card generation.
 **Functions:**
 - `test_generate_model_card_full_context(tmp_path: Path) -> None` - No description
 - `test_generate_model_card_minimal_context(tmp_path: Path) -> None` - No description
+
+---
+## `unit/workflow/test_resume_model_type_filtering.py`
+Tests for resume-time model type filtering.
+
+**Functions:**
+- `test_filters_checkpoint_model_types_on_resume(tmp_path)` - No description
+- `test_uses_allowed_model_types_when_checkpoint_has_none(tmp_path)` - No description
+- `test_raises_when_allowed_types_do_not_intersect_checkpoint(tmp_path)` - No description
+- `test_does_not_filter_before_phase_one(tmp_path)` - No description
 
 ---
