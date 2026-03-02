@@ -206,7 +206,8 @@ def train_lightgbm(
         if isinstance(model, LGBMRanker):
             task_type = "learning_to_rank"
         elif isinstance(model, LGBMClassifier):
-            task_type = "binary_classification"
+            n_classes = len(np.unique(y_train))
+            task_type = "multiclass_classification" if n_classes > 2 else "binary_classification"
         else:
             task_type = "regression"
 

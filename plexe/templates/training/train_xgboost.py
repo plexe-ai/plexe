@@ -210,7 +210,8 @@ def train_xgboost(
         if isinstance(model, XGBRanker):
             task_type = "learning_to_rank"
         elif isinstance(model, XGBClassifier):
-            task_type = "binary_classification"
+            n_classes = len(np.unique(y_train))
+            task_type = "multiclass_classification" if n_classes > 2 else "binary_classification"
         else:
             task_type = "regression"
 

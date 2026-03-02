@@ -195,7 +195,7 @@ def train_keras(
     # Step 5: Train with EarlyStopping
     # ============================================
     callbacks = [
-        keras.callbacks.EarlyStopping(monitor="val_loss", patience=10, restore_best_weights=True, verbose=1),
+        keras.callbacks.EarlyStopping(monitor="val_loss", patience=3, restore_best_weights=True, verbose=1),
     ]
 
     logger.info(f"Training for up to {epochs} epochs, batch_size={batch_size}...")

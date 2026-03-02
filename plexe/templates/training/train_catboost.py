@@ -160,7 +160,11 @@ def train_catboost(
 
     # Step 8: Save Metadata
     if not task_type:
-        task_type = "binary_classification" if is_classification else "regression"
+        if is_classification:
+            n_classes = len(np.unique(y_train))
+            task_type = "multiclass_classification" if n_classes > 2 else "binary_classification"
+        else:
+            task_type = "regression"
 
     metadata = {
         "model_type": "catboost",
