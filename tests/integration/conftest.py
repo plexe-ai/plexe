@@ -106,10 +106,10 @@ def configure_integration_environment(repo_root: Path) -> None:
     os.environ["CONFIG_FILE"] = str(config_path)
 
     if not INSTALLED_MODEL_TYPES:
-        pytest.skip("No supported integration model frameworks are installed", allow_module_level=True)
+        pytest.skip("No supported integration model frameworks are installed")
 
     if not os.getenv("ANTHROPIC_API_KEY"):
-        pytest.skip("ANTHROPIC_API_KEY is required for tests/integration", allow_module_level=True)
+        pytest.skip("ANTHROPIC_API_KEY is required for tests/integration")
 
 
 @pytest.fixture(scope="session", autouse=True)

@@ -54,15 +54,14 @@ PYTEST_LOG_DISABLE_ARGS=(
 )
 
 run_stage() {
-  local stage_name="$1"
-  local marker="$2"
+  local marker="$1"
   local cmd=(poetry run pytest tests/integration -m "$marker" "${PYTEST_PARALLEL_ARGS[@]}" --maxfail=1)
 
   if [[ "${PLEXE_IT_VERBOSE:-0}" == "1" ]]; then
     cmd+=(-s -vv -o log_cli=true -o log_cli_level=INFO --capture=tee-sys "${PYTEST_LOG_DISABLE_ARGS[@]}")
   fi
 
-  PLEXE_IT_STAGE="$stage_name" "${cmd[@]}"
+  "${cmd[@]}"
 }
 
 echo "Running staged integration tests with run id: $PLEXE_IT_RUN_ID"
@@ -74,15 +73,15 @@ fi
 
 echo ""
 echo "Stage 1/3: building reusable seeds through phase 3"
-run_stage "seed" "integration_seed"
+run_stage "integration_seed"
 
 echo ""
 echo "Stage 2/3: resuming from seeds through phase 4"
-run_stage "search" "integration_search"
+run_stage "integration_search"
 
 echo ""
 echo "Stage 3/3: final evaluation, packaging, and predictor checks"
-run_stage "eval" "integration_eval"
+run_stage "integration_eval"
 
 echo ""
 echo "Staged integration suite completed successfully."
