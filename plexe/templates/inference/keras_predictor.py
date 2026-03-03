@@ -102,8 +102,7 @@ class KerasPredictor:
                 "multiclass_classification",
             }
         ):
-            finite = probabilities[np.isfinite(probabilities)]
-            if finite.size > 0 and (finite.min() < 0.0 or finite.max() > 1.0):
+            if probabilities.min() < 0.0 or probabilities.max() > 1.0:
                 uses_logits = True
 
         if task_type == "binary_classification":
