@@ -40,6 +40,18 @@ def test_pytorch_predict_proba_binary_classification() -> None:
     assert probabilities.iloc[0]["proba_1"] < probabilities.iloc[1]["proba_1"]
 
 
+def test_pytorch_predict_proba_allows_missing_task_metadata() -> None:
+    predictor = PyTorchPredictor.__new__(PyTorchPredictor)
+    predictor._task_type = ""
+    predictor.pipeline = DummyPipeline()
+    predictor.model = DummyModel(torch.tensor([[-2.0], [2.0]], dtype=torch.float32))
+
+    probabilities = predictor.predict_proba(pd.DataFrame({"f1": [0.0, 1.0]}))
+
+    assert list(probabilities.columns) == ["proba_0", "proba_1"]
+    assert len(probabilities) == 2
+
+
 def test_pytorch_predict_proba_raises_for_regression() -> None:
     predictor = PyTorchPredictor.__new__(PyTorchPredictor)
     predictor._task_type = "regression"

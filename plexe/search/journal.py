@@ -124,7 +124,12 @@ class SearchJournal:
         good = self.good_nodes
         if not good:
             return None
-        return max(good, key=self.sort_key)
+
+        best = good[0]
+        for candidate in good[1:]:
+            if self.is_better(candidate.performance, best.performance):
+                best = candidate
+        return best
 
     @property
     def best_performance(self) -> float:

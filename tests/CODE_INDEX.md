@@ -1,6 +1,6 @@
 # Code Index: tests
 
-> Generated on 2026-03-03 04:24:02
+> Generated on 2026-03-03 04:33:06
 
 Test suite structure and test case documentation.
 
@@ -295,6 +295,7 @@ Unit tests for PyTorch predictor template semantics.
 
 **Functions:**
 - `test_pytorch_predict_proba_binary_classification() -> None` - No description
+- `test_pytorch_predict_proba_allows_missing_task_metadata() -> None` - No description
 - `test_pytorch_predict_proba_raises_for_regression() -> None` - No description
 
 ---
