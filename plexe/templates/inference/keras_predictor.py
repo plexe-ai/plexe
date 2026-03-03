@@ -84,6 +84,8 @@ class KerasPredictor:
         probabilities = np.asarray(raw_predictions)
         if probabilities.ndim == 1:
             probabilities = probabilities.reshape(-1, 1)
+        if not np.isfinite(probabilities).all():
+            raise ValueError("Keras model outputs contain NaN/Inf values; cannot compute probabilities.")
         task_type = self._task_type
         if not task_type:
             task_type = "binary_classification" if probabilities.shape[1] <= 2 else "multiclass_classification"

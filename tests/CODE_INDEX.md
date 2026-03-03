@@ -1,6 +1,6 @@
 # Code Index: tests
 
-> Generated on 2026-03-03 04:46:10
+> Generated on 2026-03-03 04:57:14
 
 Test suite structure and test case documentation.
 
@@ -253,6 +253,7 @@ Unit tests for Keras predictor template semantics.
 - `test_keras_probabilities_infer_logits_when_loss_config_missing() -> None` - No description
 - `test_keras_predict_proba_raises_for_regression() -> None` - No description
 - `test_keras_predict_proba_allows_missing_task_metadata() -> None` - No description
+- `test_keras_predict_proba_raises_on_non_finite_outputs() -> None` - No description
 
 ---
 ## `unit/test_lightgbm_predictor.py`
