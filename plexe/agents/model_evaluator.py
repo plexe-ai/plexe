@@ -260,6 +260,9 @@ class ModelEvaluatorAgent:
             ),
             "baseline_performance": self.context.baseline_performance,  # Validation set performance (for reference)
             "baseline_predictor": self.context.baseline_predictor,  # For re-evaluation on test set
+            "core_metrics_report": self.context.scratch.get(
+                "_core_metrics_report"
+            ),  # Model's test metrics from Phase 1
         }
         synthesis_args = {**additional_args, **baseline_context}
 
@@ -469,6 +472,11 @@ class ModelEvaluatorAgent:
             f"2. Synthesize prioritized recommendations (HIGH/MEDIUM/LOW)\\n"
             f"3. Write executive summary (2-3 sentences)\\n"
             f"4. Determine deployment readiness\\n\\n"
+            f"Verdict rubric:\\n"
+            f"- FAIL: Model is broken, materially worse than heuristic baseline, or has catastrophic/high-severity issues.\\n"
+            f"- CONDITIONAL_PASS: Model is roughly on par with baseline, or is better than baseline but has material unresolved issues.\\n"
+            f"- PASS: Model is clearly better than baseline, has no catastrophic/high-severity issues, and is generally robust.\\n"
+            f"- Do not assign CONDITIONAL_PASS only because minor improvement opportunities exist.\\n\\n"
             f"Register using:\\n"
             f"register_final_evaluation_report(\\n"
             f"    verdict='PASS'|'CONDITIONAL_PASS'|'FAIL',\\n"
