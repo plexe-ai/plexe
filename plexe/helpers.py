@@ -8,7 +8,7 @@ from __future__ import annotations
 
 import logging
 from pathlib import Path
-from typing import TYPE_CHECKING
+from typing import Any, TYPE_CHECKING
 
 import numpy as np
 import pandas as pd
@@ -93,68 +93,85 @@ def evaluate_on_sample(
     metric: str,
     target_columns: list[str],
     group_column: str | None = None,
-) -> float:
+    train_sample_uri: str | None = None,
+) -> tuple[float, float | None]:
     """
-    Evaluate model on sample (fast).
+    Evaluate model on validation sample, optionally also on training sample.
 
     Args:
         spark: SparkSession
-        sample_uri: Sample data URI
+        sample_uri: Validation sample data URI
         model_artifacts_path: Path to model artifacts
         model_type: "xgboost", "catboost", "lightgbm", "keras", or "pytorch"
         metric: Metric name
         target_columns: Target column names
         group_column: Optional group column for ranking metrics (query_id, session_id)
+        train_sample_uri: Optional training sample URI (for train/val gap computation)
 
     Returns:
-        Performance value
+        Tuple of (val_performance, train_performance). train_performance is None
+        when train_sample_uri is not provided.
     """
+    predictor = _load_predictor(model_artifacts_path, model_type)
+    val_performance = _evaluate_predictor(spark, predictor, sample_uri, metric, target_columns, group_column)
+    logger.info(f"Val sample performance ({metric}): {val_performance:.4f}")
 
-    logger.info(f"Evaluating on sample with metric: {metric}")
+    # TODO: Computing secondary metrics (e.g. per-class breakdown, calibration) per solution during search.
+    train_performance = None
+    if train_sample_uri:
+        train_performance = _evaluate_predictor(
+            spark, predictor, train_sample_uri, metric, target_columns, group_column
+        )
+        gap = train_performance - val_performance
+        logger.info(f"Train sample performance ({metric}): {train_performance:.4f} (train-val gap: {gap:+.4f})")
 
-    # Load Sample
-    sample_df = spark.read.parquet(sample_uri).toPandas()
+    return val_performance, train_performance
 
-    # Extract group IDs if ranking task
-    group_ids = sample_df[group_column].values if group_column and group_column in sample_df.columns else None
 
-    # Use column names instead of positional indexing to handle target columns in any position
-    columns_to_drop = list(target_columns)
-    if group_column and group_column in sample_df.columns:
-        columns_to_drop.append(group_column)
-
-    X_sample = sample_df.drop(columns=columns_to_drop)
-    y_sample = sample_df[target_columns[0]]
-
-    # Load Predictor
+def _load_predictor(model_artifacts_path: Path, model_type: str) -> Any:
+    """Load the appropriate predictor for a model type."""
     if model_type == ModelType.XGBOOST:
         from plexe.templates.inference.xgboost_predictor import XGBoostPredictor
 
-        predictor = XGBoostPredictor(str(model_artifacts_path))
+        return XGBoostPredictor(str(model_artifacts_path))
     elif model_type == ModelType.CATBOOST:
         from plexe.templates.inference.catboost_predictor import CatBoostPredictor
 
-        predictor = CatBoostPredictor(str(model_artifacts_path))
+        return CatBoostPredictor(str(model_artifacts_path))
     elif model_type == ModelType.LIGHTGBM:
         from plexe.templates.inference.lightgbm_predictor import LightGBMPredictor
 
-        predictor = LightGBMPredictor(str(model_artifacts_path))
+        return LightGBMPredictor(str(model_artifacts_path))
     elif model_type == ModelType.KERAS:
         from plexe.templates.inference.keras_predictor import KerasPredictor
 
-        predictor = KerasPredictor(str(model_artifacts_path))
+        return KerasPredictor(str(model_artifacts_path))
     else:
         from plexe.templates.inference.pytorch_predictor import PyTorchPredictor
 
-        predictor = PyTorchPredictor(str(model_artifacts_path))
+        return PyTorchPredictor(str(model_artifacts_path))
 
-    # Predict and compute metric on predictions
-    predictions = predictor.predict(X_sample)["prediction"].values
-    performance = compute_metric(y_sample, predictions, metric, group_ids=group_ids)
 
-    logger.info(f"Sample performance ({metric}): {performance:.4f}")
+def _evaluate_predictor(
+    spark: "SparkSession",
+    predictor: Any,
+    data_uri: str,
+    metric: str,
+    target_columns: list[str],
+    group_column: str | None,
+) -> float:
+    """Run predictor on a dataset and compute metric."""
+    df = spark.read.parquet(data_uri).toPandas()
+    group_ids = df[group_column].values if group_column and group_column in df.columns else None
 
-    return performance
+    columns_to_drop = list(target_columns)
+    if group_column and group_column in df.columns:
+        columns_to_drop.append(group_column)
+
+    X = df.drop(columns=columns_to_drop)
+    y = df[target_columns[0]]
+    predictions = predictor.predict(X)["prediction"].values
+    return compute_metric(y, predictions, metric, group_ids=group_ids)
 
 
 def compute_metric_hardcoded(y_true, y_pred, metric_name: str) -> float:

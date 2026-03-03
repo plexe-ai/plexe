@@ -170,3 +170,28 @@ def test_journal_improvement_trend_insufficient_data():
     trend = journal.get_improvement_trend()
 
     assert trend == 0.0
+
+
+# ============================================
+# Train Performance in History Tests
+# ============================================
+
+
+def test_journal_get_history_includes_train_performance():
+    """get_history should include train_performance when set on a solution."""
+    journal = SearchJournal()
+    sol = _make_solution(0, performance=0.85)
+    sol.train_performance = 0.92
+    journal.add_node(sol)
+
+    history = journal.get_history()
+    assert history[0]["train_performance"] == 0.92
+
+
+def test_journal_get_history_train_performance_none():
+    """get_history should include train_performance=None when not set."""
+    journal = SearchJournal()
+    journal.add_node(_make_solution(0, performance=0.85))
+
+    history = journal.get_history()
+    assert history[0]["train_performance"] is None

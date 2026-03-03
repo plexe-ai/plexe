@@ -1,6 +1,6 @@
 # Code Index: plexe
 
-> Generated on 2026-03-03 00:43:08
+> Generated on 2026-03-03 00:06:47
 
 Code structure and public interface documentation for the **plexe** package.
 
@@ -222,7 +222,7 @@ Helper functions for workflow.
 
 **Functions:**
 - `select_viable_model_types(data_layout: DataLayout, selected_frameworks: list[str] | None) -> list[str]` - Select viable model types using three-tier filtering.
-- `evaluate_on_sample(spark: SparkSession, sample_uri: str, model_artifacts_path: Path, model_type: str, metric: str, target_columns: list[str], group_column: str | None) -> float` - Evaluate model on sample (fast).
+- `evaluate_on_sample(spark: SparkSession, sample_uri: str, model_artifacts_path: Path, model_type: str, metric: str, target_columns: list[str], group_column: str | None, train_sample_uri: str | None) -> tuple[float, float | None]` - Evaluate model on validation sample, optionally also on training sample.
 - `compute_metric_hardcoded(y_true, y_pred, metric_name: str) -> float` - Compute metric using hardcoded sklearn implementations.
 - `compute_metric(y_true, y_pred, metric_name: str, group_ids) -> float` - Compute metric value.
 

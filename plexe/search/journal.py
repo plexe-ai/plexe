@@ -130,6 +130,7 @@ class SearchJournal:
                 "stage": _compute_stage(node),
                 "success": not node.is_buggy,
                 "performance": node.performance,
+                "train_performance": node.train_performance,
                 "error": node.error,
             }
 
