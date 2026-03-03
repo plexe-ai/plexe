@@ -64,12 +64,13 @@ class KerasPredictor:
         with open(artifacts_dir / "pipeline.pkl", "rb") as f:
             self.pipeline = cloudpickle.load(f)
 
-    def _uses_logits_output(self) -> bool:
+    def _uses_logits_output(self, task_type: str | None = None) -> bool:
         """Return True when model outputs are logits based on training loss metadata."""
+        effective_task_type = task_type or self._task_type
         from_logits = self._loss_config.get("from_logits")
-        if self._task_type == "binary_classification" and self._loss_class == "BinaryCrossentropy":
+        if effective_task_type == "binary_classification" and self._loss_class == "BinaryCrossentropy":
             return bool(from_logits)
-        if self._task_type == "multiclass_classification" and self._loss_class in {
+        if effective_task_type == "multiclass_classification" and self._loss_class in {
             "SparseCategoricalCrossentropy",
             "CategoricalCrossentropy",
         }:
@@ -83,14 +84,17 @@ class KerasPredictor:
         probabilities = np.asarray(raw_predictions)
         if probabilities.ndim == 1:
             probabilities = probabilities.reshape(-1, 1)
-        uses_logits = self._uses_logits_output()
+        task_type = self._task_type
+        if not task_type:
+            task_type = "binary_classification" if probabilities.shape[1] <= 2 else "multiclass_classification"
+        uses_logits = self._uses_logits_output(task_type)
 
         # Legacy model metadata may omit loss_config.from_logits.
         # If outputs are clearly outside probability bounds, treat them as logits.
         if (
             not uses_logits
             and not self._loss_config
-            and self._task_type
+            and task_type
             in {
                 "binary_classification",
                 "multiclass_classification",
@@ -100,7 +104,7 @@ class KerasPredictor:
             if finite.size > 0 and (finite.min() < 0.0 or finite.max() > 1.0):
                 uses_logits = True
 
-        if self._task_type == "binary_classification":
+        if task_type == "binary_classification":
             if probabilities.shape[1] == 1:
                 positive = probabilities[:, 0]
                 if uses_logits:
@@ -117,7 +121,7 @@ class KerasPredictor:
 
             raise ValueError(f"Binary classification expects 1 or 2 outputs, got shape {probabilities.shape}")
 
-        if self._task_type == "multiclass_classification":
+        if task_type == "multiclass_classification":
             if uses_logits:
                 shifted = probabilities - np.max(probabilities, axis=1, keepdims=True)
                 exp_values = np.exp(shifted)

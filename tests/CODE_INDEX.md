@@ -1,6 +1,6 @@
 # Code Index: tests
 
-> Generated on 2026-03-03 04:33:06
+> Generated on 2026-03-03 04:46:10
 
 Test suite structure and test case documentation.
 
@@ -137,6 +137,7 @@ Unit tests for SearchJournal.
 - `test_journal_get_history_train_performance_none()` - get_history should include train_performance=None when not set.
 - `test_journal_serialization_preserves_optimization_direction()` - to_dict/from_dict should preserve optimization_direction.
 - `test_journal_from_dict_defaults_optimization_direction_to_higher()` - Older checkpoints without optimization_direction should default to higher.
+- `test_journal_optimization_direction_setter_validates_values()` - No description
 
 ---
 ## `unit/search/test_tree_policy_determinism.py`
@@ -251,6 +252,7 @@ Unit tests for Keras predictor template semantics.
 - `test_keras_probabilities_from_multiclass_logits() -> None` - No description
 - `test_keras_probabilities_infer_logits_when_loss_config_missing() -> None` - No description
 - `test_keras_predict_proba_raises_for_regression() -> None` - No description
+- `test_keras_predict_proba_allows_missing_task_metadata() -> None` - No description
 
 ---
 ## `unit/test_lightgbm_predictor.py`

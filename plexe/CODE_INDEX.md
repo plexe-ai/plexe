@@ -1,6 +1,6 @@
 # Code Index: plexe
 
-> Generated on 2026-03-03 04:33:06
+> Generated on 2026-03-03 04:46:10
 
 Code structure and public interface documentation for the **plexe** package.
 
@@ -396,6 +396,8 @@ Search journal for tracking model search tree.
 
 **`SearchJournal`** - Tracks solution search tree.
 - `__init__(self, baseline: Baseline | None, optimization_direction: str)`
+- `optimization_direction(self) -> str` - Metric optimization direction, constrained to {'higher', 'lower'}.
+- `optimization_direction(self, value: str) -> None` - Validate and set optimization direction.
 - `selection_score(self, value: float) -> float` - Normalize a metric value so larger always means better.
 - `is_better(self, candidate: float, reference: float | None) -> bool` - Compare two metric values using the configured optimization direction.
 - `sort_key(self, node: Solution) -> float` - Direction-aware sort key for solution nodes.

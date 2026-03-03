@@ -40,9 +40,6 @@ class SearchJournal:
             baseline: Baseline model for comparison
             optimization_direction: Metric optimization direction ("higher" or "lower")
         """
-        if optimization_direction not in {"higher", "lower"}:
-            raise ValueError(f"optimization_direction must be 'higher' or 'lower', got: {optimization_direction}")
-
         self.baseline = baseline
         self.baseline_performance = baseline.performance if baseline else 0.0
         self.optimization_direction = optimization_direction
@@ -50,6 +47,18 @@ class SearchJournal:
         self.nodes: list[Solution] = []
         self.successful_attempts = 0
         self.failed_attempts = 0
+
+    @property
+    def optimization_direction(self) -> str:
+        """Metric optimization direction, constrained to {'higher', 'lower'}."""
+        return self._optimization_direction
+
+    @optimization_direction.setter
+    def optimization_direction(self, value: str) -> None:
+        """Validate and set optimization direction."""
+        if value not in {"higher", "lower"}:
+            raise ValueError(f"optimization_direction must be 'higher' or 'lower', got: {value}")
+        self._optimization_direction = value
 
     def selection_score(self, value: float) -> float:
         """Normalize a metric value so larger always means better."""

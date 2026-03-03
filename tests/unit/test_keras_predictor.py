@@ -90,3 +90,18 @@ def test_keras_predict_proba_raises_for_regression() -> None:
 
     with pytest.raises(ValueError, match="only valid for classification"):
         predictor.predict_proba(pd.DataFrame({"f1": [1.0, 2.0]}))
+
+
+def test_keras_predict_proba_allows_missing_task_metadata() -> None:
+    predictor = KerasPredictor.__new__(KerasPredictor)
+    predictor._task_type = ""
+    predictor._loss_class = ""
+    predictor._loss_config = {}
+    predictor.pipeline = DummyPipeline()
+    predictor.model = DummyModel(np.array([[-2.0], [2.0]]))
+
+    probabilities = predictor.predict_proba(pd.DataFrame({"f1": [1.0, 2.0]}))
+
+    assert list(probabilities.columns) == ["proba_0", "proba_1"]
+    assert len(probabilities) == 2
+    assert probabilities.iloc[0]["proba_1"] < probabilities.iloc[1]["proba_1"]

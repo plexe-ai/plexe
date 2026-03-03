@@ -232,3 +232,10 @@ def test_journal_from_dict_defaults_optimization_direction_to_higher():
 
     restored = SearchJournal.from_dict(payload)
     assert restored.optimization_direction == "higher"
+
+
+def test_journal_optimization_direction_setter_validates_values():
+    journal = SearchJournal()
+
+    with pytest.raises(ValueError, match="optimization_direction must be 'higher' or 'lower'"):
+        journal.optimization_direction = "maximize"
