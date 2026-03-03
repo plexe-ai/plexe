@@ -102,6 +102,22 @@ def test_journal_best_node_tracks_best():
     assert journal.best_performance == 0.90
 
 
+def test_journal_best_node_respects_lower_direction():
+    """best_node should select smallest metric when optimization is lower."""
+    journal = SearchJournal(optimization_direction="lower")
+
+    sol1 = _make_solution(0, performance=0.40)
+    sol2 = _make_solution(1, performance=0.25)
+    sol3 = _make_solution(2, performance=0.31)
+
+    journal.add_node(sol1)
+    journal.add_node(sol2)
+    journal.add_node(sol3)
+
+    assert journal.best_node == sol2
+    assert journal.best_performance == 0.25
+
+
 # ============================================
 # Failure Rate Tests
 # ============================================
@@ -195,3 +211,24 @@ def test_journal_get_history_train_performance_none():
 
     history = journal.get_history()
     assert history[0]["train_performance"] is None
+
+
+def test_journal_serialization_preserves_optimization_direction():
+    """to_dict/from_dict should preserve optimization_direction."""
+    journal = SearchJournal(optimization_direction="lower")
+    journal.add_node(_make_solution(0, performance=0.3))
+
+    restored = SearchJournal.from_dict(journal.to_dict())
+    assert restored.optimization_direction == "lower"
+    assert restored.best_performance == pytest.approx(0.3)
+
+
+def test_journal_from_dict_defaults_optimization_direction_to_higher():
+    """Older checkpoints without optimization_direction should default to higher."""
+    journal = SearchJournal()
+    journal.add_node(_make_solution(0, performance=0.3))
+    payload = journal.to_dict()
+    payload.pop("optimization_direction")
+
+    restored = SearchJournal.from_dict(payload)
+    assert restored.optimization_direction == "higher"

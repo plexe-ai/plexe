@@ -28,6 +28,13 @@ from plexe.models import DataLayout
 
 logger = logging.getLogger(__name__)
 
+PROBABILITY_METRICS = {
+    StandardMetric.ROC_AUC.value,
+    StandardMetric.ROC_AUC_OVR.value,
+    StandardMetric.ROC_AUC_OVO.value,
+    StandardMetric.LOG_LOSS.value,
+}
+
 
 def select_viable_model_types(data_layout: DataLayout, selected_frameworks: list[str] | None = None) -> list[str]:
     """
@@ -83,6 +90,44 @@ def select_viable_model_types(data_layout: DataLayout, selected_frameworks: list
 
     logger.info(f"Viable model types: {viable}")
     return viable
+
+
+def metric_requires_probabilities(metric_name: str) -> bool:
+    """Return True when a metric requires probability scores instead of hard labels."""
+    return metric_name.lower().strip() in PROBABILITY_METRICS
+
+
+def normalize_probability_predictions(y_true: np.ndarray, y_pred_proba: Any, metric_name: str) -> np.ndarray:
+    """
+    Normalize probability predictions for sklearn metric compatibility.
+
+    - Binary metrics use positive-class scores (1D array).
+    - Multiclass metrics use full per-class probability matrix (2D array).
+    """
+    probabilities = y_pred_proba.values if hasattr(y_pred_proba, "values") else np.asarray(y_pred_proba)
+    metric = metric_name.lower().strip()
+    n_classes = len(np.unique(y_true))
+
+    if probabilities.ndim == 1:
+        if n_classes > 2:
+            raise ValueError(f"Metric '{metric_name}' requires per-class probabilities for multiclass tasks.")
+        return probabilities
+
+    if probabilities.ndim != 2:
+        raise ValueError(f"Expected probability outputs to be 1D or 2D, got shape {probabilities.shape}")
+
+    if probabilities.shape[1] == 1:
+        probabilities = np.column_stack([1 - probabilities[:, 0], probabilities[:, 0]])
+
+    if n_classes <= 2:
+        return probabilities[:, 1]
+
+    if probabilities.shape[1] < n_classes and metric in PROBABILITY_METRICS:
+        raise ValueError(
+            f"Metric '{metric_name}' requires {n_classes} class probabilities, got {probabilities.shape[1]} columns."
+        )
+
+    return probabilities
 
 
 def evaluate_on_sample(
@@ -170,8 +215,18 @@ def _evaluate_predictor(
 
     X = df.drop(columns=columns_to_drop)
     y = df[target_columns[0]]
-    predictions = predictor.predict(X)["prediction"].values
-    return compute_metric(y, predictions, metric, group_ids=group_ids)
+    if metric_requires_probabilities(metric):
+        if not hasattr(predictor, "predict_proba") or not callable(predictor.predict_proba):
+            raise ValueError(
+                f"Metric '{metric}' requires probability scores, but predictor {type(predictor).__name__} "
+                "does not implement predict_proba()."
+            )
+        raw_probabilities = predictor.predict_proba(X)
+        predictions = normalize_probability_predictions(y.values, raw_probabilities, metric)
+    else:
+        predictions = predictor.predict(X)["prediction"].values
+
+    return compute_metric(y.values, predictions, metric, group_ids=group_ids)
 
 
 def compute_metric_hardcoded(y_true, y_pred, metric_name: str) -> float:

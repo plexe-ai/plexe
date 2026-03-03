@@ -1,6 +1,6 @@
 # Code Index: tests
 
-> Generated on 2026-03-03 00:06:47
+> Generated on 2026-03-03 02:35:53
 
 Test suite structure and test case documentation.
 
@@ -76,6 +76,14 @@ Tests for user feedback integration in agents.
 - `test_agent_without_feedback_works(self, mock_context, mock_config)` - Agents should work normally when no feedback is provided.
 
 ---
+## `unit/agents/test_model_evaluator_prompt.py`
+Prompt-level tests for ModelEvaluatorAgent probability guidance.
+
+**Functions:**
+- `test_phase_1_prompt_includes_probability_metric_guidance()` - No description
+- `test_build_agent_instructions_document_predict_proba_interface()` - No description
+
+---
 ## `unit/execution/training/test_local_runner.py`
 Tests for LocalProcessRunner GPU detection and command construction.
 
@@ -99,6 +107,7 @@ Determinism tests for EvolutionarySearchPolicy local RNG behavior.
 
 **Functions:**
 - `test_evolutionary_policy_determinism(monkeypatch, tmp_path)` - No description
+- `test_evolutionary_exploit_respects_lower_metric_direction(tmp_path)` - No description
 
 ---
 ## `unit/search/test_insight_store.py`
@@ -117,6 +126,7 @@ Unit tests for SearchJournal.
 - `test_journal_add_successful_node()` - Test recording a successful solution.
 - `test_journal_add_buggy_node()` - Test recording a failed attempt.
 - `test_journal_best_node_tracks_best()` - Test best_node returns the highest performing solution.
+- `test_journal_best_node_respects_lower_direction()` - best_node should select smallest metric when optimization is lower.
 - `test_journal_failure_rate()` - Test failure rate computation.
 - `test_journal_failure_rate_empty()` - Test failure rate on empty journal.
 - `test_journal_get_history()` - Test history returns recent entries.
@@ -124,6 +134,8 @@ Unit tests for SearchJournal.
 - `test_journal_improvement_trend_insufficient_data()` - Test improvement trend with fewer than 2 successful solutions.
 - `test_journal_get_history_includes_train_performance()` - get_history should include train_performance when set on a solution.
 - `test_journal_get_history_train_performance_none()` - get_history should include train_performance=None when not set.
+- `test_journal_serialization_preserves_optimization_direction()` - to_dict/from_dict should preserve optimization_direction.
+- `test_journal_from_dict_defaults_optimization_direction_to_higher()` - Older checkpoints without optimization_direction should default to higher.
 
 ---
 ## `unit/search/test_tree_policy_determinism.py`
@@ -131,6 +143,7 @@ Determinism tests for TreeSearchPolicy local RNG behavior.
 
 **Functions:**
 - `test_tree_policy_determinism(monkeypatch, tmp_path)` - No description
+- `test_tree_policy_respects_lower_metric_direction(tmp_path)` - No description
 
 ---
 ## `unit/templates/features/test_pipeline_runner.py`
@@ -160,6 +173,25 @@ Unit tests for PyTorch DataLoader worker fallback behavior.
 - `test_resolve_num_workers_kept_on_non_darwin_spawn(monkeypatch) -> None` - Spawn on non-macOS should keep the requested worker count.
 
 ---
+## `unit/test_baseline_probability_validation.py`
+Unit tests for baseline probability validation behavior.
+
+**Functions:**
+- `test_validate_baseline_predictor_requires_predict_proba_for_probability_metrics(tmp_path)` - No description
+- `test_validate_baseline_predictor_accepts_predict_proba_for_probability_metrics(tmp_path)` - No description
+
+---
+## `unit/test_catboost_predictor.py`
+Unit tests for CatBoost predictor template.
+
+**`DummyPipeline`** - Minimal pipeline stub for tests.
+- `transform(self, x)` - No description
+
+**Functions:**
+- `test_catboost_predictor_predict_proba_classification() -> None` - No description
+- `test_catboost_predictor_predict_proba_raises_for_regression() -> None` - No description
+
+---
 ## `unit/test_config.py`
 Unit tests for config helpers.
 
@@ -182,6 +214,13 @@ Unit tests for workflow helper functions.
 - `test_select_viable_model_types_defaults_image()` - Default model types intersect with IMAGE_PATH.
 - `test_select_viable_model_types_no_intersection()` - No compatible frameworks should raise ValueError.
 - `test_compute_metric_map_grouped()` - MAP should compute per-group and average.
+- `test_metric_requires_probabilities()` - No description
+- `test_normalize_probability_predictions_binary_matrix_to_positive_scores()` - No description
+- `test_normalize_probability_predictions_multiclass_keeps_matrix()` - No description
+- `test_normalize_probability_predictions_multiclass_raises_on_1d()` - No description
+- `test_evaluate_predictor_uses_predict_for_label_metrics()` - No description
+- `test_evaluate_predictor_uses_predict_proba_for_probability_metrics()` - No description
+- `test_evaluate_predictor_raises_when_probability_metric_missing_predict_proba()` - No description
 
 ---
 ## `unit/test_imports.py`
@@ -191,11 +230,31 @@ Test that all production modules can be imported without errors.
 - `test_all_modules_importable()` - Import all production modules in the plexe/ package to catch import errors.
 
 ---
+## `unit/test_keras_predictor.py`
+Unit tests for Keras predictor template semantics.
+
+**`DummyPipeline`** - Minimal pipeline stub for tests.
+- `transform(self, x)` - No description
+
+**`DummyModel`** - Minimal model stub for tests.
+- `__init__(self, output)`
+- `predict(self, x, verbose)` - No description
+
+**Functions:**
+- `test_keras_probabilities_from_binary_logits() -> None` - No description
+- `test_keras_probabilities_from_binary_two_logit_output() -> None` - No description
+- `test_keras_probabilities_from_multiclass_logits() -> None` - No description
+- `test_keras_predict_proba_raises_for_regression() -> None` - No description
+
+---
 ## `unit/test_lightgbm_predictor.py`
 Unit tests for LightGBM predictor template.
 
 **`DummyModel`** - Minimal model stub with a predict method.
 - `predict(self, x)` - No description
+
+**`DummyClassificationModel`** - Minimal model stub with predict_proba for classification.
+- `predict_proba(self, x)` - No description
 
 **`DummyPipeline`** - Minimal pipeline stub with a transform method.
 - `transform(self, x)` - No description
@@ -203,6 +262,8 @@ Unit tests for LightGBM predictor template.
 **Functions:**
 - `test_lightgbm_predictor_basic(tmp_path: Path) -> None` - No description
 - `test_lightgbm_predictor_label_encoder(tmp_path: Path) -> None` - No description
+- `test_lightgbm_predictor_predict_proba_classification(tmp_path: Path) -> None` - No description
+- `test_lightgbm_predictor_predict_proba_raises_for_regression(tmp_path: Path) -> None` - No description
 
 ---
 ## `unit/test_models.py`
@@ -216,11 +277,40 @@ Unit tests for core model dataclasses.
 - `test_solution_from_dict_with_train_performance()` - Checkpoints with train_performance should round-trip correctly.
 
 ---
+## `unit/test_pytorch_predictor.py`
+Unit tests for PyTorch predictor template semantics.
+
+**`DummyPipeline`** - Minimal pipeline stub for tests.
+- `transform(self, x)` - No description
+
+**`DummyModel`** - Minimal callable model stub for tests.
+- `__init__(self, outputs)`
+
+**Functions:**
+- `test_pytorch_predict_proba_binary_classification() -> None` - No description
+- `test_pytorch_predict_proba_raises_for_regression() -> None` - No description
+
+---
 ## `unit/test_submission_pytorch.py`
 Unit tests for PyTorch model submission.
 
 **Functions:**
 - `test_save_model_pytorch(tmp_path)` - Test PyTorch model submission validation and context scratch storage.
+
+---
+## `unit/test_xgboost_predictor.py`
+Unit tests for XGBoost predictor template.
+
+**`DummyModel`** - Minimal predictor stub for tests.
+- `predict(self, x)` - No description
+- `predict_proba(self, x)` - No description
+
+**`DummyPipeline`** - Minimal pipeline stub for tests.
+- `transform(self, x)` - No description
+
+**Functions:**
+- `test_xgboost_predictor_predict_proba_classification(tmp_path: Path) -> None` - No description
+- `test_xgboost_predictor_predict_proba_raises_for_regression(tmp_path: Path) -> None` - No description
 
 ---
 ## `unit/utils/test_parquet_dataset.py`

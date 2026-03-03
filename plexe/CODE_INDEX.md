@@ -1,6 +1,6 @@
 # Code Index: plexe
 
-> Generated on 2026-03-03 00:06:47
+> Generated on 2026-03-03 02:35:53
 
 Code structure and public interface documentation for the **plexe** package.
 
@@ -222,6 +222,8 @@ Helper functions for workflow.
 
 **Functions:**
 - `select_viable_model_types(data_layout: DataLayout, selected_frameworks: list[str] | None) -> list[str]` - Select viable model types using three-tier filtering.
+- `metric_requires_probabilities(metric_name: str) -> bool` - Return True when a metric requires probability scores instead of hard labels.
+- `normalize_probability_predictions(y_true: np.ndarray, y_pred_proba: Any, metric_name: str) -> np.ndarray` - Normalize probability predictions for sklearn metric compatibility.
 - `evaluate_on_sample(spark: SparkSession, sample_uri: str, model_artifacts_path: Path, model_type: str, metric: str, target_columns: list[str], group_column: str | None, train_sample_uri: str | None) -> tuple[float, float | None]` - Evaluate model on validation sample, optionally also on training sample.
 - `compute_metric_hardcoded(y_true, y_pred, metric_name: str) -> float` - Compute metric using hardcoded sklearn implementations.
 - `compute_metric(y_true, y_pred, metric_name: str, group_ids) -> float` - Compute metric value.
@@ -393,7 +395,10 @@ Insight store for accumulating learnings from search.
 Search journal for tracking model search tree.
 
 **`SearchJournal`** - Tracks solution search tree.
-- `__init__(self, baseline: Baseline | None)`
+- `__init__(self, baseline: Baseline | None, optimization_direction: str)`
+- `selection_score(self, value: float) -> float` - Normalize a metric value so larger always means better.
+- `is_better(self, candidate: float, reference: float | None) -> bool` - Compare two metric values using the configured optimization direction.
+- `sort_key(self, node: Solution) -> float` - Direction-aware sort key for solution nodes.
 - `add_node(self, node: Solution) -> None` - Add a solution to the journal.
 - `draft_nodes(self) -> list[Solution]` - Get all root nodes (bootstrap solutions without parents).
 - `buggy_nodes(self) -> list[Solution]` - Get all buggy nodes that could be debugged.
@@ -447,6 +452,7 @@ Standard CatBoost predictor - NO Plexe dependencies.
 **`CatBoostPredictor`** - Standalone CatBoost predictor.
 - `__init__(self, model_dir: str)`
 - `predict(self, x: pd.DataFrame) -> pd.DataFrame` - Make predictions on input DataFrame.
+- `predict_proba(self, x: pd.DataFrame) -> pd.DataFrame` - Predict per-class probabilities on input DataFrame.
 
 ---
 ## `templates/inference/keras_predictor.py`
@@ -464,6 +470,7 @@ Standard LightGBM predictor - NO Plexe dependencies.
 **`LightGBMPredictor`** - Standalone LightGBM predictor.
 - `__init__(self, model_dir: str)`
 - `predict(self, x: pd.DataFrame) -> pd.DataFrame` - Make predictions on input DataFrame.
+- `predict_proba(self, x: pd.DataFrame) -> pd.DataFrame` - Predict per-class probabilities on input DataFrame.
 
 ---
 ## `templates/inference/pytorch_predictor.py`
@@ -481,6 +488,7 @@ Standard XGBoost predictor - NO Plexe dependencies.
 **`XGBoostPredictor`** - Standalone XGBoost predictor.
 - `__init__(self, model_dir: str)`
 - `predict(self, x: pd.DataFrame) -> pd.DataFrame` - Make predictions on input DataFrame.
+- `predict_proba(self, x: pd.DataFrame) -> pd.DataFrame` - Predict per-class probabilities on input DataFrame.
 
 ---
 ## `templates/packaging/model_card_template.py`

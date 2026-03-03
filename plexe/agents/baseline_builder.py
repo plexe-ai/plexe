@@ -17,6 +17,7 @@ if TYPE_CHECKING:
 
 from plexe.config import Config, get_routing_for_model
 from plexe.constants import DirNames
+from plexe.helpers import compute_metric, metric_requires_probabilities, normalize_probability_predictions
 from plexe.models import BuildContext, Baseline
 from plexe.utils.tracing import agent_span
 from plexe.tools.submission import (
@@ -54,6 +55,13 @@ class BaselineBuilderAgent:
         from plexe.agents.utils import format_user_feedback_for_prompt
 
         feedback_section = format_user_feedback_for_prompt(self.context.scratch.get("_user_feedback"))
+        requires_proba = metric_requires_probabilities(self.context.metric.name)
+        proba_requirement = (
+            "6. Because the selected primary metric requires probabilities, your class MUST also implement\n"
+            "   `predict_proba(self, x: pd.DataFrame) -> np.ndarray | pd.DataFrame` that returns per-sample scores.\n"
+            if requires_proba
+            else ""
+        )
 
         # Get routing configuration for this agent's model
         api_base, headers = get_routing_for_model(self.config.routing_config, self.llm_model)
@@ -124,6 +132,7 @@ class BaselineBuilderAgent:
                 "3. Instantiate and validate: validate_baseline_predictor(predictor, name, description)\n"
                 "4. Once the predictor is successfully validated, save its code as string: save_baseline_code(code_string)\n"
                 "5. Call final_answer() with rationale\n"
+                f"{proba_requirement}"
                 "\n"
                 "## CRITICAL:\n"
                 "- Use task_analysis['output_targets'] to identify target column(s)\n"
@@ -164,6 +173,11 @@ class BaselineBuilderAgent:
         task_type = self.context.task_analysis.get("task_type", "unknown")
         target_columns = self.context.output_targets
         metric_name = self.context.metric.name
+        proba_note = (
+            "Primary metric requires probabilities, so baseline must implement predict_proba(X)."
+            if metric_requires_probabilities(metric_name)
+            else "Primary metric uses label/value predictions."
+        )
 
         task = (
             f"Create a simple baseline predictor for this ML task.\n\n"
@@ -171,6 +185,7 @@ class BaselineBuilderAgent:
             f"Task Type: {task_type}\n"
             f"Target Column(s): {target_columns}\n"
             f"Metric: {metric_name}\n\n"
+            f"{proba_note}\n\n"
             f"Build ONE simple baseline (heuristics preferred) that makes sense for this ML task. "
             f"Register it and evaluate performance using the tools provided."
         )
@@ -224,8 +239,6 @@ class BaselineBuilderAgent:
         Returns:
             Performance metric value
         """
-        from plexe.helpers import compute_metric
-
         # Separate features from target
         target_cols = self.context.output_targets
         feature_cols = [col for col in val_sample_df.columns if col not in target_cols]
@@ -233,11 +246,21 @@ class BaselineBuilderAgent:
         X_val = val_sample_df[feature_cols]
         y_val = val_sample_df[target_cols[0]]
 
-        # Make predictions
-        y_pred = self.context.baseline_predictor.predict(X_val)
+        if metric_requires_probabilities(self.context.metric.name):
+            if not hasattr(self.context.baseline_predictor, "predict_proba") or not callable(
+                self.context.baseline_predictor.predict_proba
+            ):
+                raise ValueError(
+                    f"Metric '{self.context.metric.name}' requires probabilities but baseline predictor "
+                    "does not implement predict_proba()."
+                )
+            raw_proba = self.context.baseline_predictor.predict_proba(X_val)
+            y_pred_input = normalize_probability_predictions(y_val.values, raw_proba, self.context.metric.name)
+        else:
+            y_pred_input = self.context.baseline_predictor.predict(X_val)
 
         # Compute metric
-        performance = compute_metric(y_true=y_val.values, y_pred=y_pred, metric_name=self.context.metric.name)
+        performance = compute_metric(y_true=y_val.values, y_pred=y_pred_input, metric_name=self.context.metric.name)
 
         logger.info(f"Baseline performance: {self.context.metric.name}={performance:.4f}")
 

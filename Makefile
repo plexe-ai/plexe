@@ -45,6 +45,7 @@ help:
 	@echo ""
 	@echo "📊 Example Datasets:"
 	@echo "  make run-titanic        Run on Titanic dataset (medium)"
+	@echo "  make run-titanic-proba  Run Titanic with probability-focused intent"
 	@echo "  make run-house-prices   Run on House Prices dataset (regression)"
 	@echo ""
 	@echo "🏗️  Building:"
@@ -328,6 +329,32 @@ run-titanic: build
 			--experiment-id titanic \
 			--max-iterations 5 \
 			--work-dir /workdir/titanic/$(TIMESTAMP) \
+			--spark-mode local \
+			--enable-final-evaluation
+
+# Spaceship Titanic dataset with probability-focused objective
+.PHONY: run-titanic-proba
+run-titanic-proba: build
+	@echo "📊 Running on Spaceship Titanic dataset (probability-focused)..."
+	$(eval TIMESTAMP := $(shell date +%Y%m%d_%H%M%S))
+	docker run --rm \
+		--add-host=host.docker.internal:host-gateway \
+		$(CONFIG_MOUNT) \
+		$(CONFIG_ENV) \
+		-v $(PWD)/examples/datasets:/data:ro \
+		-v $(PWD)/workdir:/workdir \
+		-e OPENAI_API_KEY=$(OPENAI_API_KEY) \
+		-e ANTHROPIC_API_KEY=$(ANTHROPIC_API_KEY) \
+		-e SPARK_LOCAL_CORES=4 \
+		-e SPARK_DRIVER_MEMORY=4g \
+		plexe:py$(PYTHON_VERSION) \
+		python -m plexe.main \
+			--train-dataset-uri /data/spaceship-titanic/train.parquet \
+			--user-id dev_user \
+			--intent "predict each passenger's probability of being transported; optimize probability quality and ranking" \
+			--experiment-id titanic_proba \
+			--max-iterations 5 \
+			--work-dir /workdir/titanic_proba/$(TIMESTAMP) \
 			--spark-mode local \
 			--enable-final-evaluation
 

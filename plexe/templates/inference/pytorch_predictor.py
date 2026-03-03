@@ -109,6 +109,11 @@ class PyTorchPredictor:
 
         Applies sigmoid for single-logit binary models, otherwise softmax.
         """
+        if self._task_type not in {"binary_classification", "multiclass_classification"}:
+            raise ValueError(
+                f"predict_proba() is only valid for classification tasks, got task_type='{self._task_type or 'unknown'}'"
+            )
+
         # Transform features through pipeline
         x_transformed = self.pipeline.transform(x)
 

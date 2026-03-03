@@ -178,6 +178,8 @@ def build_model(
             context = BuildContext.from_dict(checkpoint_data["context"])
             if checkpoint_data.get("search_journal"):
                 journal = SearchJournal.from_dict(checkpoint_data["search_journal"])
+                if context.metric:
+                    journal.optimization_direction = context.metric.optimization_direction
                 context.scratch["_search_journal"] = journal
                 logger.info(f"Restored SearchJournal with {len(journal.nodes)} solutions")
             if checkpoint_data.get("insight_store"):
@@ -437,7 +439,7 @@ def build_model(
 
                 if valid_alternatives:
                     # Sort by performance and pick the best alternative
-                    valid_alternatives.sort(key=lambda s: s.performance, reverse=True)
+                    valid_alternatives.sort(key=journal.sort_key, reverse=True)
                     fallback_solution = valid_alternatives[0]
 
                     logger.info(f"Found {len(valid_alternatives)} valid alternatives")
@@ -1342,9 +1344,13 @@ def search_models(
     # Use restored journal/insight_store if resuming, otherwise create fresh
     if restored_journal:
         journal = restored_journal
+        journal.optimization_direction = context.metric.optimization_direction
         logger.info(f"Using restored SearchJournal with {len(journal.nodes)} existing solutions")
     else:
-        journal = SearchJournal(baseline=context.heuristic_baseline)
+        journal = SearchJournal(
+            baseline=context.heuristic_baseline,
+            optimization_direction=context.metric.optimization_direction,
+        )
 
     if restored_insight_store:
         insight_store = restored_insight_store

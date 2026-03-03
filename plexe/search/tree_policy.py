@@ -64,7 +64,7 @@ class TreeSearchPolicy(SearchPolicy):
         k = max(1, round(self.num_drafts * (1 - progress)))
         temp = max(0.3, (1 - progress) ** 2)
 
-        sorted_nodes = sorted(journal.good_nodes, key=lambda n: n.performance, reverse=True)
+        sorted_nodes = sorted(journal.good_nodes, key=journal.sort_key, reverse=True)
         top_k = sorted_nodes[:k]
 
         # Greedy if k=1 or low temperature
@@ -73,8 +73,8 @@ class TreeSearchPolicy(SearchPolicy):
             return top_k[0]
 
         # Softmax sampling
-        perfs = np.array([n.performance for n in top_k])
-        probs = np.exp((perfs / temp) - np.max(perfs / temp))
+        scores = np.array([journal.selection_score(n.performance) for n in top_k])
+        probs = np.exp((scores / temp) - np.max(scores / temp))
         probs /= probs.sum()
         selected = self._np_rng.choice(top_k, p=probs)
 

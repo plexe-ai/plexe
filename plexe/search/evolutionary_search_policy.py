@@ -100,9 +100,9 @@ class EvolutionarySearchPolicy(SearchPolicy):
                 return -0.3  # Slight negative - recent period mostly buggy but we had good solutions before
 
         # Calculate trend slope using linear regression
-        performances = [n.performance for n in good_recent]
-        x = np.arange(len(performances))
-        slope = np.polyfit(x, performances, 1)[0] if len(performances) > 1 else 0.0
+        scores = [journal.selection_score(n.performance) for n in good_recent]
+        x = np.arange(len(scores))
+        slope = np.polyfit(x, scores, 1)[0] if len(scores) > 1 else 0.0
 
         # Normalize slope to [-1, 1] range
         return float(np.clip(slope * 10, -1.0, 1.0))  # Scale for typical performance ranges
@@ -112,7 +112,7 @@ class EvolutionarySearchPolicy(SearchPolicy):
         if not journal.good_nodes:
             return 0.0  # No stagnation if no good solutions yet
 
-        best_performance = journal.best_performance
+        best_score = journal.selection_score(journal.best_performance)
         recent_nodes = journal.nodes[-window:] if len(journal.nodes) >= window else journal.nodes
 
         # Safety check: ensure we have nodes to analyze
@@ -125,7 +125,7 @@ class EvolutionarySearchPolicy(SearchPolicy):
 
         for node in reversed(recent_nodes):
             if not node.is_buggy and node.performance is not None:
-                if node.performance >= best_performance - threshold:
+                if journal.selection_score(node.performance) >= best_score - threshold:
                     improvements += 1
 
         # High stagnation = few improvements in recent window
@@ -203,7 +203,7 @@ class EvolutionarySearchPolicy(SearchPolicy):
         temp = max(0.2, (1 - progress) ** 1.5)
 
         # Focus on top-k performers
-        sorted_nodes = sorted(good_nodes, key=lambda n: n.performance, reverse=True)
+        sorted_nodes = sorted(good_nodes, key=journal.sort_key, reverse=True)
         top_k = sorted_nodes[:k]
 
         if len(top_k) == 1 or temp < 0.25:
@@ -211,9 +211,9 @@ class EvolutionarySearchPolicy(SearchPolicy):
             logger.info(f"Action: EXPLOIT (greedy) - solution {selected.solution_id} (perf={selected.performance:.4f})")
         else:
             # Softmax selection among top-k
-            perfs = np.array([n.performance for n in top_k])
+            scores = np.array([journal.selection_score(n.performance) for n in top_k])
             # Numerical stability: subtract max before exp
-            exp_probs = np.exp((perfs / temp) - np.max(perfs / temp))
+            exp_probs = np.exp((scores / temp) - np.max(scores / temp))
             probs = exp_probs / np.sum(exp_probs)
             selected = self._np_rng.choice(top_k, p=probs)
             logger.info(
@@ -253,7 +253,7 @@ class EvolutionarySearchPolicy(SearchPolicy):
             return self._explore_action(journal)
 
         # Prefer solutions with medium performance for mutation (not best, not worst)
-        sorted_nodes = sorted(good_nodes, key=lambda n: n.performance, reverse=True)
+        sorted_nodes = sorted(good_nodes, key=journal.sort_key, reverse=True)
         mid_range_start = max(0, len(sorted_nodes) // 4)
         mid_range_end = min(len(sorted_nodes), 3 * len(sorted_nodes) // 4)
         mid_range = sorted_nodes[mid_range_start:mid_range_end] if mid_range_end > mid_range_start else sorted_nodes
@@ -273,13 +273,18 @@ class EvolutionarySearchPolicy(SearchPolicy):
         # Early stopping logic (only after halfway point to allow for exploration)
         if iteration > max_iterations * 0.4:
             stagnation = self._calculate_stagnation(journal, window=5)
+            baseline = journal.baseline_performance
+            best = journal.best_performance
+
+            if journal.optimization_direction == "higher":
+                has_good_performance = best > baseline * 1.1
+                has_exceptional_performance = best > baseline * 1.5
+            else:
+                has_good_performance = best < baseline * 0.9
+                has_exceptional_performance = best < baseline * 0.5
 
             # Stop if highly stagnant AND we have a good solution (>10% improvement over baseline)
-            if (
-                stagnation > 0.8
-                and journal.best_performance > journal.baseline_performance * 1.1
-                and len(journal.good_nodes) >= 2
-            ):
+            if stagnation > 0.8 and has_good_performance and len(journal.good_nodes) >= 2:
 
                 logger.info(
                     f"Early stopping: High stagnation ({stagnation:.3f}) with good performance "
@@ -288,7 +293,7 @@ class EvolutionarySearchPolicy(SearchPolicy):
                 return True
 
             # Stop if we have exceptional performance (>50% improvement) and some stagnation
-            if stagnation > 0.6 and journal.best_performance > journal.baseline_performance * 1.5:
+            if stagnation > 0.6 and has_exceptional_performance:
 
                 logger.info(
                     f"Early stopping: Exceptional performance ({journal.best_performance:.4f}) "

@@ -56,3 +56,15 @@ def test_evolutionary_policy_determinism(monkeypatch, tmp_path):
     assert (selected_a is None) == (selected_b is None)
     if selected_a is not None:
         assert selected_a.solution_id == selected_b.solution_id
+
+
+def test_evolutionary_exploit_respects_lower_metric_direction(tmp_path):
+    journal = SearchJournal(optimization_direction="lower")
+    for idx, perf in enumerate([0.9, 0.3, 0.2], start=1):
+        journal.add_node(_make_solution(idx, performance=perf))
+
+    policy = EvolutionarySearchPolicy(num_drafts=2, seed=456)
+    selected = policy._exploit_action(journal, iteration=9, max_iterations=10)
+
+    assert selected is not None
+    assert selected.solution_id == 3
