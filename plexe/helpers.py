@@ -119,10 +119,11 @@ def normalize_probability_predictions(y_true: np.ndarray, y_pred_proba: Any, met
     if probabilities.shape[1] == 1:
         probabilities = np.column_stack([1 - probabilities[:, 0], probabilities[:, 0]])
 
-    if n_classes <= 2:
+    is_multiclass = probabilities.shape[1] > 2 or n_classes > 2
+    if not is_multiclass:
         return probabilities[:, 1]
 
-    if probabilities.shape[1] < n_classes and metric in PROBABILITY_METRICS:
+    if probabilities.shape[1] != n_classes and metric in PROBABILITY_METRICS:
         raise ValueError(
             f"Metric '{metric_name}' requires {n_classes} class probabilities, got {probabilities.shape[1]} columns."
         )

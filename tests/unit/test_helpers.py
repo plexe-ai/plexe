@@ -134,6 +134,35 @@ def test_normalize_probability_predictions_multiclass_raises_on_1d():
         normalize_probability_predictions(y_true, probs, "log_loss")
 
 
+def test_normalize_probability_predictions_multiclass_raises_on_extra_columns():
+    y_true = np.array([0, 1, 2])
+    probs = np.array(
+        [
+            [0.7, 0.1, 0.1, 0.1],
+            [0.1, 0.7, 0.1, 0.1],
+            [0.1, 0.1, 0.7, 0.1],
+        ]
+    )
+
+    with pytest.raises(ValueError, match="requires 3 class probabilities, got 4 columns"):
+        normalize_probability_predictions(y_true, probs, "roc_auc_ovr")
+
+
+def test_normalize_probability_predictions_raises_when_validation_missing_class():
+    y_true = np.array([0, 1, 1, 0])
+    probs = np.array(
+        [
+            [0.8, 0.1, 0.1],
+            [0.1, 0.7, 0.2],
+            [0.2, 0.6, 0.2],
+            [0.7, 0.2, 0.1],
+        ]
+    )
+
+    with pytest.raises(ValueError, match="requires 2 class probabilities, got 3 columns"):
+        normalize_probability_predictions(y_true, probs, "log_loss")
+
+
 class _DummySparkDataFrame:
     def __init__(self, pdf: pd.DataFrame):
         self._pdf = pdf
