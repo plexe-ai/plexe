@@ -57,8 +57,8 @@ class BaselineBuilderAgent:
         feedback_section = format_user_feedback_for_prompt(self.context.scratch.get("_user_feedback"))
         requires_proba = metric_requires_probabilities(self.context.metric.name)
         proba_requirement = (
-            "6. Because the selected primary metric requires probabilities, your class MUST also implement\n"
-            "   `predict_proba(self, x: pd.DataFrame) -> np.ndarray | pd.DataFrame` that returns per-sample scores.\n"
+            "- Because the selected primary metric requires probabilities, your class MUST also implement\n"
+            "  `predict_proba(self, x: pd.DataFrame) -> np.ndarray | pd.DataFrame` that returns per-sample scores.\n"
             if requires_proba
             else ""
         )
@@ -132,11 +132,11 @@ class BaselineBuilderAgent:
                 "3. Instantiate and validate: validate_baseline_predictor(predictor, name, description)\n"
                 "4. Once the predictor is successfully validated, save its code as string: save_baseline_code(code_string)\n"
                 "5. Call final_answer() with rationale\n"
-                f"{proba_requirement}"
                 "\n"
                 "## CRITICAL:\n"
                 "- Use task_analysis['output_targets'] to identify target column(s)\n"
                 "- Predictor must have standard .predict(X) -> array interface\n"
+                f"{proba_requirement}"
             ),
             model=PlexeLiteLLMModel(
                 model_id=self.llm_model,
