@@ -144,7 +144,7 @@ def test_normalize_probability_predictions_multiclass_raises_on_extra_columns():
         ]
     )
 
-    with pytest.raises(ValueError, match="requires 3 class probabilities, got 4 columns"):
+    with pytest.raises(ValueError, match="Probability matrix has 4 columns"):
         normalize_probability_predictions(y_true, probs, "roc_auc_ovr")
 
 
@@ -159,7 +159,7 @@ def test_normalize_probability_predictions_raises_when_validation_missing_class(
         ]
     )
 
-    with pytest.raises(ValueError, match="requires 2 class probabilities, got 3 columns"):
+    with pytest.raises(ValueError, match="validation labels contain 2 distinct classes"):
         normalize_probability_predictions(y_true, probs, "log_loss")
 
 

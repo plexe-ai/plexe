@@ -1,6 +1,6 @@
 # Code Index: plexe
 
-> Generated on 2026-03-03 03:16:32
+> Generated on 2026-03-03 03:58:35
 
 Code structure and public interface documentation for the **plexe** package.
 
@@ -547,7 +547,7 @@ Submission tools for agents.
 - `get_register_statistical_profile_tool(context: BuildContext)` - Factory: Returns statistical profile submission tool.
 - `get_register_layout_tool(context: BuildContext)` - Factory: Returns layout detection submission tool.
 - `get_register_eda_report_tool(context: BuildContext)` - Factory: Returns EDA report submission tool.
-- `get_save_split_uris_tool(context: BuildContext)` - Factory: Returns split URI submission tool.
+- `get_save_split_uris_tool(context: BuildContext, spark: Any | None, expected_ratios: dict[str, float] | None)` - Factory: Returns split URI submission tool.
 - `get_save_sample_uris_tool(context: BuildContext)` - Factory: Returns sample URIs submission tool.
 - `get_save_metric_implementation_fn(context: BuildContext)` - Factory: Returns metric implementation submission function.
 - `get_validate_baseline_predictor_tool(context: BuildContext, val_sample_df)` - Factory: Returns baseline predictor validation tool.
@@ -702,6 +702,7 @@ OpenTelemetry tracing decorators for agents and tools.
 Validation functions for pipelines, models, and other agent outputs.
 
 **Functions:**
+- `canonicalize_split_ratios(split_ratios: dict[str, float] | None) -> dict[str, float]` - Normalize split ratio key aliases to canonical names.
 - `validate_sklearn_pipeline(pipeline: Pipeline, sample_df: pd.DataFrame, target_columns: list[str]) -> tuple[bool, str]` - Validate that an sklearn Pipeline is well-formed and functional.
 - `validate_pipeline_consistency(pipeline: Pipeline, train_sample: pd.DataFrame, val_sample: pd.DataFrame, target_columns: list[str]) -> tuple[bool, str]` - Validate pipeline produces consistent output shape on train/val samples.
 - `validate_xgboost_params(params: dict[str, Any]) -> tuple[bool, str]` - Validate XGBoost hyperparameters.

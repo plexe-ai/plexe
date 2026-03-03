@@ -17,7 +17,12 @@ from plexe.constants import DirNames, ScratchKeys
 from plexe.models import BuildContext, Metric, Hypothesis, TaskType, UnifiedPlan
 from plexe.search.insight_store import InsightStore
 from plexe.utils.tracing import tool_span
-from plexe.validation.validators import validate_sklearn_pipeline, validate_pipeline_consistency
+from plexe.validation.validators import (
+    canonicalize_split_ratios,
+    validate_dataset_splits,
+    validate_pipeline_consistency,
+    validate_sklearn_pipeline,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -787,16 +792,22 @@ def get_register_eda_report_tool(context: BuildContext):
     return save_eda_report
 
 
-def get_save_split_uris_tool(context: BuildContext):
+def get_save_split_uris_tool(
+    context: BuildContext, spark: Any | None = None, expected_ratios: dict[str, float] | None = None
+):
     """
     Factory: Returns split URI submission tool.
 
     Args:
         context: Build context for storing result
+        spark: Optional SparkSession for immediate split validation
+        expected_ratios: Optional expected split ratios (train/val/test)
 
     Returns:
         Configured tool
     """
+    normalized_expected = canonicalize_split_ratios(expected_ratios)
+    expects_test_split = normalized_expected.get("test", 0.0) > 0
 
     @tool
     @tool_span
@@ -820,6 +831,19 @@ def get_save_split_uris_tool(context: BuildContext):
         Returns:
             Confirmation message
         """
+        if expects_test_split and not test_uri:
+            raise ValueError("A non-empty test split is required for this run. Provide test_uri.")
+
+        if spark is not None and normalized_expected:
+            is_valid, error_msg = validate_dataset_splits(
+                spark=spark,
+                train_uri=train_uri,
+                val_uri=val_uri,
+                test_uri=test_uri,
+                expected_ratios=normalized_expected,
+            )
+            if not is_valid:
+                raise ValueError(f"Split validation failed: {error_msg}")
 
         # Save URIs to context scratch
         context.scratch["_train_uri"] = train_uri

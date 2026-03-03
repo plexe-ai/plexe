@@ -7,6 +7,8 @@ from sklearn.pipeline import Pipeline
 from sklearn.preprocessing import StandardScaler
 
 from plexe.validation.validators import (
+    canonicalize_split_ratios,
+    validate_dataset_splits,
     validate_sklearn_pipeline,
     validate_xgboost_params,
     validate_model_definition,
@@ -127,3 +129,47 @@ def test_validate_metric_function_object_bad_signature():
 
     assert not is_valid
     assert "Arguments must be named" in error
+
+
+class _DummySparkFrame:
+    def __init__(self, count: int):
+        self._count = count
+
+    def count(self) -> int:
+        return self._count
+
+
+class _DummySparkReader:
+    def __init__(self, counts: dict[str, int]):
+        self._counts = counts
+
+    def parquet(self, uri: str) -> _DummySparkFrame:
+        if uri not in self._counts:
+            raise ValueError(f"Unknown URI: {uri}")
+        return _DummySparkFrame(self._counts[uri])
+
+
+class _DummySpark:
+    def __init__(self, counts: dict[str, int]):
+        self.read = _DummySparkReader(counts)
+
+
+def test_canonicalize_split_ratios_maps_validation_alias():
+    ratios = canonicalize_split_ratios({"train": 0.8, "validation": 0.2, "note": "ignored"})
+
+    assert ratios == {"train": 0.8, "val": 0.2}
+
+
+def test_validate_dataset_splits_fails_when_expected_test_is_empty():
+    spark = _DummySpark({"train_uri": 80, "val_uri": 20, "test_uri": 0})
+
+    is_valid, error = validate_dataset_splits(
+        spark=spark,
+        train_uri="train_uri",
+        val_uri="val_uri",
+        test_uri="test_uri",
+        expected_ratios={"train": 0.7, "val": 0.15, "test": 0.15},
+    )
+
+    assert not is_valid
+    assert "Test split is empty" in error

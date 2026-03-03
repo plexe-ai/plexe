@@ -53,10 +53,12 @@ class DatasetSplitterAgent:
         self.config = config
         self.llm_model = config.dataset_splitting_llm
 
-    def _build_agent(self) -> CodeAgent:
+    def _build_agent(self, split_ratios: dict[str, float]) -> CodeAgent:
         """Build CodeAgent with splitting tool."""
         # Get routing configuration for this agent's model
         api_base, headers = get_routing_for_model(self.config.routing_config, self.llm_model)
+        # TODO(splitter-prompts): Make split instructions conditional on requested split mode.
+        # 2-way modes should not instruct writing test.parquet or passing test_uri.
 
         return CodeAgent(
             name="DatasetSplitter",
@@ -142,7 +144,7 @@ class DatasetSplitterAgent:
                 extra_headers=headers,
             ),
             verbosity_level=self.config.agent_verbosity_level,
-            tools=[get_save_split_uris_tool(self.context)],
+            tools=[get_save_split_uris_tool(self.context, self.spark, split_ratios)],
             add_base_tools=False,
             additional_authorized_imports=self.config.allowed_base_imports
             + [
@@ -189,7 +191,7 @@ class DatasetSplitterAgent:
             output_dir_str = str(output_dir)
 
         # Build agent
-        agent = self._build_agent()
+        agent = self._build_agent(split_ratios)
 
         # Build task prompt (use string version of output_dir)
         task = self._build_task_prompt(split_ratios, output_dir_str)
@@ -263,6 +265,8 @@ class DatasetSplitterAgent:
 
         prompt += (
             "\n"
+            # TODO(splitter-prompts): Make this task prompt explicitly 2-way vs 3-way.
+            # Current wording always asks for train/val/test outputs, which can induce accidental holdouts.
             "Based on the task type and data characteristics, choose the appropriate splitting strategy:\n"
             "- Classification → Stratified split (preserve class balance)\n"
             "- Forecasting future events/values → Chronological split (train on past, test on future)\n"

@@ -17,6 +17,43 @@ logger = logging.getLogger(__name__)
 
 
 # ============================================
+# Dataset Split Validation
+# ============================================
+
+
+def canonicalize_split_ratios(split_ratios: dict[str, float] | None) -> dict[str, float]:
+    """
+    Normalize split ratio key aliases to canonical names.
+
+    Canonical keys are: train, val, test.
+    Unknown keys and non-numeric values are ignored.
+    """
+    if not split_ratios:
+        return {}
+
+    alias_map = {
+        "train": "train",
+        "val": "val",
+        "valid": "val",
+        "validation": "val",
+        "test": "test",
+    }
+
+    normalized: dict[str, float] = {}
+    for key, value in split_ratios.items():
+        if not isinstance(value, int | float):
+            continue
+
+        canonical_key = alias_map.get(str(key).strip().lower())
+        if canonical_key is None:
+            continue
+
+        normalized[canonical_key] = float(value)
+
+    return normalized
+
+
+# ============================================
 # Pipeline Validation
 # ============================================
 
@@ -342,6 +379,9 @@ def validate_dataset_splits(
     Returns:
         (is_valid, error_message)
     """
+    normalized_expected = canonicalize_split_ratios(expected_ratios)
+    expects_test_split = normalized_expected.get("test", 0.0) > 0
+
     # Validate row counts (existence check implicit - count() fails if dataset doesn't exist)
     try:
         train_count = spark.read.parquet(train_uri).count()
@@ -356,16 +396,31 @@ def validate_dataset_splits(
     except Exception as e:
         return False, f"Failed to read split datasets: {e}"
 
+    if train_count == 0:
+        return False, "Train split is empty"
+    if val_count == 0:
+        return False, "Validation split is empty"
+    if expects_test_split:
+        if not test_uri:
+            return False, "Test split expected but test URI was not provided"
+        if test_count == 0:
+            return False, "Test split is empty but final evaluation requires a non-empty test split"
+
+    if total == 0:
+        return False, "All splits are empty"
+
     logger.info(f"Split sizes: train={train_count}, val={val_count}, test={test_count}, total={total}")
 
     # Check ratios are within reasonable tolerance (10%)
     actual_ratios = {"train": train_count / total, "val": val_count / total, "test": test_count / total}
+    # TODO(split-validation): Escalate severe ratio drift to hard failure (not warning-only),
+    # so agent retries before finishing Phase 2.
 
     # Only check splits that exist in actual_ratios (ignore extra keys like "rationale")
     for split_name in actual_ratios.keys():
-        if split_name not in expected_ratios:
+        if split_name not in normalized_expected:
             continue
-        expected = expected_ratios[split_name]
+        expected = normalized_expected[split_name]
         actual = actual_ratios[split_name]
         diff = abs(actual - expected)
 

@@ -1,6 +1,6 @@
 # Code Index: tests
 
-> Generated on 2026-03-03 03:16:32
+> Generated on 2026-03-03 03:58:35
 
 Test suite structure and test case documentation.
 
@@ -247,6 +247,7 @@ Unit tests for Keras predictor template semantics.
 - `test_keras_probabilities_from_binary_logits() -> None` - No description
 - `test_keras_probabilities_from_binary_two_logit_output() -> None` - No description
 - `test_keras_probabilities_from_multiclass_logits() -> None` - No description
+- `test_keras_probabilities_infer_logits_when_loss_config_missing() -> None` - No description
 - `test_keras_predict_proba_raises_for_regression() -> None` - No description
 
 ---
@@ -299,6 +300,14 @@ Unit tests for PyTorch model submission.
 
 **Functions:**
 - `test_save_model_pytorch(tmp_path)` - Test PyTorch model submission validation and context scratch storage.
+
+---
+## `unit/test_submission_split_validation.py`
+Unit tests for split URI submission validation.
+
+**Functions:**
+- `test_save_split_uris_requires_test_when_expected(tmp_path)` - No description
+- `test_save_split_uris_canonicalizes_validation_key(tmp_path)` - No description
 
 ---
 ## `unit/test_xgboost_predictor.py`
@@ -372,6 +381,8 @@ Unit tests for validation functions.
 - `test_validate_model_definition_unknown_type()` - Test unknown model type fails validation.
 - `test_validate_metric_function_object_success()` - Callable with correct signature should pass.
 - `test_validate_metric_function_object_bad_signature()` - Callable with wrong arg names should fail.
+- `test_canonicalize_split_ratios_maps_validation_alias()` - No description
+- `test_validate_dataset_splits_fails_when_expected_test_is_empty()` - No description
 
 ---
 ## `unit/workflow/test_checkpoint_resume_feedback.py`

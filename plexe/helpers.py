@@ -125,7 +125,8 @@ def normalize_probability_predictions(y_true: np.ndarray, y_pred_proba: Any, met
 
     if probabilities.shape[1] != n_classes and metric in PROBABILITY_METRICS:
         raise ValueError(
-            f"Metric '{metric_name}' requires {n_classes} class probabilities, got {probabilities.shape[1]} columns."
+            f"Probability matrix has {probabilities.shape[1]} columns but validation labels contain {n_classes} "
+            f"distinct classes for metric '{metric_name}'. Ensure validation data includes all expected classes."
         )
 
     return probabilities

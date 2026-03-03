@@ -67,6 +67,19 @@ def test_keras_probabilities_from_multiclass_logits() -> None:
     assert np.argmax(probs, axis=1)[0] == 2
 
 
+def test_keras_probabilities_infer_logits_when_loss_config_missing() -> None:
+    predictor = KerasPredictor.__new__(KerasPredictor)
+    predictor._task_type = "binary_classification"
+    predictor._loss_class = "BinaryCrossentropy"
+    predictor._loss_config = {}
+
+    probs = predictor._probabilities_from_raw(np.array([[-2.0], [2.0]]))
+
+    assert probs.shape == (2, 2)
+    assert np.allclose(probs[:, 0] + probs[:, 1], np.ones(2))
+    assert probs[0, 1] < probs[1, 1]
+
+
 def test_keras_predict_proba_raises_for_regression() -> None:
     predictor = KerasPredictor.__new__(KerasPredictor)
     predictor._task_type = "regression"
