@@ -153,7 +153,12 @@ def _load_predictor(model_artifacts_path: Path, model_type: str) -> Any:
 
 
 def _evaluate_predictor(
-    spark, predictor, data_uri: str, metric: str, target_columns: list[str], group_column: str | None
+    spark: "SparkSession",
+    predictor: Any,
+    data_uri: str,
+    metric: str,
+    target_columns: list[str],
+    group_column: str | None,
 ) -> float:
     """Run predictor on a dataset and compute metric."""
     df = spark.read.parquet(data_uri).toPandas()
