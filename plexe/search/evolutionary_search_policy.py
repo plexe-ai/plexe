@@ -277,11 +277,11 @@ class EvolutionarySearchPolicy(SearchPolicy):
             best = journal.best_performance
 
             if journal.optimization_direction == "higher":
-                has_good_performance = best > baseline * 1.1
-                has_exceptional_performance = best > baseline * 1.5
+                has_good_performance = best > baseline * 1.1 if baseline > 0 else best > 0
+                has_exceptional_performance = best > baseline * 1.5 if baseline > 0 else False
             else:
-                has_good_performance = best < baseline * 0.9
-                has_exceptional_performance = best < baseline * 0.5
+                has_good_performance = best < baseline * 0.9 if baseline > 0 else best >= 0
+                has_exceptional_performance = best < baseline * 0.5 if baseline > 0 else False
 
             # Stop if highly stagnant AND we have a good solution (>10% improvement over baseline)
             if stagnation > 0.8 and has_good_performance and len(journal.good_nodes) >= 2:

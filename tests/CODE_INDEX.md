@@ -1,6 +1,6 @@
 # Code Index: tests
 
-> Generated on 2026-03-03 02:50:38
+> Generated on 2026-03-03 03:03:49
 
 Test suite structure and test case documentation.
 
@@ -108,6 +108,7 @@ Determinism tests for EvolutionarySearchPolicy local RNG behavior.
 **Functions:**
 - `test_evolutionary_policy_determinism(monkeypatch, tmp_path)` - No description
 - `test_evolutionary_exploit_respects_lower_metric_direction(tmp_path)` - No description
+- `test_should_stop_lower_metric_without_baseline_can_early_stop()` - No description
 
 ---
 ## `unit/search/test_insight_store.py`

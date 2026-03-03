@@ -68,3 +68,15 @@ def test_evolutionary_exploit_respects_lower_metric_direction(tmp_path):
 
     assert selected is not None
     assert selected.solution_id == 3
+
+
+def test_should_stop_lower_metric_without_baseline_can_early_stop():
+    journal = SearchJournal(optimization_direction="lower")
+    journal.baseline_performance = 0.0
+    for idx, perf in enumerate([0.9, 0.8, 0.7], start=1):
+        journal.add_node(_make_solution(idx, performance=perf))
+
+    policy = EvolutionarySearchPolicy(num_drafts=2, seed=456)
+    policy._calculate_stagnation = MagicMock(return_value=0.9)
+
+    assert policy.should_stop(journal, iteration=5, max_iterations=10)
