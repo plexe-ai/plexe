@@ -116,6 +116,7 @@ def normalize_probability_predictions(y_true: np.ndarray, y_pred_proba: Any, met
     if probabilities.ndim != 2:
         raise ValueError(f"Expected probability outputs to be 1D or 2D, got shape {probabilities.shape}")
 
+    original_n_cols = probabilities.shape[1]
     if probabilities.shape[1] == 1:
         probabilities = np.column_stack([1 - probabilities[:, 0], probabilities[:, 0]])
 
@@ -124,9 +125,14 @@ def normalize_probability_predictions(y_true: np.ndarray, y_pred_proba: Any, met
         return probabilities[:, 1]
 
     if probabilities.shape[1] != n_classes and metric in PROBABILITY_METRICS:
+        reported_n_cols = (
+            original_n_cols if original_n_cols == 1 and probabilities.shape[1] == 2 else probabilities.shape[1]
+        )
+        column_label = "column" if reported_n_cols == 1 else "columns"
         raise ValueError(
-            f"Probability matrix has {probabilities.shape[1]} columns but validation labels contain {n_classes} "
-            f"distinct classes for metric '{metric_name}'. Ensure validation data includes all expected classes."
+            f"Probability outputs have {reported_n_cols} {column_label} but validation labels contain {n_classes} "
+            f"distinct classes for metric '{metric_name}'. For multiclass tasks, predictor.predict_proba "
+            f"must return one probability column per class."
         )
 
     return probabilities

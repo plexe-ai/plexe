@@ -1,6 +1,6 @@
 # Code Index: tests
 
-> Generated on 2026-03-03 03:58:35
+> Generated on 2026-03-03 04:10:59
 
 Test suite structure and test case documentation.
 
@@ -220,6 +220,7 @@ Unit tests for workflow helper functions.
 - `test_normalize_probability_predictions_multiclass_keeps_matrix()` - No description
 - `test_normalize_probability_predictions_multiclass_raises_on_1d()` - No description
 - `test_normalize_probability_predictions_multiclass_raises_on_extra_columns()` - No description
+- `test_normalize_probability_predictions_multiclass_raises_on_single_column_matrix()` - No description
 - `test_normalize_probability_predictions_raises_when_validation_missing_class()` - No description
 - `test_evaluate_predictor_uses_predict_for_label_metrics()` - No description
 - `test_evaluate_predictor_uses_predict_proba_for_probability_metrics()` - No description

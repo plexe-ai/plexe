@@ -144,8 +144,16 @@ def test_normalize_probability_predictions_multiclass_raises_on_extra_columns():
         ]
     )
 
-    with pytest.raises(ValueError, match="Probability matrix has 4 columns"):
+    with pytest.raises(ValueError, match="Probability outputs have 4 columns"):
         normalize_probability_predictions(y_true, probs, "roc_auc_ovr")
+
+
+def test_normalize_probability_predictions_multiclass_raises_on_single_column_matrix():
+    y_true = np.array([0, 1, 2])
+    probs = np.array([[0.2], [0.5], [0.3]])
+
+    with pytest.raises(ValueError, match="Probability outputs have 1 column"):
+        normalize_probability_predictions(y_true, probs, "log_loss")
 
 
 def test_normalize_probability_predictions_raises_when_validation_missing_class():
