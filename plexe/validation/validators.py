@@ -406,9 +406,6 @@ def validate_dataset_splits(
         if test_count == 0:
             return False, "Test split is empty but final evaluation requires a non-empty test split"
 
-    if total == 0:
-        return False, "All splits are empty"
-
     logger.info(f"Split sizes: train={train_count}, val={val_count}, test={test_count}, total={total}")
 
     # Check ratios are within reasonable tolerance (10%)

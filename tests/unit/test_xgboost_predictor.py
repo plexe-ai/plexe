@@ -50,6 +50,19 @@ def test_xgboost_predictor_predict_proba_classification(tmp_path: Path) -> None:
     assert len(probabilities) == 2
 
 
+def test_xgboost_predictor_predict_proba_without_metadata(tmp_path: Path) -> None:
+    _write_artifacts(tmp_path, "binary_classification")
+    (tmp_path / "artifacts" / "metadata.json").unlink()
+
+    predictor = XGBoostPredictor(str(tmp_path))
+    input_df = pd.DataFrame({"a": [1, 2], "b": [3, 4]})
+
+    probabilities = predictor.predict_proba(input_df)
+
+    assert list(probabilities.columns) == ["proba_0", "proba_1"]
+    assert len(probabilities) == 2
+
+
 def test_xgboost_predictor_predict_proba_raises_for_regression(tmp_path: Path) -> None:
     _write_artifacts(tmp_path, "regression")
 

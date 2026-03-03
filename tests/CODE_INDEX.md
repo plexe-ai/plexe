@@ -1,6 +1,6 @@
 # Code Index: tests
 
-> Generated on 2026-03-03 04:10:59
+> Generated on 2026-03-03 04:24:02
 
 Test suite structure and test case documentation.
 
@@ -190,6 +190,7 @@ Unit tests for CatBoost predictor template.
 
 **Functions:**
 - `test_catboost_predictor_predict_proba_classification() -> None` - No description
+- `test_catboost_predictor_predict_proba_allows_missing_task_metadata() -> None` - No description
 - `test_catboost_predictor_predict_proba_raises_for_regression() -> None` - No description
 
 ---
@@ -268,6 +269,7 @@ Unit tests for LightGBM predictor template.
 - `test_lightgbm_predictor_basic(tmp_path: Path) -> None` - No description
 - `test_lightgbm_predictor_label_encoder(tmp_path: Path) -> None` - No description
 - `test_lightgbm_predictor_predict_proba_classification(tmp_path: Path) -> None` - No description
+- `test_lightgbm_predictor_predict_proba_without_metadata(tmp_path: Path) -> None` - No description
 - `test_lightgbm_predictor_predict_proba_raises_for_regression(tmp_path: Path) -> None` - No description
 
 ---
@@ -323,6 +325,7 @@ Unit tests for XGBoost predictor template.
 
 **Functions:**
 - `test_xgboost_predictor_predict_proba_classification(tmp_path: Path) -> None` - No description
+- `test_xgboost_predictor_predict_proba_without_metadata(tmp_path: Path) -> None` - No description
 - `test_xgboost_predictor_predict_proba_raises_for_regression(tmp_path: Path) -> None` - No description
 
 ---
