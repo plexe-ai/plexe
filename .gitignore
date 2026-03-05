@@ -202,5 +202,7 @@ experiments/
 notebooks/
 
 **/.claude/settings.local.json
+.claude/
+.codex/
 config.yaml
 Makefile.local
