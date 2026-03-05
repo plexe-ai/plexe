@@ -123,7 +123,13 @@ def main(
         if nn_max_epochs is not None:
             epoch_overrides["nn_max_epochs"] = nn_max_epochs
         if epoch_overrides:
-            config = config.__class__.model_validate(config.model_dump() | epoch_overrides)
+            merged_config = config.model_dump() | epoch_overrides
+            # Preserve prior max-only override behavior: lowering the cap alone should
+            # also lower the default when it would otherwise violate validation.
+            if "nn_max_epochs" in epoch_overrides and "nn_default_epochs" not in epoch_overrides:
+                if merged_config.get("nn_default_epochs", 0) > epoch_overrides["nn_max_epochs"]:
+                    merged_config["nn_default_epochs"] = epoch_overrides["nn_max_epochs"]
+            config = config.__class__.model_validate(merged_config)
         if allowed_model_types:
             config.allowed_model_types = allowed_model_types
         if global_seed is not None:

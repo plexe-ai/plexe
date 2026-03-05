@@ -1,6 +1,6 @@
 # Code Index: tests
 
-> Generated on 2026-03-05 21:17:33
+> Generated on 2026-03-05 21:32:55
 
 Test suite structure and test case documentation.
 
@@ -290,6 +290,7 @@ Unit tests for main() dataset input handling.
 **Functions:**
 - `test_main_prefers_train_dataset_uri_and_forwards_optional_splits(monkeypatch, tmp_path)` - No description
 - `test_main_auto_enables_final_evaluation_when_test_dataset_is_provided(monkeypatch, tmp_path)` - No description
+- `test_main_nn_max_epochs_override_clamps_default_when_only_cap_is_set(monkeypatch, tmp_path)` - No description
 - `test_main_uses_data_refs_fallback_when_train_dataset_uri_missing(monkeypatch, tmp_path)` - No description
 - `test_main_requires_train_dataset_uri_or_data_refs(monkeypatch, tmp_path)` - No description
 

@@ -46,7 +46,15 @@ class _FakeIntegration:
 
 
 def _patch_main_dependencies(monkeypatch, build_model_spy: dict, normalize_calls: list[tuple]):
-    fake_config = SimpleNamespace(
+    class _FakeConfig(SimpleNamespace):
+        def model_dump(self):
+            return self.__dict__.copy()
+
+        @classmethod
+        def model_validate(cls, payload):
+            return cls(**payload)
+
+    fake_config = _FakeConfig(
         max_search_iterations=10,
         spark_mode="local",
         nn_max_epochs=10,
@@ -145,6 +153,28 @@ def test_main_auto_enables_final_evaluation_when_test_dataset_is_provided(monkey
 
     assert normalize_calls == [("train", "s3://bucket/train.csv"), ("test", "s3://bucket/test.csv")]
     assert build_model_spy["kwargs"]["enable_final_evaluation"] is True
+
+
+def test_main_nn_max_epochs_override_clamps_default_when_only_cap_is_set(monkeypatch, tmp_path):
+    fake_integration = _FakeIntegration()
+    build_model_spy: dict = {}
+    normalize_calls: list[tuple] = []
+    _patch_main_dependencies(monkeypatch, build_model_spy, normalize_calls)
+
+    main_module.main(
+        intent="predict churn",
+        train_dataset_uri="s3://bucket/train.csv",
+        nn_max_epochs=5,
+        integration=fake_integration,
+        spark_mode="local",
+        work_dir=tmp_path,
+        user_id="user-1",
+        experiment_id="exp-1",
+    )
+
+    used_config = build_model_spy["kwargs"]["config"]
+    assert used_config.nn_max_epochs == 5
+    assert used_config.nn_default_epochs == 5
 
 
 def test_main_uses_data_refs_fallback_when_train_dataset_uri_missing(monkeypatch, tmp_path):
