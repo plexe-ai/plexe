@@ -87,7 +87,7 @@ def test_prepare_data_generates_missing_test_when_only_val_is_provided(monkeypat
     context = _make_context(tmp_path)
     config = SimpleNamespace(train_sample_size=100, val_sample_size=40)
     integration = _DummyIntegration()
-    calls = {"split_ratios": None}
+    calls = {"split_ratios": None, "split_output_dir": None}
 
     def _materialize(_spark, dataset_uri, split_name, _context, output_dir):
         assert split_name == "val"
@@ -100,6 +100,7 @@ def test_prepare_data_generates_missing_test_when_only_val_is_provided(monkeypat
 
         def run(self, split_ratios, output_dir):
             calls["split_ratios"] = split_ratios
+            calls["split_output_dir"] = output_dir
             return "split_train.parquet", "generated_test.parquet", None
 
     class _FakeSampler:
@@ -126,6 +127,7 @@ def test_prepare_data_generates_missing_test_when_only_val_is_provided(monkeypat
     )
 
     assert calls["split_ratios"] == {"train": 0.8, "val": 0.2}
+    assert calls["split_output_dir"] == str(tmp_path / ".build" / "data" / "splits" / "generated")
     assert context.train_uri == "split_train.parquet"
     assert context.val_uri == "copied_val.parquet"
     assert context.test_uri == "generated_test.parquet"

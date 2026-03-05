@@ -957,9 +957,14 @@ def prepare_data(
     )
     train_uri = training_dataset_uri
 
-    def run_split(split_ratios: dict[str, float]) -> tuple[str, str, str | None]:
+    def run_split(split_ratios: dict[str, float], output_dir: str = splits_output_dir) -> tuple[str, str, str | None]:
         splitter = DatasetSplitterAgent(spark=spark, dataset_uri=training_dataset_uri, context=context, config=config)
-        return splitter.run(split_ratios=split_ratios, output_dir=splits_output_dir)
+        return splitter.run(split_ratios=split_ratios, output_dir=output_dir)
+
+    def get_generated_split_output_dir() -> str:
+        if splits_output_dir.startswith("s3://"):
+            return f"{splits_output_dir}/generated"
+        return str(Path(splits_output_dir) / "generated")
 
     def get_three_way_split_ratios() -> dict[str, float]:
         recommended_split = (context.task_analysis or {}).get("recommended_split", {})
@@ -989,7 +994,8 @@ def prepare_data(
             split_ratios = get_three_way_split_ratios()
             test_ratio = split_ratios.get("test", 0.15)
             split_ratios = {"train": max(1.0 - test_ratio, 0.01), "val": test_ratio}
-            train_uri, generated_test_uri, split_test_uri = run_split(split_ratios)
+            generated_output_dir = get_generated_split_output_dir()
+            train_uri, generated_test_uri, split_test_uri = run_split(split_ratios, output_dir=generated_output_dir)
             if split_test_uri:
                 logger.warning(
                     "Splitter returned an unexpected third split while generating test-only split; "
