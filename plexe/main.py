@@ -24,6 +24,7 @@ import numpy as np
 from plexe.integrations.base import WorkflowIntegration
 from plexe.config import setup_logging, setup_litellm, get_config
 from plexe.constants import DirNames, PhaseNames
+from plexe.execution.dataproc.dataset_io import DatasetNormalizer
 from plexe.execution.dataproc.session import get_or_create_spark_session, stop_spark_session
 from plexe.execution.training.local_runner import LocalProcessRunner
 from plexe.search.tree_policy import TreeSearchPolicy
@@ -36,7 +37,7 @@ logger = logging.getLogger(__name__)
 
 def main(
     intent: str,
-    data_refs: list[str],  # TODO: Support multiple datasets + join_strategy when multi-dataset joining is implemented
+    data_refs: list[str] | None = None,  # Deprecated fallback for backward compatibility
     integration: WorkflowIntegration | None = None,
     spark_mode: str = "local",
     user_id: str = "default_user",
@@ -44,9 +45,12 @@ def main(
     max_iterations: int = 10,
     global_seed: int | None = None,
     work_dir: Path = Path("/tmp/model_builder_v2"),
+    train_dataset_uri: str | None = None,
+    val_dataset_uri: str | None = None,
     test_dataset_uri: str | None = None,
     enable_final_evaluation: bool = False,
-    max_epochs: int | None = None,
+    nn_default_epochs: int | None = None,
+    nn_max_epochs: int | None = None,
     allowed_model_types: list[str] | None = None,
     is_retrain: bool = False,
     original_model_uri: str | None = None,
@@ -65,7 +69,7 @@ def main(
 
     Args:
         intent: ML task description
-        data_refs: Dataset references
+        data_refs: Deprecated dataset references list (only first element used)
         integration: WorkflowIntegration instance (default: StandaloneIntegration)
         spark_mode: Spark backend ("local" or "databricks")
         user_id: User identifier
@@ -73,9 +77,12 @@ def main(
         max_iterations: Maximum search iterations
         global_seed: Global seed for reproducible runs (random + numpy + search policies)
         work_dir: Working directory for artifacts
+        train_dataset_uri: Required training dataset URI (preferred over data_refs)
+        val_dataset_uri: Optional validation dataset URI
         test_dataset_uri: Optional test dataset URI
         enable_final_evaluation: Whether to run test evaluation
-        max_epochs: Cap Keras epochs (for testing)
+        nn_default_epochs: Override default epochs for neural network training
+        nn_max_epochs: Override max epochs cap for neural network training
         allowed_model_types: Restrict model types
         is_retrain: Whether this is a retraining job
         original_model_uri: URI to original model.tar.gz (for retraining)
@@ -110,10 +117,13 @@ def main(
         # Apply CLI argument overrides (highest priority)
         config.max_search_iterations = max_iterations
         config.spark_mode = spark_mode
-        if max_epochs:
-            config.nn_max_epochs = max_epochs
-            if config.nn_default_epochs > config.nn_max_epochs:
-                config.nn_default_epochs = config.nn_max_epochs
+        epoch_overrides = {}
+        if nn_default_epochs is not None:
+            epoch_overrides["nn_default_epochs"] = nn_default_epochs
+        if nn_max_epochs is not None:
+            epoch_overrides["nn_max_epochs"] = nn_max_epochs
+        if epoch_overrides:
+            config = config.__class__.model_validate(config.model_dump() | epoch_overrides)
         if allowed_model_types:
             config.allowed_model_types = allowed_model_types
         if global_seed is not None:
@@ -155,20 +165,75 @@ def main(
         work_dir.mkdir(parents=True, exist_ok=True)
         integration.prepare_workspace(experiment_id, work_dir)
 
-        # Normalize dataset to parquet
-        if not data_refs:
-            raise ValueError("No dataset references provided")
-        input_uri = data_refs[0]
-        normalized_output = integration.get_artifact_location("normalized", input_uri, experiment_id, work_dir)
-        spark = get_or_create_spark_session(config)
-        from plexe.execution.dataproc.dataset_io import DatasetNormalizer
+        # Resolve training dataset input (new train_dataset_uri preferred)
+        if train_dataset_uri:
+            resolved_train_input_uri = train_dataset_uri
+            if data_refs:
+                logger.warning(
+                    "Both train_dataset_uri and deprecated data_refs provided; "
+                    "using train_dataset_uri and ignoring data_refs"
+                )
+        elif data_refs:
+            resolved_train_input_uri = data_refs[0]
+            logger.warning(
+                "data_refs is deprecated and will be removed in a future release. "
+                "Please pass train_dataset_uri instead."
+            )
+            if len(data_refs) > 1:
+                logger.warning(
+                    f"Multiple dataset refs provided, using first: {resolved_train_input_uri}. "
+                    "Multi-dataset joining is not supported yet."
+                )
+        else:
+            raise ValueError("train_dataset_uri is required (or use deprecated data_refs=[...])")
 
+        # Normalize training dataset to parquet
+        normalized_output = integration.get_artifact_location(
+            "normalized", resolved_train_input_uri, experiment_id, work_dir
+        )
+        spark = get_or_create_spark_session(config)
         normalizer = DatasetNormalizer(spark)
-        csv_options = {"sep": csv_delimiter, "header": csv_header}
+        csv_options = {"sep": config.csv_delimiter, "header": config.csv_header}
         train_dataset_uri, input_format = normalizer.normalize(
-            input_uri=input_uri, output_uri=normalized_output, read_options=csv_options
+            input_uri=resolved_train_input_uri, output_uri=normalized_output, read_options=csv_options
         )
         input_format = input_format.value
+
+        # Optional explicit split datasets are ignored in retraining mode
+        if is_retrain and (val_dataset_uri or test_dataset_uri):
+            logger.warning("val_dataset_uri/test_dataset_uri are ignored in retraining mode")
+            val_dataset_uri = None
+            test_dataset_uri = None
+
+        # Normalize optional provided val/test datasets using existing normalizer logic
+        val_input_format = None
+        test_input_format = None
+        if not is_retrain:
+            normalized_output_base = integration.get_artifact_location(
+                "normalized", train_dataset_uri, experiment_id, work_dir
+            )
+
+            def normalize_dataset_uri(dataset_uri: str, split_name: str) -> tuple[str, str]:
+                if normalized_output_base.startswith("s3://"):
+                    output_uri = f"{normalized_output_base}/normalized_inputs/{split_name}.parquet"
+                else:
+                    output_uri = str(Path(normalized_output_base) / "normalized_inputs" / f"{split_name}.parquet")
+
+                normalized_uri, detected_format = normalizer.normalize(
+                    input_uri=dataset_uri,
+                    output_uri=output_uri,
+                    read_options=csv_options,
+                )
+                return normalized_uri, detected_format.value
+
+            if val_dataset_uri:
+                val_dataset_uri, val_input_format = normalize_dataset_uri(val_dataset_uri, "val")
+            if test_dataset_uri:
+                test_dataset_uri, test_input_format = normalize_dataset_uri(test_dataset_uri, "test")
+
+        if test_dataset_uri and not enable_final_evaluation:
+            logger.info("test_dataset_uri provided; auto-enabling final evaluation")
+            enable_final_evaluation = True
 
         # Prepare original model if retraining
         if is_retrain:
@@ -189,6 +254,10 @@ def main(
         logger.info(f"LiteLLM routing: {'custom config' if config.routing_config else 'default providers'}")
         logger.info(f"Intent: {intent}")
         logger.info(f"Dataset: {train_dataset_uri} (format: {input_format}) | Max iterations: {max_iterations}")
+        if val_dataset_uri:
+            logger.info(f"Validation dataset: {val_dataset_uri} (format: {val_input_format})")
+        if test_dataset_uri:
+            logger.info(f"Test dataset: {test_dataset_uri} (format: {test_input_format})")
         if config.global_seed is not None and config.max_parallel_variants > 1:
             logger.info(
                 "Reproducibility note: max_parallel_variants>1 can introduce nondeterminism under threading. "
@@ -219,7 +288,6 @@ def main(
             evaluation_report = None
         else:
             # Normal build workflow
-            spark = get_or_create_spark_session(config)
             search_policy = TreeSearchPolicy(seed=config.global_seed)
             # search_policy = EvolutionarySearchPolicy(seed=config.global_seed)  TODO: enable after testing
 
@@ -233,6 +301,7 @@ def main(
             result = build_model(
                 spark=spark,
                 train_dataset_uri=train_dataset_uri,
+                val_dataset_uri=val_dataset_uri,
                 test_dataset_uri=test_dataset_uri,
                 user_id=user_id,
                 intent=intent,
@@ -286,6 +355,7 @@ if __name__ == "__main__":
     parser.add_argument(
         "--train-dataset-uri", required=True, help="Path to training dataset (CSV, ORC, Avro, or Parquet)"
     )
+    parser.add_argument("--val-dataset-uri", help="Optional: Path to validation dataset (CSV, ORC, Avro, or Parquet)")
     parser.add_argument("--test-dataset-uri", help="Optional: Path to test dataset (CSV, ORC, Avro, or Parquet)")
     parser.add_argument("--user-id", default=os.getenv("USER_ID", "default_user"), help="User identifier")
     parser.add_argument("--intent", required=True, help="ML task description")
@@ -294,7 +364,16 @@ if __name__ == "__main__":
     parser.add_argument("--seed", type=int, help="Global seed for reproducible runs")
     parser.add_argument("--work-dir", type=Path, default=Path("/tmp/model_builder_v2"), help="Working directory")
     parser.add_argument("--enable-final-evaluation", action="store_true", help="Enable test set evaluation")
-    parser.add_argument("--max-epochs", type=int, help="Cap neural network epochs (Keras, PyTorch)")
+    parser.add_argument(
+        "--nn-default-epochs",
+        type=int,
+        help="Override default epochs for neural network training (Keras, PyTorch)",
+    )
+    parser.add_argument(
+        "--nn-max-epochs",
+        type=int,
+        help="Override max epochs cap for neural network training (Keras, PyTorch)",
+    )
     parser.add_argument(
         "--allowed-model-types",
         nargs="+",
@@ -418,16 +497,18 @@ if __name__ == "__main__":
     try:
         main(
             intent=args.intent,
-            data_refs=[args.train_dataset_uri],
+            train_dataset_uri=args.train_dataset_uri,
             spark_mode=spark_mode,
             user_id=args.user_id,
             experiment_id=args.experiment_id,
             max_iterations=args.max_iterations,
             global_seed=args.seed,
             work_dir=args.work_dir,
+            val_dataset_uri=args.val_dataset_uri,
             test_dataset_uri=args.test_dataset_uri,
             enable_final_evaluation=enable_final_evaluation,
-            max_epochs=args.max_epochs,
+            nn_default_epochs=args.nn_default_epochs,
+            nn_max_epochs=args.nn_max_epochs,
             allowed_model_types=args.allowed_model_types,
             is_retrain=args.is_retrain,
             original_model_uri=args.original_model_uri,

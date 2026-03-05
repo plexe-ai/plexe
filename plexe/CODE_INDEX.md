@@ -1,6 +1,6 @@
 # Code Index: plexe
 
-> Generated on 2026-03-03 05:08:33
+> Generated on 2026-03-05 20:58:27
 
 Code structure and public interface documentation for the **plexe** package.
 
@@ -17,7 +17,7 @@ Dataset Splitter Agent.
 
 **`DatasetSplitterAgent`** - Agent that generates PySpark code for intelligent dataset splitting.
 - `__init__(self, spark: SparkSession, dataset_uri: str, context: BuildContext, config: Config)`
-- `run(self, split_ratios: dict[str, float], output_dir: str | Path) -> tuple[str, str, str]` - Generate and execute intelligent dataset splitting.
+- `run(self, split_ratios: dict[str, float], output_dir: str | Path) -> tuple[str, str, str | None]` - Generate and execute intelligent dataset splitting.
 
 ---
 ## `agents/feature_processor.py`
@@ -306,7 +306,7 @@ Amazon S3 storage helper.
 Universal entry point for plexe.
 
 **Functions:**
-- `main(intent: str, data_refs: list[str], integration: WorkflowIntegration | None, spark_mode: str, user_id: str, experiment_id: str, max_iterations: int, global_seed: int | None, work_dir: Path, test_dataset_uri: str | None, enable_final_evaluation: bool, max_epochs: int | None, allowed_model_types: list[str] | None, is_retrain: bool, original_model_uri: str | None, original_experiment_id: str | None, auto_mode: bool, user_feedback: dict | None, enable_otel: bool, otel_endpoint: str | None, otel_headers: dict[str, str] | None, external_storage_uri: str | None, csv_delimiter: str, csv_header: bool)` - Main model building function.
+- `main(intent: str, data_refs: list[str] | None, integration: WorkflowIntegration | None, spark_mode: str, user_id: str, experiment_id: str, max_iterations: int, global_seed: int | None, work_dir: Path, train_dataset_uri: str | None, val_dataset_uri: str | None, test_dataset_uri: str | None, enable_final_evaluation: bool, nn_default_epochs: int | None, nn_max_epochs: int | None, allowed_model_types: list[str] | None, is_retrain: bool, original_model_uri: str | None, original_experiment_id: str | None, auto_mode: bool, user_feedback: dict | None, enable_otel: bool, otel_endpoint: str | None, otel_headers: dict[str, str] | None, external_storage_uri: str | None, csv_delimiter: str, csv_header: bool)` - Main model building function.
 
 ---
 ## `models.py`
@@ -728,10 +728,10 @@ Streamlit dashboard for plexe.
 Main workflow orchestrator.
 
 **Functions:**
-- `build_model(spark: SparkSession, train_dataset_uri: str, test_dataset_uri: str | None, user_id: str, intent: str, experiment_id: str, work_dir: Path, runner: TrainingRunner, search_policy: SearchPolicy, config: Config, integration: WorkflowIntegration, enable_final_evaluation: bool, on_checkpoint_saved: Callable[[str, Path, Path], None] | None, pause_points: list[str] | None, on_pause: Callable[[str], None] | None, user_feedback: dict | None) -> tuple[Solution, dict, EvaluationReport | None] | None` - Main workflow orchestrator.
+- `build_model(spark: SparkSession, train_dataset_uri: str, val_dataset_uri: str | None, test_dataset_uri: str | None, user_id: str, intent: str, experiment_id: str, work_dir: Path, runner: TrainingRunner, search_policy: SearchPolicy, config: Config, integration: WorkflowIntegration, enable_final_evaluation: bool, on_checkpoint_saved: Callable[[str, Path, Path], None] | None, pause_points: list[str] | None, on_pause: Callable[[str], None] | None, user_feedback: dict | None) -> tuple[Solution, dict, EvaluationReport | None] | None` - Main workflow orchestrator.
 - `sanitize_dataset_column_names(spark: SparkSession, dataset_uri: str, context: BuildContext) -> str` - Sanitize column names by replacing special characters with underscores.
 - `analyze_data(spark: SparkSession, dataset_uri: str, context: BuildContext, config: Config, on_checkpoint_saved: Callable[[str, Path, Path], None] | None)` - Phase 1: Layout detection + Statistical + ML task analysis + metric selection.
-- `prepare_data(spark: SparkSession, training_dataset_uri: str, test_dataset_uri: str | None, context: BuildContext, config: Config, integration: WorkflowIntegration, generate_test_set: bool, on_checkpoint_saved: Callable[[str, Path, Path], None] | None)` - Phase 2: Split dataset and extract sample.
+- `prepare_data(spark: SparkSession, training_dataset_uri: str, val_dataset_uri: str | None, test_dataset_uri: str | None, context: BuildContext, config: Config, integration: WorkflowIntegration, generate_test_set: bool, on_checkpoint_saved: Callable[[str, Path, Path], None] | None)` - Phase 2: Split dataset and extract sample.
 - `build_baselines(spark: SparkSession, context: BuildContext, config: Config, on_checkpoint_saved: Callable[[str, Path, Path], None] | None)` - Phase 3: Build baseline models.
 - `search_models(spark: SparkSession, context: BuildContext, runner: TrainingRunner, search_policy: SearchPolicy, config: Config, integration: WorkflowIntegration, on_checkpoint_saved: Callable[[str, Path, Path], None] | None, restored_journal: SearchJournal | None, restored_insight_store: InsightStore | None) -> Solution | None` - Phase 4: Iterative tree-search for best model.
 - `retrain_on_full_dataset(spark: SparkSession, best_solution: Solution, context: BuildContext, runner: TrainingRunner, config: Config) -> Solution` - Retrain best solution on FULL dataset.

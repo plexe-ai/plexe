@@ -1,6 +1,6 @@
 # Code Index: tests
 
-> Generated on 2026-03-03 05:08:33
+> Generated on 2026-03-05 20:58:27
 
 Test suite structure and test case documentation.
 
@@ -51,6 +51,14 @@ Stage 3 integration tests: run evaluation/packaging and validate predictors.
 
 **Functions:**
 - `test_resume_and_run_eval_then_predict(model_type: str, artifact_root, repo_root) -> None` - Resume from stage 2 checkpoints, run to completion, and validate predictor inference.
+
+---
+## `unit/agents/test_dataset_splitter_prompt.py`
+Prompt-level tests for DatasetSplitterAgent split-mode instructions.
+
+**Functions:**
+- `test_build_task_prompt_for_two_way_split_avoids_test_output()` - No description
+- `test_build_task_prompt_for_three_way_split_requires_test_output()` - No description
 
 ---
 ## `unit/agents/test_feedback.py`
@@ -276,6 +284,16 @@ Unit tests for LightGBM predictor template.
 - `test_lightgbm_predictor_predict_proba_raises_for_regression(tmp_path: Path) -> None` - No description
 
 ---
+## `unit/test_main_dataset_inputs.py`
+Unit tests for main() dataset input handling.
+
+**Functions:**
+- `test_main_prefers_train_dataset_uri_and_forwards_optional_splits(monkeypatch, tmp_path)` - No description
+- `test_main_auto_enables_final_evaluation_when_test_dataset_is_provided(monkeypatch, tmp_path)` - No description
+- `test_main_uses_data_refs_fallback_when_train_dataset_uri_missing(monkeypatch, tmp_path)` - No description
+- `test_main_requires_train_dataset_uri_or_data_refs(monkeypatch, tmp_path)` - No description
+
+---
 ## `unit/test_models.py`
 Unit tests for core model dataclasses.
 
@@ -420,6 +438,15 @@ Unit tests for model card generation.
 **Functions:**
 - `test_generate_model_card_full_context(tmp_path: Path) -> None` - No description
 - `test_generate_model_card_minimal_context(tmp_path: Path) -> None` - No description
+
+---
+## `unit/workflow/test_prepare_data_explicit_splits.py`
+Unit tests for prepare_data split resolution with explicit val/test datasets.
+
+**Functions:**
+- `test_prepare_data_uses_all_provided_splits_without_running_splitter(monkeypatch, tmp_path)` - No description
+- `test_prepare_data_generates_missing_test_when_only_val_is_provided(monkeypatch, tmp_path)` - No description
+- `test_prepare_data_generates_missing_val_when_only_test_is_provided(monkeypatch, tmp_path)` - No description
 
 ---
 ## `unit/workflow/test_resume_model_type_filtering.py`

@@ -251,6 +251,7 @@ def build_seed_workflow(work_dir: Path, dataset_input: Path, intent: str, experi
     return build_model(
         spark=spark,
         train_dataset_uri=train_dataset_uri,
+        val_dataset_uri=None,
         test_dataset_uri=None,
         user_id="integration_test",
         intent=intent,
@@ -306,6 +307,7 @@ def resume_workflow(
     return build_model(
         spark=spark,
         train_dataset_uri=resume_context["dataset_uri"],
+        val_dataset_uri=None,
         test_dataset_uri=None,
         user_id=resume_context["user_id"],
         intent=resume_context["intent"],

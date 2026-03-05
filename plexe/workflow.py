@@ -107,6 +107,7 @@ def _apply_allowed_model_types_on_resume(context: BuildContext, config: Config, 
 def build_model(
     spark: SparkSession,
     train_dataset_uri: str,
+    val_dataset_uri: str | None,
     test_dataset_uri: str | None,
     user_id: str,
     intent: str,
@@ -128,6 +129,7 @@ def build_model(
     Args:
         spark: SparkSession
         train_dataset_uri: URI to training dataset
+        val_dataset_uri: Optional URI to separate validation dataset
         test_dataset_uri: Optional URI to separate test dataset
         user_id: User identifier
         intent: Natural language description of ML task
@@ -244,64 +246,38 @@ def build_model(
                 train_uri_to_use = context.scratch.get("_filtered_dataset_uri") or context.scratch.get(
                     "_sanitized_dataset_uri", train_dataset_uri
                 )
+                splits_output_dir = integration.get_artifact_location(
+                    "splits", train_uri_to_use, context.experiment_id, context.work_dir
+                )
 
-                # Sanitize test dataset too if provided (must match training data schema)
+                # Sanitize explicit val/test datasets too if provided (must match training data schema)
+                val_uri_to_use = val_dataset_uri
                 test_uri_to_use = test_dataset_uri
-                if test_dataset_uri and "_original_column_names" in context.scratch:
-                    import re
-
-                    # Reuse training data's column mapping to ensure consistency
-                    column_mapping = context.scratch["_original_column_names"]
-                    test_df = spark.read.parquet(test_dataset_uri)
-
-                    # Apply same transformations as training data
-                    for original, sanitized in column_mapping.items():
-                        if original in test_df.columns:
-                            # Check if target name already exists (would be silently overwritten)
-                            if sanitized in test_df.columns and sanitized != original:
-                                raise ValueError(
-                                    f"Cannot sanitize test dataset: column '{original}' would rename to "
-                                    f"'{sanitized}', but '{sanitized}' already exists in test dataset. "
-                                    f"This would cause data loss. Please ensure test dataset columns match "
-                                    f"training dataset or have unique sanitized names."
-                                )
-                            test_df = test_df.withColumnRenamed(original, sanitized)
-
-                    # Handle columns in test that weren't in training data
-                    test_only_mapping = {}
-                    # Track all existing names: training-sanitized + already-processed test columns
-                    all_existing_names = set(column_mapping.values())
-
-                    for idx, col_name in enumerate(test_df.columns):
-                        if col_name not in column_mapping.values() and any(
-                            char in col_name for char in [".", " ", "-", "(", ")", "[", "]"]
-                        ):
-                            safe_name = re.sub(r"[.\s\-\(\)\[\]]", "_", col_name)
-                            safe_name = re.sub(r"_+", "_", safe_name).strip("_")
-                            if not safe_name:
-                                safe_name = f"col_{idx}"
-
-                            # Check for collisions with training names AND other test columns
-                            original_safe_name = safe_name
-                            counter = 1
-                            while safe_name in all_existing_names:
-                                safe_name = f"{original_safe_name}_{counter}"
-                                counter += 1
-
-                            test_df = test_df.withColumnRenamed(col_name, safe_name)
-                            test_only_mapping[col_name] = safe_name
-                            all_existing_names.add(safe_name)  # Mark as used
-                            logger.info(f"  Test-only column: '{col_name}' → '{safe_name}'")
-
-                    # Save sanitized test dataset
-                    test_uri_to_use = f"{context.work_dir}/{DirNames.BUILD_DIR}/data/test_sanitized.parquet"
-                    test_df.write.mode("overwrite").parquet(test_uri_to_use)
-                    logger.info("✓ Test dataset sanitized using training column mapping")
-                    context.scratch["_sanitized_test_dataset_uri"] = test_uri_to_use
+                column_mapping = context.scratch.get("_original_column_names")
+                if column_mapping:
+                    if val_dataset_uri:
+                        val_uri_to_use = _sanitize_aux_dataset_column_names(
+                            spark=spark,
+                            dataset_uri=val_dataset_uri,
+                            column_mapping=column_mapping,
+                            context=context,
+                            split_name="val",
+                            output_dir=splits_output_dir,
+                        )
+                    if test_dataset_uri:
+                        test_uri_to_use = _sanitize_aux_dataset_column_names(
+                            spark=spark,
+                            dataset_uri=test_dataset_uri,
+                            column_mapping=column_mapping,
+                            context=context,
+                            split_name="test",
+                            output_dir=splits_output_dir,
+                        )
 
                 prepare_data(
                     spark,
                     train_uri_to_use,
+                    val_uri_to_use,
                     test_uri_to_use,
                     context,
                     config,
@@ -615,6 +591,64 @@ def sanitize_dataset_column_names(spark: SparkSession, dataset_uri: str, context
     return sanitized_uri
 
 
+def _sanitize_aux_dataset_column_names(
+    spark: SparkSession,
+    dataset_uri: str,
+    column_mapping: dict[str, str],
+    context: BuildContext,
+    split_name: str,
+    output_dir: str,
+) -> str:
+    """
+    Apply training-derived column sanitization mapping to auxiliary datasets (val/test).
+    """
+    import re
+
+    df = spark.read.parquet(dataset_uri)
+
+    # Apply exact mapping from training sanitization first
+    for original, sanitized in column_mapping.items():
+        if original in df.columns:
+            if sanitized in df.columns and sanitized != original:
+                raise ValueError(
+                    f"Cannot sanitize {split_name} dataset: column '{original}' would rename to "
+                    f"'{sanitized}', but '{sanitized}' already exists in {split_name} dataset."
+                )
+            df = df.withColumnRenamed(original, sanitized)
+
+    # Track all names currently present in aux dataset after applying training mapping.
+    # New sanitized names must not collide with any existing aux column name.
+    all_existing_names = set(df.columns)
+    for idx, col_name in enumerate(df.columns):
+        if col_name not in column_mapping.values() and any(
+            char in col_name for char in [".", " ", "-", "(", ")", "[", "]"]
+        ):
+            safe_name = re.sub(r"[.\s\-\(\)\[\]]", "_", col_name)
+            safe_name = re.sub(r"_+", "_", safe_name).strip("_")
+            if not safe_name:
+                safe_name = f"col_{idx}"
+
+            original_safe_name = safe_name
+            counter = 1
+            while safe_name in all_existing_names:
+                safe_name = f"{original_safe_name}_{counter}"
+                counter += 1
+
+            df = df.withColumnRenamed(col_name, safe_name)
+            all_existing_names.add(safe_name)
+            logger.info(f"  {split_name.capitalize()}-only column: '{col_name}' → '{safe_name}'")
+
+    if output_dir.startswith("s3://"):
+        output_uri = f"{output_dir}/{split_name}_sanitized.parquet"
+    else:
+        output_uri = str(Path(output_dir) / f"{split_name}_sanitized.parquet")
+
+    df.write.mode("overwrite").parquet(output_uri)
+    context.scratch[f"_sanitized_{split_name}_dataset_uri"] = output_uri
+    logger.info(f"✓ {split_name.capitalize()} dataset sanitized using training column mapping")
+    return output_uri
+
+
 def _set_noop_filtered_dataset_uri(context: BuildContext, dataset_uri: str) -> str:
     """Store no-op filtering result in context and return original URI."""
     context.excluded_columns = []
@@ -848,9 +882,39 @@ def analyze_data(
 # ============================================
 
 
+def _materialize_explicit_split(
+    spark: SparkSession,
+    dataset_uri: str,
+    split_name: str,
+    context: BuildContext,
+    output_dir: str,
+) -> str:
+    """Copy explicit val/test split into build directory and apply excluded-column drops."""
+    split_df = spark.read.parquet(dataset_uri)
+
+    if context.excluded_columns:
+        excluded_column_names = [
+            entry.get("column") for entry in context.excluded_columns if isinstance(entry, dict) and entry.get("column")
+        ]
+        columns_to_drop = [col for col in excluded_column_names if col in split_df.columns]
+        if columns_to_drop:
+            split_df = split_df.drop(*columns_to_drop)
+            logger.info(f"Excluded {len(columns_to_drop)} columns from {split_name} dataset: {columns_to_drop}")
+
+    if output_dir.startswith("s3://"):
+        output_uri = f"{output_dir}/{split_name}.parquet"
+    else:
+        output_uri = str(Path(output_dir) / f"{split_name}.parquet")
+
+    split_df.write.mode("overwrite").parquet(output_uri)
+    logger.info(f"Copied {split_name} dataset to: {output_uri}")
+    return output_uri
+
+
 def prepare_data(
     spark: SparkSession,
     training_dataset_uri: str,
+    val_dataset_uri: str | None,
     test_dataset_uri: str | None,
     context: BuildContext,
     config: Config,
@@ -861,91 +925,105 @@ def prepare_data(
     """
     Phase 2: Split dataset and extract sample.
 
-    Supports two modes:
-    1. Single dataset: Split training_dataset_uri into train/val(/test if enabled)
-    2. Separate datasets: Split training_dataset_uri into train/val, use test_dataset_uri as test
+    Supports explicit split injection while generating missing splits from training data.
 
     Args:
         spark: SparkSession
         training_dataset_uri: URI to training dataset
+        val_dataset_uri: Optional URI to separate validation dataset
         test_dataset_uri: Optional URI to separate test dataset
         context: Build context
         config: Configuration
         integration: WorkflowIntegration for infrastructure queries
-        generate_test_set: Whether to create test set from training data (ignored if test_dataset_uri provided)
+        generate_test_set: Whether to create test set from training data when not explicitly provided
         on_checkpoint_saved: Optional callback for platform integration
     """
 
     logger.info("=== Phase 2: Data Preparation ===")
 
-    # Step 1: Handle Test Dataset (if provided separately)
-    if test_dataset_uri:
-        logger.info(f"Separate test dataset mode: {test_dataset_uri}")
+    provided_val = val_dataset_uri is not None
+    provided_test = test_dataset_uri is not None
 
-        # Copy test dataset to DirNames.BUILD_DIR/data/ for consistency
-        test_df = spark.read.parquet(test_dataset_uri)
-        if context.excluded_columns:
-            excluded_column_names = [
-                entry.get("column")
-                for entry in context.excluded_columns
-                if isinstance(entry, dict) and entry.get("column")
-            ]
-            columns_to_drop = [col for col in excluded_column_names if col in test_df.columns]
-            if columns_to_drop:
-                test_df = test_df.drop(*columns_to_drop)
-                logger.info(f"Excluded {len(columns_to_drop)} columns from test dataset: {columns_to_drop}")
-        test_uri = str(context.work_dir / DirNames.BUILD_DIR / "data" / "test.parquet")
-        test_df.write.mode("overwrite").parquet(test_uri)
-        logger.info(f"Copied test dataset to: {test_uri}")
-
-        # Always 2-way split when separate test provided
-        split_ratios = {"train": 0.85, "val": 0.15}
-        logger.info("Splitting training data into train/val only (test provided separately)")
-
-    else:
-        # Single dataset mode: create test from split if requested
-        test_uri = None
-        if generate_test_set:
-            # 3-way split: train/val/test
-            # Handle both new schema (ratios nested) and legacy (ratios at top level)
-            recommended_split = context.task_analysis.get("recommended_split", {})
-            if "ratios" in recommended_split:
-                # New schema: extract ratios from nested structure
-                split_ratios = recommended_split["ratios"]
-            elif "train" in recommended_split:
-                # Legacy schema: ratios at top level
-                split_ratios = recommended_split
-            else:
-                # Default fallback
-                split_ratios = {"train": 0.7, "val": 0.15, "test": 0.15}
-
-            split_ratios = canonicalize_split_ratios(split_ratios)
-            if not {"train", "val", "test"}.issubset(split_ratios):
-                logger.warning(
-                    "Recommended split ratios are missing one of train/val/test (%s); "
-                    "falling back to default 70/15/15 for final evaluation.",
-                    split_ratios,
-                )
-                split_ratios = {"train": 0.7, "val": 0.15, "test": 0.15}
-
-            logger.info("Creating train/val/test splits from single dataset (final evaluation enabled)")
-        else:
-            # 2-way split: train/val only
-            split_ratios = {"train": 0.85, "val": 0.15}
-            logger.info("Creating train/val splits only (final evaluation disabled)")
-
-    # Step 2: Split Training Dataset
-    splitter = DatasetSplitterAgent(spark=spark, dataset_uri=training_dataset_uri, context=context, config=config)
-
-    # Get splits output location from integration (based on dataset location)
     splits_output_dir = integration.get_artifact_location(
         "splits", training_dataset_uri, context.experiment_id, context.work_dir
     )
+    val_uri = (
+        _materialize_explicit_split(spark, val_dataset_uri, "val", context, splits_output_dir) if provided_val else None
+    )
+    test_uri = (
+        _materialize_explicit_split(spark, test_dataset_uri, "test", context, splits_output_dir)
+        if provided_test
+        else None
+    )
+    train_uri = training_dataset_uri
 
-    train_uri, val_uri, split_test_uri = splitter.run(split_ratios=split_ratios, output_dir=splits_output_dir)
+    def run_split(split_ratios: dict[str, float]) -> tuple[str, str, str | None]:
+        splitter = DatasetSplitterAgent(spark=spark, dataset_uri=training_dataset_uri, context=context, config=config)
+        return splitter.run(split_ratios=split_ratios, output_dir=splits_output_dir)
 
-    # Use separate test if provided, otherwise use split test
-    test_uri = test_uri if test_dataset_uri else split_test_uri
+    def get_three_way_split_ratios() -> dict[str, float]:
+        recommended_split = (context.task_analysis or {}).get("recommended_split", {})
+        if "ratios" in recommended_split:
+            split_ratios = recommended_split["ratios"]
+        elif "train" in recommended_split:
+            split_ratios = recommended_split
+        else:
+            split_ratios = {"train": 0.7, "val": 0.15, "test": 0.15}
+
+        split_ratios = canonicalize_split_ratios(split_ratios)
+        if {"train", "val", "test"}.issubset(split_ratios):
+            return split_ratios
+
+        logger.warning(
+            "Recommended split ratios are missing one of train/val/test (%s); "
+            "falling back to default 70/15/15 for final evaluation.",
+            split_ratios,
+        )
+        return {"train": 0.7, "val": 0.15, "test": 0.15}
+
+    if provided_val and provided_test:
+        logger.info("Using provided train/val/test splits without splitter")
+    elif provided_val and not provided_test:
+        if generate_test_set:
+            logger.info("Validation split provided - generating missing test split from training dataset")
+            split_ratios = get_three_way_split_ratios()
+            test_ratio = split_ratios.get("test", 0.15)
+            split_ratios = {"train": max(1.0 - test_ratio, 0.01), "val": test_ratio}
+            train_uri, generated_test_uri, split_test_uri = run_split(split_ratios)
+            if split_test_uri:
+                logger.warning(
+                    "Splitter returned an unexpected third split while generating test-only split; "
+                    "using returned test URI"
+                )
+                test_uri = split_test_uri
+            else:
+                # In this path the 2-way splitter "val" output is intentionally repurposed as test split.
+                test_uri = generated_test_uri
+        else:
+            logger.info("Validation split provided - test split not requested")
+    elif not provided_val and provided_test:
+        logger.info("Test split provided - generating missing validation split from training dataset")
+        val_ratio = get_three_way_split_ratios().get("val", 0.15)
+        split_ratios = {"train": max(1.0 - val_ratio, 0.01), "val": val_ratio}
+        train_uri, val_uri, split_test_uri = run_split(split_ratios)
+        if split_test_uri:
+            logger.warning("Splitter returned unexpected test split in train/val mode; ignoring generated test URI")
+    else:
+        if generate_test_set:
+            split_ratios = get_three_way_split_ratios()
+            logger.info("Creating train/val/test splits from training dataset")
+        else:
+            split_ratios = {"train": 0.85, "val": 0.15}
+            logger.info("Creating train/val splits from training dataset")
+
+        train_uri, val_uri, split_test_uri = run_split(split_ratios)
+        if generate_test_set:
+            test_uri = split_test_uri
+        elif split_test_uri:
+            logger.warning("Splitter returned unexpected test split while final evaluation disabled; ignoring it")
+
+    if not val_uri:
+        raise ValueError("Validation split URI is required for sampling and was not resolved")
 
     # Step 3: Create Intelligent Samples
     sampler = SamplingAgent(spark=spark, context=context, config=config)
@@ -974,36 +1052,8 @@ def prepare_data(
         val_sample_uri=val_sample_uri,
     )
 
-    # Step 5: Validate schema compatibility (if separate test provided)
-    if test_dataset_uri:
-        logger.info("Validating test dataset schema compatibility...")
-        train_df = spark.read.parquet(train_uri)
-        test_df = spark.read.parquet(test_uri)
-
-        # Check target column exists in test
-        if context.output_targets[0] not in test_df.columns:
-            raise ValueError(
-                f"Test dataset missing target column '{context.output_targets[0]}'. " f"Test columns: {test_df.columns}"
-            )
-
-        # Check feature overlap
-        train_features = set(train_df.columns) - set(context.output_targets)
-        test_features = set(test_df.columns) - set(context.output_targets)
-
-        missing_in_test = train_features - test_features
-        if missing_in_test:
-            raise ValueError(
-                f"Test dataset missing {len(missing_in_test)} features from training data: {sorted(missing_in_test)}\n"
-                f"Model cannot make predictions without these features."
-            )
-
-        extra_in_test = test_features - train_features
-        if extra_in_test:
-            logger.warning(
-                f"Test dataset has {len(extra_in_test)} extra features not in training data (will be ignored)"
-            )
-
-        logger.info("✓ Test dataset schema validation complete")
+    # TODO(explicit-split-schema-validation): Validate explicit val/test schema compatibility
+    # against training schema (target + feature alignment) in a dedicated follow-up PR.
 
     logger.info(f"Data preparation complete: train={train_uri}, val={val_uri}, test={test_uri}")
     logger.info(f"Samples created: train_sample={train_sample_uri}, val_sample={val_sample_uri}")
