@@ -291,6 +291,28 @@
 #     anthropic/claude-sonnet-4-5-20250929: my-proxy
 
 # ============================================================
+# Example: Using MiniMax as LLM Provider
+# ============================================================
+#
+# MiniMax models are supported via the minimax/ prefix.
+# Set MINIMAX_API_KEY in your environment, then use:
+#
+# hypothesiser_llm: "minimax/MiniMax-M2.7"
+# planner_llm: "minimax/MiniMax-M2.7"
+# model_definer_llm: "minimax/MiniMax-M2.5-highspeed"
+#
+# Available MiniMax models:
+#   minimax/MiniMax-M2.7           (1M context)
+#   minimax/MiniMax-M2.7-highspeed (1M context, faster)
+#   minimax/MiniMax-M2.5           (204K context)
+#   minimax/MiniMax-M2.5-highspeed (204K context, faster)
+#
+# Recommended: enable litellm_drop_params when using MiniMax
+# to silently ignore any unsupported parameters:
+#
+# litellm_drop_params: true
+
+# ============================================================
 # Example: Minimal Config for Quick Testing
 # ============================================================
 #

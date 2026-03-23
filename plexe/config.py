@@ -170,6 +170,25 @@ STANDARD_LIB_IMPORTS = [
 
 
 # ============================================
+# MiniMax Provider Support
+# ============================================
+
+MINIMAX_API_BASE = "https://api.minimax.io/v1"
+
+MINIMAX_MODELS = {
+    "MiniMax-M2.7": {"context_window": 1_000_000},
+    "MiniMax-M2.7-highspeed": {"context_window": 1_000_000},
+    "MiniMax-M2.5": {"context_window": 204_000},
+    "MiniMax-M2.5-highspeed": {"context_window": 204_000},
+}
+
+
+def _is_minimax_model(model_id: str) -> bool:
+    """Check if a model ID uses the ``minimax/`` provider prefix."""
+    return model_id.startswith("minimax/")
+
+
+# ============================================
 # Configuration Helpers
 # ============================================
 
@@ -512,8 +531,9 @@ def get_routing_for_model(config: RoutingConfig | None, model_id: str) -> tuple[
 
     Lookup order:
     1. Check if model_id is in 'models' mapping → use that provider's config
-    2. Else use 'default' config if present
-    3. Else return (None, {}) for LiteLLM's default routing
+    2. If model_id uses ``minimax/`` prefix → auto-route to MiniMax API
+    3. Else use 'default' config if present
+    4. Else return (None, {}) for LiteLLM's default routing
 
     Args:
         config: Routing configuration (or None if no config loaded)
@@ -524,29 +544,34 @@ def get_routing_for_model(config: RoutingConfig | None, model_id: str) -> tuple[
         - api_base: Base URL for API requests (None = use LiteLLM default)
         - headers: Dict of HTTP headers to include in requests
     """
+    # Check if model has explicit provider mapping (highest priority)
+    if config is not None and model_id in config.models:
+        provider_name = config.models[model_id]
+
+        if provider_name not in config.providers:
+            logging.getLogger(__name__).warning(
+                f"Model '{model_id}' references non-existent provider '{provider_name}'. Using default routing."
+            )
+        else:
+            provider_config = config.providers[provider_name]
+            logging.getLogger(__name__).debug(f"Model '{model_id}' → provider '{provider_name}'")
+            return provider_config.api_base, provider_config.headers
+
+    # Auto-route minimax/ prefix to MiniMax API
+    if _is_minimax_model(model_id):
+        api_key = os.getenv("MINIMAX_API_KEY", "")
+        headers = {"Authorization": f"Bearer {api_key}"} if api_key else {}
+        logging.getLogger(__name__).debug(f"Model '{model_id}' → MiniMax auto-routing")
+        return MINIMAX_API_BASE, headers
+
     # If no config provided, use LiteLLM defaults
     if config is None:
         return None, {}
 
-    # Check if model has explicit provider mapping
-    if model_id in config.models:
-        provider_name = config.models[model_id]
+    # Use default routing config
+    provider_config = config.default
+    logging.getLogger(__name__).debug(f"Model '{model_id}' → default routing")
 
-        if provider_name not in config.providers:
-            # This should have been caught by validation, but handle gracefully
-            logging.getLogger(__name__).warning(
-                f"Model '{model_id}' references non-existent provider '{provider_name}'. Using default routing."
-            )
-            provider_config = config.default
-        else:
-            provider_config = config.providers[provider_name]
-            logging.getLogger(__name__).debug(f"Model '{model_id}' → provider '{provider_name}'")
-    else:
-        # No explicit mapping, use default
-        provider_config = config.default
-        logging.getLogger(__name__).debug(f"Model '{model_id}' → default routing")
-
-    # If no applicable config found, use LiteLLM defaults
     if provider_config is None:
         return None, {}
 

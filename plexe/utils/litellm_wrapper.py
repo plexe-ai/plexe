@@ -15,6 +15,8 @@ from litellm import InternalServerError, APIConnectionError, RateLimitError, Ser
 from smolagents import LiteLLMModel
 from tenacity import retry, stop_after_attempt, wait_exponential, wait_random, retry_if_exception_type
 
+from plexe.config import _is_minimax_model
+
 logger = logging.getLogger(__name__)
 
 
@@ -70,6 +72,13 @@ class PlexeLiteLLMModel(LiteLLMModel):
         on_llm_call: Callable[[str, Any, int], None] | None = None,
         **kwargs,
     ):
+        # Rewrite minimax/ prefix to openai/ for LiteLLM compatibility
+        if _is_minimax_model(model_id):
+            model_id = "openai/" + model_id[len("minimax/"):]
+            # Clamp temperature to MiniMax's supported range [0, 1.0]
+            if "temperature" in kwargs:
+                kwargs["temperature"] = max(0.0, min(1.0, kwargs["temperature"]))
+
         super().__init__(model_id=model_id, **kwargs)
         self.extra_headers = extra_headers or {}
         self.on_llm_call = on_llm_call

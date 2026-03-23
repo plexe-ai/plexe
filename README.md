@@ -152,7 +152,27 @@ Plexe uses LLMs via [LiteLLM](https://docs.litellm.ai/docs/providers), so you ca
 hypothesiser_llm: "openai/gpt-5-mini"
 feature_processor_llm: "anthropic/claude-sonnet-4-5-20250929"
 model_definer_llm: "ollama/llama3"
+planner_llm: "minimax/MiniMax-M2.7"
 ```
+
+#### MiniMax
+
+[MiniMax](https://www.minimaxi.com) models are supported as a first-class provider via the `minimax/` prefix.
+Set your API key and use MiniMax models directly:
+
+```bash
+export MINIMAX_API_KEY=<your-key>
+```
+
+```yaml
+# config.yaml
+hypothesiser_llm: "minimax/MiniMax-M2.7"
+planner_llm: "minimax/MiniMax-M2.7"
+model_definer_llm: "minimax/MiniMax-M2.5-highspeed"
+litellm_drop_params: true
+```
+
+Available models: `MiniMax-M2.7`, `MiniMax-M2.7-highspeed` (1M context), `MiniMax-M2.5`, `MiniMax-M2.5-highspeed` (204K context).
 
 > [!NOTE]
 > Plexe *should* work with most LiteLLM providers, but we actively test only with `openai/*` and `anthropic/*`
@@ -198,6 +218,7 @@ Requires Python >= 3.10, < 3.13.
 ```bash
 export OPENAI_API_KEY=<your-key>
 export ANTHROPIC_API_KEY=<your-key>
+export MINIMAX_API_KEY=<your-key>      # Optional: for MiniMax models
 ```
 See [LiteLLM providers](https://docs.litellm.ai/docs/providers) for all supported providers.
 
