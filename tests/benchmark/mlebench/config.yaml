@@ -1,0 +1,6 @@
+plexe:
+  start: plexe/start.sh
+  dockerfile: plexe/Dockerfile
+  env_vars:
+    PLEXE_MAX_ITERATIONS: ${PLEXE_MAX_ITERATIONS}
+    PLEXE_PROVIDER: ${PLEXE_PROVIDER}
