@@ -180,7 +180,10 @@ def load_predictor(package_dir: Path) -> Any:
         "keras": "KerasPredictor",
         "pytorch": "PyTorchPredictor",
     }
-    class_name = class_map.get(model_type, f"{str(model_type).capitalize()}Predictor")
+    if model_type not in class_map:
+        expected = ", ".join(sorted(class_map))
+        raise ValueError(f"Unknown or missing model_type {model_type!r} in {model_yaml}; expected one of: {expected}")
+    class_name = class_map[model_type]
 
     spec = importlib.util.spec_from_file_location("plexe_mlebench_predictor", predictor_file)
     if spec is None or spec.loader is None:

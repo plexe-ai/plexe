@@ -7,9 +7,11 @@ import sys
 from pathlib import Path
 
 import pandas as pd
+import pytest
 
 
 ADAPTER_PATH = Path(__file__).parents[2] / "benchmark" / "mlebench" / "plexe" / "run_mlebench.py"
+ENTRYPOINT_PATH = Path(__file__).parents[2] / "benchmark" / "mlebench" / "start.sh"
 
 
 def _load_adapter():
@@ -73,3 +75,28 @@ def test_copy_existing_submission_ignores_destination(tmp_path):
 
     assert adapter.copy_existing_submission(work_dir, destination) is True
     assert destination.read_text(encoding="utf-8") == "id,prediction\n1,0\n"
+
+
+def test_entrypoint_targets_packaged_runner_location():
+    entrypoint = ENTRYPOINT_PATH.read_text(encoding="utf-8")
+
+    assert 'python "${AGENT_DIR}/plexe/run_mlebench.py"' in entrypoint
+    assert "${AGENT_DIR}/run_mlebench.py" not in entrypoint
+
+
+def test_load_predictor_rejects_missing_model_type(tmp_path):
+    adapter = _load_adapter()
+    package_dir = tmp_path / "packaged_model"
+    package_dir.mkdir()
+    (package_dir / "model.yaml").write_text("target: label\n", encoding="utf-8")
+    predictor_source = "\n".join(
+        [
+            "class XGBoostPredictor:",
+            "    def __init__(self, model_dir):",
+            "        self.model_dir = model_dir",
+        ]
+    )
+    (package_dir / "predictor.py").write_text(predictor_source, encoding="utf-8")
+
+    with pytest.raises(ValueError, match="Unknown or missing model_type"):
+        adapter.load_predictor(package_dir)
