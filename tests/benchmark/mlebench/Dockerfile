@@ -1,0 +1,23 @@
+FROM mlebench-env
+
+ARG SUBMISSION_DIR
+ENV SUBMISSION_DIR=${SUBMISSION_DIR}
+
+ARG LOGS_DIR
+ENV LOGS_DIR=${LOGS_DIR}
+
+ARG CODE_DIR
+ENV CODE_DIR=${CODE_DIR}
+
+ARG AGENT_DIR
+ENV AGENT_DIR=${AGENT_DIR}
+
+ARG CONDA_ENV_NAME=agent
+ARG PLEXE_PACKAGE="plexe[pyspark,tabular]"
+
+RUN mkdir -p ${SUBMISSION_DIR} ${LOGS_DIR} ${CODE_DIR} ${AGENT_DIR}
+
+COPY . ${AGENT_DIR}
+
+RUN conda run -n ${CONDA_ENV_NAME} pip install --no-cache-dir "${PLEXE_PACKAGE}" && \
+    conda clean -afy
