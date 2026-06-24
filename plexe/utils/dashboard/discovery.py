@@ -1,7 +1,10 @@
 """
 Experiment discovery and metadata extraction for dashboard.
 
-Scans workdir at correct depth (dataset_name/timestamp/) and loads checkpoint metadata.
+Scans at flat, 1-level, or 2-level depth:
+- workdir/checkpoints/ (flat — default standalone local runs)
+- workdir/{dataset_name}/checkpoints/ (1-level)
+- workdir/{dataset_name}/{timestamp}/checkpoints/ (2-level)
 """
 
 import json
@@ -56,6 +59,19 @@ def discover_experiments(workdir: Path) -> list[ExperimentMetadata]:
     if not workdir.exists():
         logger.warning(f"Workdir does not exist: {workdir}")
         return experiments
+
+    # Flat layout: checkpoints/ directly under workdir (standalone local runs)
+    if (workdir / "checkpoints").is_dir():
+        try:
+            experiments.append(
+                _extract_metadata(
+                    dataset_name=workdir.name,
+                    timestamp=workdir.name,
+                    experiment_path=workdir,
+                )
+            )
+        except Exception as e:
+            logger.warning(f"Failed to extract metadata from {workdir}: {e}")
 
     # Scan first level (dataset names)
     for dataset_dir in workdir.iterdir():
@@ -134,13 +150,16 @@ def _extract_metadata(dataset_name: str, timestamp: str, experiment_path: Path) 
     }
 
     current_phase = latest_checkpoint.get("phase")
-    phase_number = phase_map.get(current_phase, 0)
+    phase_key = (
+        current_phase.split("_", 1)[1] if current_phase and current_phase.split("_", 1)[0].isdigit() else current_phase
+    )
+    phase_number = phase_map.get(phase_key, 0)
 
     # Determine status
     checkpoint_status = latest_checkpoint.get("status", "completed")
     if checkpoint_status == "in_progress":
         status = "running"
-    elif current_phase == "package_final_model" and checkpoint_status == "completed":
+    elif phase_key == "package_final_model" and checkpoint_status == "completed":
         status = "completed"
     else:
         # Check if there's an error or if it looks abandoned
