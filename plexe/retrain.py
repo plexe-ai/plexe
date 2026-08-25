@@ -419,7 +419,7 @@ def retrain_model(
             metric_name = "unknown"
 
         solution = Solution(
-            iteration=0,
+            solution_id=0,
             feature_pipeline=fitted_pipeline,
             model=untrained_model,
             model_type=model_type,
