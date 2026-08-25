@@ -8,7 +8,7 @@ import logging
 import os
 import subprocess
 import sys
-import time
+import threading
 import uuid
 from pathlib import Path
 from typing import Any
@@ -284,9 +284,20 @@ class LocalProcessRunner(TrainingRunner):
                 env=env,
             )
 
-            # Stream output in real-time while capturing it
+            # Stream output in real-time while capturing it.
+            # A watchdog enforces the timeout even when the subprocess is silent
+            # (data loading, quiet training loops), which reading the output pipe
+            # alone cannot do: readline() blocks until the next line arrives.
             stdout_lines = []
-            start_time = time.time()
+            timed_out = threading.Event()
+
+            def _kill_on_timeout():
+                timed_out.set()
+                logger.warning(f"Training exceeded {timeout}s - killing process")
+                process.kill()
+
+            watchdog = threading.Timer(timeout, _kill_on_timeout)
+            watchdog.start()
 
             try:
                 for line in iter(process.stdout.readline, ""):
@@ -296,17 +307,14 @@ class LocalProcessRunner(TrainingRunner):
                         # Capture for error logging
                         stdout_lines.append(line)
 
-                    # Check timeout manually
-                    elapsed = time.time() - start_time
-                    if elapsed > timeout:
-                        process.kill()
-                        process.wait()
-                        raise subprocess.TimeoutExpired(cmd, timeout)
+                if timed_out.is_set():
+                    raise subprocess.TimeoutExpired(cmd, timeout)
 
                 # Wait for process to complete
                 return_code = process.wait(timeout=5)  # Short wait since process already finished
 
             finally:
+                watchdog.cancel()
                 if process.stdout:
                     process.stdout.close()
 
