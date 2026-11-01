@@ -14,6 +14,7 @@ User feedback is persisted in checkpoint JSON to support offline feedback workfl
 import base64
 import json
 import logging
+import tempfile
 from datetime import datetime, timezone
 from pathlib import Path
 
@@ -93,6 +94,7 @@ def save_checkpoint(
     """
     logger.info(f"Saving checkpoint for phase: {phase_name}")
 
+    temporary_path = None
     try:
         # Extract user feedback from context scratch space (if provided)
         user_feedback = context.scratch.get("_user_feedback") if hasattr(context, "scratch") else None
@@ -115,8 +117,14 @@ def save_checkpoint(
         checkpoint_dir.mkdir(parents=True, exist_ok=True)
 
         checkpoint_path = checkpoint_dir / f"{phase_name}.json"
-        with open(checkpoint_path, "w") as f:
+        # Publish only a complete checkpoint. A failed write must not truncate
+        # the previous phase state, which may be the only resumable copy.
+        with tempfile.NamedTemporaryFile(
+            mode="w", encoding="utf-8", dir=checkpoint_dir, prefix=f".{phase_name}.", suffix=".tmp", delete=False
+        ) as f:
+            temporary_path = Path(f.name)
             json.dump(checkpoint_data, f, indent=2, default=str)
+        temporary_path.replace(checkpoint_path)
 
         logger.info(f"✓ Checkpoint saved locally: {checkpoint_path}")
         if user_feedback:
@@ -126,6 +134,12 @@ def save_checkpoint(
     except Exception as e:
         logger.error(f"Failed to save checkpoint locally: {e}", exc_info=True)
         return None
+    finally:
+        if temporary_path is not None:
+            try:
+                temporary_path.unlink(missing_ok=True)
+            except OSError:
+                logger.warning("Could not remove temporary checkpoint %s", temporary_path, exc_info=True)
 
 
 def load_checkpoint(
