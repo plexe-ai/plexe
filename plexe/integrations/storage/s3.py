@@ -123,7 +123,10 @@ class S3Helper(StorageHelper):
 
         logger.info(f"Downloading directory from S3: {uri}")
         paginator = self.client.get_paginator("list_objects_v2")
-        pages = paginator.paginate(Bucket=bucket, Prefix=prefix)
+        # S3 prefixes are literal strings: the separator excludes siblings
+        # such as "dataset-old" when downloading "dataset".
+        directory_prefix = prefix + "/"
+        pages = paginator.paginate(Bucket=bucket, Prefix=directory_prefix)
 
         target_dir = local_dir / Path(prefix).name
         target_dir.mkdir(parents=True, exist_ok=True)
@@ -134,7 +137,9 @@ class S3Helper(StorageHelper):
                 continue
             for obj in page["Contents"]:
                 obj_key = obj["Key"]
-                relative_path = obj_key[len(prefix) :].lstrip("/")
+                if obj_key.endswith("/"):
+                    continue  # Folder markers are not dataset files.
+                relative_path = obj_key[len(directory_prefix) :]
                 if not relative_path:
                     continue
                 local_file = target_dir / relative_path
