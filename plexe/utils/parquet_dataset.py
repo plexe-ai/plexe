@@ -65,11 +65,26 @@ def _resolve_parquet_files(uri: str) -> list[str]:
         raise FileNotFoundError(f"Path does not exist: {uri}")
 
 
+def _feature_columns(parquet_file: pq.ParquetFile, target_column: str, expected: list[str] | None = None) -> list[str]:
+    """Validate shard columns and retain the first file's feature order."""
+    names = parquet_file.schema_arrow.names
+    if target_column not in names:
+        raise ValueError(f"Parquet file is missing target column {target_column!r}")
+    columns = [name for name in names if name != target_column]
+    if expected is not None:
+        if set(columns) != set(expected):
+            raise ValueError(f"Parquet feature columns differ: expected {expected}, got {columns}")
+        return expected
+    return columns
+
+
 class ParquetIterableDataset(_IterableDatasetBase):
     """Streaming parquet dataset for PyTorch DataLoader.
 
     Reads parquet files row-group by row-group, yielding individual samples.
     Supports sharding across DDP ranks and DataLoader workers.
+    Feature positions follow the first file's schema on every worker; all
+    files must contain the same feature names and the target column.
 
     Inherits from torch.utils.data.IterableDataset so PyTorch DataLoader
     knows to use the iterable protocol instead of map-style indexing.
@@ -96,8 +111,10 @@ class ParquetIterableDataset(_IterableDatasetBase):
         # Build index of (file_idx, row_group_idx) pairs
         self._row_group_index: list[tuple[int, int]] = []
         self._total_rows = 0
+        self._feature_columns: list[str] = []
         for file_idx, file_path in enumerate(self._files):
             pf = pq.ParquetFile(file_path)
+            self._feature_columns = _feature_columns(pf, target_column, self._feature_columns if file_idx > 0 else None)
             for rg_idx in range(pf.metadata.num_row_groups):
                 self._row_group_index.append((file_idx, rg_idx))
             self._total_rows += pf.metadata.num_rows
@@ -143,8 +160,7 @@ class ParquetIterableDataset(_IterableDatasetBase):
             table = pf.read_row_group(rg_idx)
             df = table.to_pandas()
 
-            feature_cols = [c for c in df.columns if c != self._target_column]
-            X = df[feature_cols].values.astype(np.float32)
+            X = df[self._feature_columns].values.astype(np.float32)
             y_raw = df[self._target_column].values
 
             # Yield individual samples for DataLoader batching
@@ -171,6 +187,7 @@ def parquet_batch_generator(
     Reads parquet file(s) in batches using PyArrow's iter_batches,
     yielding (X_batch, y_batch) numpy arrays suitable for
     tf.data.Dataset.from_generator().
+    Feature positions follow the first file's schema across all files.
 
     Args:
         uri: Path to parquet file or directory of parquet files
@@ -180,12 +197,16 @@ def parquet_batch_generator(
 
     Yields:
         (features_array, target_array) tuples of numpy arrays
+
+    Raises:
+        ValueError: A file has different feature names or lacks the target.
     """
     files = _resolve_parquet_files(uri)
+    columns = None
 
     for file_path in files:
         pf = pq.ParquetFile(file_path)
-        columns = [c for c in pf.schema_arrow.names if c != target_column]
+        columns = _feature_columns(pf, target_column, columns)
 
         for batch in pf.iter_batches(batch_size=batch_size, columns=columns + [target_column]):
             df = batch.to_pandas()
