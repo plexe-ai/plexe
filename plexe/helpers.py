@@ -138,6 +138,13 @@ def normalize_probability_predictions(y_true: np.ndarray, y_pred_proba: Any, met
     return probabilities
 
 
+def _validate_metric_result(value: float, metric_name: str) -> float:
+    """Reject metric results that cannot be ranked or reported reliably."""
+    if not np.isfinite(value):
+        raise ValueError(f"Metric '{metric_name}' produced a non-finite result ({value}).")
+    return value
+
+
 def evaluate_on_sample(
     spark: SparkSession,
     sample_uri: str,
@@ -237,7 +244,7 @@ def _evaluate_predictor(
     return compute_metric(y.values, predictions, metric, group_ids=group_ids)
 
 
-def compute_metric_hardcoded(y_true, y_pred, metric_name: str) -> float:
+def _compute_metric_hardcoded(y_true, y_pred, metric_name: str) -> float:
     """
     Compute metric using hardcoded sklearn implementations.
 
@@ -357,7 +364,24 @@ def compute_metric_hardcoded(y_true, y_pred, metric_name: str) -> float:
         )
 
 
-def compute_metric(y_true, y_pred, metric_name: str, group_ids=None) -> float:
+def compute_metric_hardcoded(y_true, y_pred, metric_name: str) -> float:
+    """Compute a standard metric and reject undefined or non-finite results.
+
+    Args:
+        y_true: True labels or values.
+        y_pred: Predicted labels or values.
+        metric_name: Metric name.
+
+    Returns:
+        A finite metric value. A score of 0.0 is valid.
+
+    Raises:
+        ValueError: If the metric is unsupported or produces a non-finite result.
+    """
+    return _validate_metric_result(_compute_metric_hardcoded(y_true, y_pred, metric_name), metric_name)
+
+
+def _compute_metric(y_true, y_pred, metric_name: str, group_ids=None) -> float:
     """
     Compute metric value.
 
@@ -471,3 +495,21 @@ def compute_metric(y_true, y_pred, metric_name: str, group_ids=None) -> float:
 
     # Non-ranking metrics use existing implementation
     return compute_metric_hardcoded(y_true, y_pred, metric_name)
+
+
+def compute_metric(y_true, y_pred, metric_name: str, group_ids=None) -> float:
+    """Compute a metric and reject undefined or non-finite results.
+
+    Args:
+        y_true: True labels or values.
+        y_pred: Predicted labels or values.
+        metric_name: Metric name.
+        group_ids: Optional group IDs for ranking metrics (query_id, session_id).
+
+    Returns:
+        A finite metric value. A score of 0.0 is valid.
+
+    Raises:
+        ValueError: If the metric produces a non-finite result.
+    """
+    return _validate_metric_result(_compute_metric(y_true, y_pred, metric_name, group_ids), metric_name)

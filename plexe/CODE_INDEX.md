@@ -1,6 +1,6 @@
 # Code Index: plexe
 
-> Generated on 2026-03-05 21:32:55
+> Generated on 2026-10-10 04:54:35
 
 Code structure and public interface documentation for the **plexe** package.
 
@@ -225,8 +225,8 @@ Helper functions for workflow.
 - `metric_requires_probabilities(metric_name: str) -> bool` - Return True when a metric requires probability scores instead of hard labels.
 - `normalize_probability_predictions(y_true: np.ndarray, y_pred_proba: Any, metric_name: str) -> np.ndarray` - Normalize probability predictions for sklearn metric compatibility.
 - `evaluate_on_sample(spark: SparkSession, sample_uri: str, model_artifacts_path: Path, model_type: str, metric: str, target_columns: list[str], group_column: str | None, train_sample_uri: str | None) -> tuple[float, float | None]` - Evaluate model on validation sample, optionally also on training sample.
-- `compute_metric_hardcoded(y_true, y_pred, metric_name: str) -> float` - Compute metric using hardcoded sklearn implementations.
-- `compute_metric(y_true, y_pred, metric_name: str, group_ids) -> float` - Compute metric value.
+- `compute_metric_hardcoded(y_true, y_pred, metric_name: str) -> float` - Compute a standard metric and reject undefined or non-finite results.
+- `compute_metric(y_true, y_pred, metric_name: str, group_ids) -> float` - Compute a metric and reject undefined or non-finite results.
 
 ---
 ## `integrations/base.py`

@@ -5,12 +5,14 @@ Unit tests for workflow helper functions.
 import numpy as np
 import pandas as pd
 import pytest
+from sklearn.exceptions import UndefinedMetricWarning
 from sklearn.metrics import accuracy_score
 
 from plexe.config import DEFAULT_MODEL_TYPES, ModelType, detect_installed_frameworks
 from plexe.helpers import (
     _evaluate_predictor,
     compute_metric,
+    compute_metric_hardcoded,
     metric_requires_probabilities,
     normalize_probability_predictions,
     select_viable_model_types,
@@ -43,6 +45,37 @@ def test_compute_metric_rmse():
     expected = float(np.sqrt(np.mean((y_true - y_pred) ** 2)))
 
     assert result == pytest.approx(expected, abs=0.01)
+
+
+@pytest.mark.parametrize("metric_function", [compute_metric, compute_metric_hardcoded])
+def test_metric_helpers_reject_non_finite_results(metric_function):
+    """An undefined one-row R2 result must not enter workflow state as a score."""
+    y_true = np.array([1.0])
+    y_pred = np.array([1.0])
+
+    with pytest.warns(UndefinedMetricWarning):
+        with pytest.raises(ValueError, match="non-finite"):
+            metric_function(y_true, y_pred, "r2")
+
+
+@pytest.mark.parametrize(
+    ("metric_function", "metric_name", "y_true", "y_pred"),
+    [
+        (compute_metric, "mse", [0.0, 0.0], [1e308, -1e308]),
+        (compute_metric_hardcoded, "r2", [0.0, 1e154], [1e154, -1e154]),
+    ],
+)
+def test_metric_helpers_reject_infinite_results(metric_function, metric_name, y_true, y_pred):
+    """Overflowed metric calculations must not be returned as valid scores."""
+    with pytest.warns(RuntimeWarning):
+        with pytest.raises(ValueError, match="non-finite"):
+            metric_function(np.array(y_true), np.array(y_pred), metric_name)
+
+
+@pytest.mark.parametrize("metric_function", [compute_metric, compute_metric_hardcoded])
+def test_metric_helpers_preserve_zero_as_valid_score(metric_function):
+    """A zero-valued score is valid and must remain distinct from missing."""
+    assert metric_function([0, 1], [1, 0], "accuracy") == 0.0
 
 
 def test_compute_metric_f1_score():

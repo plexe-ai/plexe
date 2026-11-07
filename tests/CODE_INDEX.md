@@ -1,6 +1,6 @@
 # Code Index: tests
 
-> Generated on 2026-03-05 21:32:55
+> Generated on 2026-10-10 04:54:35
 
 Test suite structure and test case documentation.
 
@@ -220,6 +220,9 @@ Unit tests for workflow helper functions.
 **Functions:**
 - `test_compute_metric_accuracy()` - Test accuracy computation.
 - `test_compute_metric_rmse()` - Test RMSE computation.
+- `test_metric_helpers_reject_non_finite_results(metric_function)` - An undefined one-row R2 result must not enter workflow state as a score.
+- `test_metric_helpers_reject_infinite_results(metric_function, metric_name, y_true, y_pred)` - Overflowed metric calculations must not be returned as valid scores.
+- `test_metric_helpers_preserve_zero_as_valid_score(metric_function)` - A zero-valued score is valid and must remain distinct from missing.
 - `test_compute_metric_f1_score()` - Test F1 score computation.
 - `test_compute_metric_unknown_raises()` - Test unknown metric raises ValueError.
 - `test_select_viable_model_types_defaults_image()` - Default model types intersect with IMAGE_PATH.
