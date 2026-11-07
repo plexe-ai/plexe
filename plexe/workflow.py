@@ -911,6 +911,22 @@ def _materialize_explicit_split(
     return output_uri
 
 
+def _validate_explicit_split_columns(
+    spark: SparkSession, training_dataset_uri: str, split_uris: dict[str, str | None]
+) -> None:
+    """Ensure each explicit split contains every column present in training data."""
+    explicit_splits = {name: uri for name, uri in split_uris.items() if uri is not None}
+    if not explicit_splits:
+        return
+
+    training_columns = set(spark.read.parquet(training_dataset_uri).columns)
+    for split_name, split_uri in explicit_splits.items():
+        split_columns = set(spark.read.parquet(split_uri).columns)
+        missing_columns = sorted(training_columns - split_columns)
+        if missing_columns:
+            raise ValueError(f"Explicit {split_name} split is missing training columns: {', '.join(missing_columns)}")
+
+
 def prepare_data(
     spark: SparkSession,
     training_dataset_uri: str,
@@ -956,6 +972,12 @@ def prepare_data(
         else None
     )
     train_uri = training_dataset_uri
+
+    _validate_explicit_split_columns(
+        spark,
+        training_dataset_uri,
+        {"validation": val_uri if provided_val else None, "test": test_uri if provided_test else None},
+    )
 
     def run_split(split_ratios: dict[str, float], output_dir: str = splits_output_dir) -> tuple[str, str, str | None]:
         splitter = DatasetSplitterAgent(spark=spark, dataset_uri=training_dataset_uri, context=context, config=config)

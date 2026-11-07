@@ -1,6 +1,6 @@
 # Code Index: tests
 
-> Generated on 2026-03-05 21:32:55
+> Generated on 2026-10-10 05:18:37
 
 Test suite structure and test case documentation.
 
@@ -448,6 +448,7 @@ Unit tests for prepare_data split resolution with explicit val/test datasets.
 - `test_prepare_data_uses_all_provided_splits_without_running_splitter(monkeypatch, tmp_path)` - No description
 - `test_prepare_data_generates_missing_test_when_only_val_is_provided(monkeypatch, tmp_path)` - No description
 - `test_prepare_data_generates_missing_val_when_only_test_is_provided(monkeypatch, tmp_path)` - No description
+- `test_prepare_data_rejects_explicit_split_missing_training_column(monkeypatch, tmp_path, split_name, val_dataset_uri, test_dataset_uri, materialized_uri, missing_column)` - No description
 
 ---
 ## `unit/workflow/test_resume_model_type_filtering.py`
