@@ -10,7 +10,7 @@ import logging
 from pathlib import Path
 from typing import TYPE_CHECKING
 
-from plexe.utils.litellm_wrapper import PlexeLiteLLMModel
+from plexe.utils.llm import build_llm_model
 from smolagents import CodeAgent
 
 if TYPE_CHECKING:
@@ -20,7 +20,6 @@ from plexe.models import BuildContext
 from plexe.config import Config
 from plexe.tools.submission import get_save_split_uris_tool
 from plexe.utils.tracing import agent_span
-from plexe.config import get_routing_for_model
 from plexe.validation.validators import canonicalize_split_ratios, validate_dataset_splits
 
 logger = logging.getLogger(__name__)
@@ -51,12 +50,10 @@ class DatasetSplitterAgent:
         self.dataset_uri = dataset_uri
         self.context = context
         self.config = config
-        self.llm_model = config.dataset_splitting_llm
+        self.llm_model = config.get_llm("dataset_splitting")
 
     def _build_agent(self, split_ratios: dict[str, float]) -> CodeAgent:
         """Build CodeAgent with splitting tool."""
-        # Get routing configuration for this agent's model
-        api_base, headers = get_routing_for_model(self.config.routing_config, self.llm_model)
         # Clean up ratio names and shape before deciding split mode.
         split_ratios = canonicalize_split_ratios(split_ratios)
         expects_test_split = split_ratios.get("test", 0.0) > 0
@@ -157,12 +154,7 @@ class DatasetSplitterAgent:
                     else "- Create only train and validation splits (no test split for this run)\n"
                 )
             ),
-            model=PlexeLiteLLMModel(
-                model_id=self.llm_model,
-                temperature=self.config.get_temperature("dataset_splitter"),
-                api_base=api_base,
-                extra_headers=headers,
-            ),
+            model=build_llm_model(self.config, self.llm_model, self.config.get_temperature("dataset_splitter")),
             verbosity_level=self.config.agent_verbosity_level,
             tools=[get_save_split_uris_tool(self.context, self.spark, split_ratios)],
             add_base_tools=False,

@@ -10,7 +10,7 @@ from __future__ import annotations
 import logging
 from typing import TYPE_CHECKING
 
-from plexe.utils.litellm_wrapper import PlexeLiteLLMModel
+from plexe.utils.llm import build_llm_model
 from smolagents import CodeAgent
 
 if TYPE_CHECKING:
@@ -20,7 +20,6 @@ from plexe.models import BuildContext
 from plexe.config import Config
 from plexe.tools.submission import get_register_layout_tool
 from plexe.utils.tracing import agent_span
-from plexe.config import get_routing_for_model
 
 logger = logging.getLogger(__name__)
 
@@ -37,13 +36,10 @@ class LayoutDetectionAgent:
         self.dataset_uri = dataset_uri
         self.context = context
         self.config = config
-        self.llm_model = config.statistical_analysis_llm  # Reuse same LLM as stats
+        self.llm_model = config.get_llm("statistical_analysis")  # Reuse same LLM as stats
 
     def _build_agent(self) -> CodeAgent:
         """Build CodeAgent with layout detection tool."""
-        # Get routing configuration for this agent's model
-        api_base, headers = get_routing_for_model(self.config.routing_config, self.llm_model)
-
         return CodeAgent(
             name="LayoutDetector",
             instructions=(
@@ -121,12 +117,7 @@ class LayoutDetectionAgent:
                 "- Use the user's intent to disambiguate\n"
                 "- Be confident in your decision\n"
             ),
-            model=PlexeLiteLLMModel(
-                model_id=self.llm_model,
-                temperature=self.config.get_temperature("layout_detector"),
-                api_base=api_base,
-                extra_headers=headers,
-            ),
+            model=build_llm_model(self.config, self.llm_model, self.config.get_temperature("layout_detector")),
             verbosity_level=self.config.agent_verbosity_level,
             tools=[get_register_layout_tool(self.context)],
             add_base_tools=False,

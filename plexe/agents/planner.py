@@ -6,14 +6,13 @@ Creates concrete plan specifications from hypotheses.
 
 import logging
 
-from plexe.utils.litellm_wrapper import PlexeLiteLLMModel
+from plexe.utils.llm import build_llm_model
 from smolagents import CodeAgent
 
 from plexe.models import BuildContext, Hypothesis, UnifiedPlan
 from plexe.config import Config
 from plexe.tools.submission import get_save_plan_tool
 from plexe.utils.tracing import agent_span
-from plexe.config import get_routing_for_model
 from plexe.search.journal import SearchJournal
 
 logger = logging.getLogger(__name__)
@@ -50,7 +49,7 @@ class PlannerAgent:
         self.context = context
         self.config = config
         self.num_bootstrap = num_bootstrap
-        self.llm_model = config.planner_llm
+        self.llm_model = config.get_llm("planner")
 
     def _build_agent(self) -> CodeAgent:
         """Build CodeAgent with plan submission tool."""
@@ -179,18 +178,10 @@ class PlannerAgent:
             )
             tool_hypothesis = self.hypothesis
 
-        # Get routing configuration for this agent's model
-        api_base, headers = get_routing_for_model(self.config.routing_config, self.llm_model)
-
         return CodeAgent(
             name="Planner",
             instructions=instructions,
-            model=PlexeLiteLLMModel(
-                model_id=self.llm_model,
-                temperature=self.config.get_temperature("planner"),
-                api_base=api_base,
-                extra_headers=headers,
-            ),
+            model=build_llm_model(self.config, self.llm_model, self.config.get_temperature("planner")),
             verbosity_level=self.config.agent_verbosity_level,
             tools=[get_save_plan_tool(self.context, tool_hypothesis, self.context.viable_model_types)],
             add_base_tools=False,

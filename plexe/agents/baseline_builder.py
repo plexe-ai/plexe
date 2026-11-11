@@ -9,13 +9,13 @@ from __future__ import annotations
 import logging
 from typing import TYPE_CHECKING
 
-from plexe.utils.litellm_wrapper import PlexeLiteLLMModel
+from plexe.utils.llm import build_llm_model
 from smolagents import CodeAgent
 
 if TYPE_CHECKING:
     from pyspark.sql import SparkSession
 
-from plexe.config import Config, get_routing_for_model
+from plexe.config import Config
 from plexe.constants import DirNames
 from plexe.helpers import compute_metric, metric_requires_probabilities, normalize_probability_predictions
 from plexe.models import BuildContext, Baseline
@@ -47,7 +47,7 @@ class BaselineBuilderAgent:
         self.spark = spark
         self.context = context
         self.config = config
-        self.llm_model = config.baseline_builder_llm
+        self.llm_model = config.get_llm("baseline_builder")
 
     def _build_agent(self, val_sample_df) -> CodeAgent:
         """Build CodeAgent with baseline tools."""
@@ -62,9 +62,6 @@ class BaselineBuilderAgent:
             if requires_proba
             else ""
         )
-
-        # Get routing configuration for this agent's model
-        api_base, headers = get_routing_for_model(self.config.routing_config, self.llm_model)
 
         # Check for previous error history from retries
         error_history = self.context.scratch.get("_baseline_errors", [])
@@ -138,12 +135,7 @@ class BaselineBuilderAgent:
                 "- Predictor must have standard .predict(X) -> array interface\n"
                 f"{proba_requirement}"
             ),
-            model=PlexeLiteLLMModel(
-                model_id=self.llm_model,
-                temperature=self.config.get_temperature("baseline_builder"),
-                api_base=api_base,
-                extra_headers=headers,
-            ),
+            model=build_llm_model(self.config, self.llm_model, self.config.get_temperature("baseline_builder")),
             verbosity_level=self.config.agent_verbosity_level,
             tools=[
                 get_save_baseline_code_tool(self.context, val_sample_df),

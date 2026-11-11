@@ -73,6 +73,9 @@ def detect_installed_frameworks() -> list[str]:
 # Default model types (auto-detected from installed packages, user can override via --allowed-model-types)
 DEFAULT_MODEL_TYPES = detect_installed_frameworks()
 
+# Default LLM used when neither a global `llm` nor a per-agent override is set
+DEFAULT_LLM = "anthropic/claude-sonnet-4-5-20250929"
+
 # Task-compatible model types based on data layout
 # Maps DataLayout enum to compatible model types
 TASK_COMPATIBLE_MODELS = {
@@ -261,6 +264,9 @@ class RoutingProviderConfig(BaseModel):
     """Configuration for a single routing provider."""
 
     api_base: str | None = Field(default=None, description="Base URL for API requests (null = use LiteLLM default)")
+    api_key: str | None = Field(
+        default=None, description="API key for this provider (null = use LiteLLM provider default)"
+    )
     headers: dict[str, str] = Field(default_factory=dict, description="HTTP headers for requests")
 
 
@@ -325,37 +331,41 @@ class Config(BaseSettings):
         default=4, description="Number of DataLoader worker processes for streaming data loading", ge=0
     )
 
-    # LLM settings (per agent role)
-    statistical_analysis_llm: str = Field(
-        default="anthropic/claude-sonnet-4-5-20250929", description="LLM for statistical profiling agent"
+    # LLM settings (per agent role; null = inherit global `llm`)
+    llm: str | None = Field(
+        default=None,
+        description="Global LLM for all agents (e.g. 'openai/gpt-6-luna'); per-agent fields override it",
     )
-    ml_task_analysis_llm: str = Field(
-        default="anthropic/claude-sonnet-4-5-20250929", description="LLM for ML task analysis agent"
+    statistical_analysis_llm: str | None = Field(
+        default=None, description="LLM for statistical profiling agent (null = inherit global llm)"
     )
-    metric_selection_llm: str = Field(
-        default="anthropic/claude-sonnet-4-5-20250929", description="LLM for metric selection agent"
+    ml_task_analysis_llm: str | None = Field(
+        default=None, description="LLM for ML task analysis agent (null = inherit global llm)"
     )
-    dataset_splitting_llm: str = Field(
-        default="anthropic/claude-sonnet-4-5-20250929", description="LLM for dataset splitting agent"
+    metric_selection_llm: str | None = Field(
+        default=None, description="LLM for metric selection agent (null = inherit global llm)"
     )
-    baseline_builder_llm: str = Field(
-        default="anthropic/claude-sonnet-4-5-20250929", description="LLM for baseline builder agent"
+    dataset_splitting_llm: str | None = Field(
+        default=None, description="LLM for dataset splitting agent (null = inherit global llm)"
     )
-    feature_processor_llm: str = Field(
-        default="anthropic/claude-sonnet-4-5-20250929", description="LLM for feature engineering agent"
+    baseline_builder_llm: str | None = Field(
+        default=None, description="LLM for baseline builder agent (null = inherit global llm)"
     )
-    model_definer_llm: str = Field(
-        default="anthropic/claude-sonnet-4-5-20250929", description="LLM for model definition agent"
+    feature_processor_llm: str | None = Field(
+        default=None, description="LLM for feature engineering agent (null = inherit global llm)"
     )
-    evaluation_llm: str = Field(
-        default="anthropic/claude-sonnet-4-5-20250929", description="LLM for model evaluation agent"
+    model_definer_llm: str | None = Field(
+        default=None, description="LLM for model definition agent (null = inherit global llm)"
     )
-    hypothesiser_llm: str = Field(
-        default="anthropic/claude-sonnet-4-5-20250929", description="LLM for hypothesiser agent"
+    evaluation_llm: str | None = Field(
+        default=None, description="LLM for model evaluation agent (null = inherit global llm)"
     )
-    planner_llm: str = Field(default="anthropic/claude-sonnet-4-5-20250929", description="LLM for planner agent")
-    insight_extractor_llm: str = Field(
-        default="anthropic/claude-sonnet-4-5-20250929", description="LLM for insight extractor agent"
+    hypothesiser_llm: str | None = Field(
+        default=None, description="LLM for hypothesiser agent (null = inherit global llm)"
+    )
+    planner_llm: str | None = Field(default=None, description="LLM for planner agent (null = inherit global llm)")
+    insight_extractor_llm: str | None = Field(
+        default=None, description="LLM for insight extractor agent (null = inherit global llm)"
     )
 
     # LLM temperature settings
@@ -451,6 +461,10 @@ class Config(BaseSettings):
         }
         return overrides.get(agent_name, self.default_temperature)
 
+    def get_llm(self, role: str) -> str:
+        """Resolve the LLM for an agent role: per-role override → global `llm` → default."""
+        return getattr(self, f"{role}_llm", None) or self.llm or DEFAULT_LLM
+
     @classmethod
     def settings_customise_sources(
         cls,
@@ -506,27 +520,30 @@ class Config(BaseSettings):
 # ============================================
 
 
-def get_routing_for_model(config: RoutingConfig | None, model_id: str) -> tuple[str | None, dict[str, str]]:
+def get_routing_for_model(
+    config: RoutingConfig | None, model_id: str
+) -> tuple[str | None, dict[str, str], str | None]:
     """
     Get routing configuration for a specific model ID.
 
     Lookup order:
     1. Check if model_id is in 'models' mapping → use that provider's config
     2. Else use 'default' config if present
-    3. Else return (None, {}) for LiteLLM's default routing
+    3. Else return (None, {}, None) for LiteLLM's default routing
 
     Args:
         config: Routing configuration (or None if no config loaded)
         model_id: Model ID to look up (e.g., "anthropic/claude-sonnet-4-5-20250929")
 
     Returns:
-        Tuple of (api_base, headers) where:
+        Tuple of (api_base, headers, api_key) where:
         - api_base: Base URL for API requests (None = use LiteLLM default)
         - headers: Dict of HTTP headers to include in requests
+        - api_key: API key for the provider (None = use LiteLLM provider default)
     """
     # If no config provided, use LiteLLM defaults
     if config is None:
-        return None, {}
+        return None, {}, None
 
     # Check if model has explicit provider mapping
     if model_id in config.models:
@@ -548,9 +565,9 @@ def get_routing_for_model(config: RoutingConfig | None, model_id: str) -> tuple[
 
     # If no applicable config found, use LiteLLM defaults
     if provider_config is None:
-        return None, {}
+        return None, {}, None
 
-    return provider_config.api_base, provider_config.headers
+    return provider_config.api_base, provider_config.headers, provider_config.api_key
 
 
 # ============================================
@@ -661,4 +678,8 @@ def get_config() -> Config:
     """
     # Config() constructor automatically uses custom settings sources
     # Priority: constructor args > env vars > YAML file > defaults
-    return Config()
+    config = Config()
+    # PLEXE_LLM is a convenient alias for the generic LLM env var
+    if config.llm is None:
+        config.llm = os.getenv("PLEXE_LLM")
+    return config

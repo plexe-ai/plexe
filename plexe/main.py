@@ -44,6 +44,7 @@ def main(
     experiment_id: str = "local",
     max_iterations: int = 10,
     global_seed: int | None = None,
+    llm: str | None = None,
     work_dir: Path = Path("/tmp/model_builder_v2"),
     train_dataset_uri: str | None = None,
     val_dataset_uri: str | None = None,
@@ -76,6 +77,7 @@ def main(
         experiment_id: Experiment identifier
         max_iterations: Maximum search iterations
         global_seed: Global seed for reproducible runs (random + numpy + search policies)
+        llm: Default LiteLLM model for all agents (per-agent config overrides it)
         work_dir: Working directory for artifacts
         train_dataset_uri: Required training dataset URI (preferred over data_refs)
         val_dataset_uri: Optional validation dataset URI
@@ -117,6 +119,8 @@ def main(
         # Apply CLI argument overrides (highest priority)
         config.max_search_iterations = max_iterations
         config.spark_mode = spark_mode
+        if llm:
+            config.llm = llm
         epoch_overrides = {}
         if nn_default_epochs is not None:
             epoch_overrides["nn_default_epochs"] = nn_default_epochs
@@ -258,6 +262,7 @@ def main(
         logger.info(f"Experiment: {experiment_id} | User: {user_id}")
         logger.info(f"Integration: {type(integration).__name__} | Spark: {spark_mode}")
         logger.info(f"LiteLLM routing: {'custom config' if config.routing_config else 'default providers'}")
+        logger.info(f"LLM: {config.llm or 'per-agent defaults'}")
         logger.info(f"Intent: {intent}")
         logger.info(f"Dataset: {train_dataset_uri} (format: {input_format}) | Max iterations: {max_iterations}")
         if val_dataset_uri:
@@ -368,6 +373,11 @@ if __name__ == "__main__":
     parser.add_argument("--experiment-id", default=os.getenv("EXPERIMENT_ID", "local"), help="Experiment identifier")
     parser.add_argument("--max-iterations", type=int, default=10, help="Max search iterations")
     parser.add_argument("--seed", type=int, help="Global seed for reproducible runs")
+    parser.add_argument(
+        "--llm",
+        type=str,
+        help="Default LiteLLM model for all agents (e.g. 'openai/gpt-6-luna'); config per-agent fields override it",
+    )
     parser.add_argument("--work-dir", type=Path, default=Path("/tmp/model_builder_v2"), help="Working directory")
     parser.add_argument("--enable-final-evaluation", action="store_true", help="Enable test set evaluation")
     parser.add_argument(
@@ -509,6 +519,7 @@ if __name__ == "__main__":
             experiment_id=args.experiment_id,
             max_iterations=args.max_iterations,
             global_seed=args.seed,
+            llm=args.llm,
             work_dir=args.work_dir,
             val_dataset_uri=args.val_dataset_uri,
             test_dataset_uri=args.test_dataset_uri,

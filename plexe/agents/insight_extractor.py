@@ -6,14 +6,13 @@ Analyzes experiment results to extract structured learnings.
 
 import logging
 
-from plexe.utils.litellm_wrapper import PlexeLiteLLMModel
+from plexe.utils.llm import build_llm_model
 from smolagents import CodeAgent
 
 from plexe.models import BuildContext, Hypothesis, Solution
 from plexe.config import Config
 from plexe.tools.submission import get_save_insight_tool
 from plexe.utils.tracing import agent_span
-from plexe.config import get_routing_for_model
 
 logger = logging.getLogger(__name__)
 
@@ -52,7 +51,7 @@ class InsightExtractorAgent:
         self.insight_store = insight_store
         self.context = context
         self.config = config
-        self.llm_model = config.insight_extractor_llm
+        self.llm_model = config.get_llm("insight_extractor")
 
     def _build_agent(self) -> CodeAgent:
         """Build CodeAgent with insight submission tool."""
@@ -119,18 +118,10 @@ class InsightExtractorAgent:
             ")\n"
         )
 
-        # Get routing configuration for this agent's model
-        api_base, headers = get_routing_for_model(self.config.routing_config, self.llm_model)
-
         return CodeAgent(
             name="InsightExtractor",
             instructions=instructions,
-            model=PlexeLiteLLMModel(
-                model_id=self.llm_model,
-                temperature=self.config.get_temperature("insight_extractor"),
-                api_base=api_base,
-                extra_headers=headers,
-            ),
+            model=build_llm_model(self.config, self.llm_model, self.config.get_temperature("insight_extractor")),
             verbosity_level=self.config.agent_verbosity_level,
             tools=[get_save_insight_tool(self.insight_store)],
             add_base_tools=False,

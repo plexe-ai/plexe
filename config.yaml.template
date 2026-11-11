@@ -51,60 +51,65 @@
 # LLM Settings (per agent role)
 # ------------------------------------------------------------
 
-# LLM for statistical profiling agent
+# Global LLM for all agents (e.g. 'openai/gpt-6-luna'); per-agent fields override it
 # Type: string
-# Default: "anthropic/claude-sonnet-4-5-20250929"
-# statistical_analysis_llm: "anthropic/claude-sonnet-4-5-20250929"
+# Default: null
+# llm: null
 
-# LLM for ML task analysis agent
-# Type: string
-# Default: "anthropic/claude-sonnet-4-5-20250929"
-# ml_task_analysis_llm: "anthropic/claude-sonnet-4-5-20250929"
+# LLM for statistical profiling agent (null = inherit global llm)
+# Type: string | null
+# Default: null
+# statistical_analysis_llm: null
 
-# LLM for metric selection agent
-# Type: string
-# Default: "anthropic/claude-sonnet-4-5-20250929"
-# metric_selection_llm: "anthropic/claude-sonnet-4-5-20250929"
+# LLM for ML task analysis agent (null = inherit global llm)
+# Type: string | null
+# Default: null
+# ml_task_analysis_llm: null
 
-# LLM for dataset splitting agent
-# Type: string
-# Default: "anthropic/claude-sonnet-4-5-20250929"
-# dataset_splitting_llm: "anthropic/claude-sonnet-4-5-20250929"
+# LLM for metric selection agent (null = inherit global llm)
+# Type: string | null
+# Default: null
+# metric_selection_llm: null
 
-# LLM for baseline builder agent
-# Type: string
-# Default: "anthropic/claude-sonnet-4-5-20250929"
-# baseline_builder_llm: "anthropic/claude-sonnet-4-5-20250929"
+# LLM for dataset splitting agent (null = inherit global llm)
+# Type: string | null
+# Default: null
+# dataset_splitting_llm: null
 
-# LLM for feature engineering agent
-# Type: string
-# Default: "anthropic/claude-sonnet-4-5-20250929"
-# feature_processor_llm: "anthropic/claude-sonnet-4-5-20250929"
+# LLM for baseline builder agent (null = inherit global llm)
+# Type: string | null
+# Default: null
+# baseline_builder_llm: null
 
-# LLM for model definition agent
-# Type: string
-# Default: "anthropic/claude-sonnet-4-5-20250929"
-# model_definer_llm: "anthropic/claude-sonnet-4-5-20250929"
+# LLM for feature engineering agent (null = inherit global llm)
+# Type: string | null
+# Default: null
+# feature_processor_llm: null
 
-# LLM for model evaluation agent
-# Type: string
-# Default: "anthropic/claude-sonnet-4-5-20250929"
-# evaluation_llm: "anthropic/claude-sonnet-4-5-20250929"
+# LLM for model definition agent (null = inherit global llm)
+# Type: string | null
+# Default: null
+# model_definer_llm: null
 
-# LLM for hypothesiser agent
-# Type: string
-# Default: "anthropic/claude-sonnet-4-5-20250929"
-# hypothesiser_llm: "anthropic/claude-sonnet-4-5-20250929"
+# LLM for model evaluation agent (null = inherit global llm)
+# Type: string | null
+# Default: null
+# evaluation_llm: null
 
-# LLM for planner agent
-# Type: string
-# Default: "anthropic/claude-sonnet-4-5-20250929"
-# planner_llm: "anthropic/claude-sonnet-4-5-20250929"
+# LLM for hypothesiser agent (null = inherit global llm)
+# Type: string | null
+# Default: null
+# hypothesiser_llm: null
 
-# LLM for insight extractor agent
-# Type: string
-# Default: "anthropic/claude-sonnet-4-5-20250929"
-# insight_extractor_llm: "anthropic/claude-sonnet-4-5-20250929"
+# LLM for planner agent (null = inherit global llm)
+# Type: string | null
+# Default: null
+# planner_llm: null
+
+# LLM for insight extractor agent (null = inherit global llm)
+# Type: string | null
+# Default: null
+# insight_extractor_llm: null
 
 # ------------------------------------------------------------
 # Logging & Agent Settings
@@ -279,12 +284,15 @@
 # Default: null
 #
 # routing_config:
+#   # OpenCode Go: route every openai/* model to the Go plan
 #   default:
-#     api_base: null
+#     api_base: "https://opencode.ai/inference/go/openai/v1"
+#     api_key: "${OPENCODE_API_KEY}"
 #     headers: {}
 #   providers:
 #     my-proxy:
 #       api_base: "https://proxy.example.com/v1"
+#       api_key: "${PROXY_API_KEY}"
 #       headers:
 #         authorization: "${PROXY_TOKEN}"
 #   models:

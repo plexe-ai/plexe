@@ -10,7 +10,7 @@ import logging
 from typing import Any, TYPE_CHECKING
 
 import pandas as pd
-from plexe.utils.litellm_wrapper import PlexeLiteLLMModel
+from plexe.utils.llm import build_llm_model
 from smolagents import CodeAgent
 
 if TYPE_CHECKING:
@@ -27,7 +27,6 @@ from plexe.tools.submission import (
     get_register_final_evaluation_tool,
 )
 from plexe.utils.tracing import agent_span
-from plexe.config import get_routing_for_model
 
 logger = logging.getLogger(__name__)
 
@@ -65,7 +64,7 @@ class ModelEvaluatorAgent:
         self.spark = spark
         self.context = context
         self.config = config
-        self.llm_model = config.evaluation_llm
+        self.llm_model = config.get_llm("evaluation")
 
     def _build_agent(self, phase_name: str, phase_prompt: str, tools: list) -> CodeAgent:
         """
@@ -79,9 +78,6 @@ class ModelEvaluatorAgent:
         Returns:
             Configured CodeAgent
         """
-        # Get routing configuration for this agent's model
-        api_base, headers = get_routing_for_model(self.config.routing_config, self.llm_model)
-
         return CodeAgent(
             name=f"ModelEvaluator_{phase_name}",
             instructions=(
@@ -117,12 +113,7 @@ class ModelEvaluatorAgent:
                 "CRITICAL: Provide interpretation, not just numbers.\\n"
                 "IMPORTANT: Do not create plots or visualizations (headless environment).\\n"
             ),
-            model=PlexeLiteLLMModel(
-                model_id=self.llm_model,
-                temperature=self.config.get_temperature("model_evaluator"),
-                api_base=api_base,
-                extra_headers=headers,
-            ),
+            model=build_llm_model(self.config, self.llm_model, self.config.get_temperature("model_evaluator")),
             verbosity_level=self.config.agent_verbosity_level,
             tools=tools,
             add_base_tools=False,

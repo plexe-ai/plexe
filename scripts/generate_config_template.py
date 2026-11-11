@@ -74,6 +74,7 @@ def generate_template():
             "nn_default_batch_size",
         ],
         "LLM Settings (per agent role)": [
+            "llm",
             "statistical_analysis_llm",
             "ml_task_analysis_llm",
             "metric_selection_llm",
@@ -161,12 +162,15 @@ def generate_template():
                 print(f"# Default: {format_value(default)}")
                 print("#")
                 print("# routing_config:")
+                print("#   # OpenCode Go: route every openai/* model to the Go plan")
                 print("#   default:")
-                print("#     api_base: null")
+                print('#     api_base: "https://opencode.ai/inference/go/openai/v1"')
+                print('#     api_key: "${OPENCODE_API_KEY}"')
                 print("#     headers: {}")
                 print("#   providers:")
                 print("#     my-proxy:")
                 print('#       api_base: "https://proxy.example.com/v1"')
+                print('#       api_key: "${PROXY_API_KEY}"')
                 print("#       headers:")
                 print('#         authorization: "${PROXY_TOKEN}"')
                 print("#   models:")

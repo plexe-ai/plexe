@@ -9,7 +9,7 @@ from __future__ import annotations
 import logging
 from typing import Any, TYPE_CHECKING
 
-from plexe.utils.litellm_wrapper import PlexeLiteLLMModel
+from plexe.utils.llm import build_llm_model
 from smolagents import CodeAgent
 
 if TYPE_CHECKING:
@@ -21,7 +21,6 @@ from plexe.models import BuildContext
 from plexe.config import Config
 from plexe.tools.submission import get_save_pipeline_code_tool
 from plexe.utils.tracing import agent_span
-from plexe.config import get_routing_for_model
 
 logger = logging.getLogger(__name__)
 
@@ -55,7 +54,7 @@ class FeatureProcessorAgent:
         self.train_uri = train_uri
         self.context = context
         self.config = config
-        self.llm_model = config.feature_processor_llm
+        self.llm_model = config.get_llm("feature_processor")
         self.plan = plan
 
     def _build_agent(self, train_sample_df, val_sample_df) -> CodeAgent:
@@ -64,18 +63,10 @@ class FeatureProcessorAgent:
         # Build stage-specific instructions
         instructions = self._build_instructions()
 
-        # Get routing configuration for this agent's model
-        api_base, headers = get_routing_for_model(self.config.routing_config, self.llm_model)
-
         return CodeAgent(
             name="FeatureProcessor",
             instructions=instructions,
-            model=PlexeLiteLLMModel(
-                model_id=self.llm_model,
-                temperature=self.config.get_temperature("feature_processor"),
-                api_base=api_base,
-                extra_headers=headers,
-            ),
+            model=build_llm_model(self.config, self.llm_model, self.config.get_temperature("feature_processor")),
             verbosity_level=self.config.agent_verbosity_level,
             tools=[get_save_pipeline_code_tool(self.context, train_sample_df, val_sample_df)],
             add_base_tools=False,

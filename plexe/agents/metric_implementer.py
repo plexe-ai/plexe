@@ -7,14 +7,13 @@ Generates metric computation function code.
 import logging
 from typing import Any
 
-from plexe.utils.litellm_wrapper import PlexeLiteLLMModel
+from plexe.utils.llm import build_llm_model
 from smolagents import CodeAgent
 
 from plexe.models import BuildContext
 from plexe.config import Config
 from plexe.tools.submission import get_save_metric_implementation_fn
 from plexe.utils.tracing import agent_span
-from plexe.config import get_routing_for_model
 
 logger = logging.getLogger(__name__)
 
@@ -37,13 +36,10 @@ class MetricImplementationAgent:
         """
         self.context = context
         self.config = config
-        self.llm_model = config.metric_selection_llm
+        self.llm_model = config.get_llm("metric_selection")
 
     def _build_agent(self) -> CodeAgent:
         """Build CodeAgent with metric implementation tool."""
-        # Get routing configuration for this agent's model
-        api_base, headers = get_routing_for_model(self.config.routing_config, self.llm_model)
-
         return CodeAgent(
             name="MetricImplementer",
             instructions=(
@@ -88,12 +84,7 @@ class MetricImplementationAgent:
                 "- Returns single float\n"
                 "- Imports inside function for portability\n"
             ),
-            model=PlexeLiteLLMModel(
-                model_id=self.llm_model,
-                temperature=self.config.get_temperature("metric_implementer"),
-                api_base=api_base,
-                extra_headers=headers,
-            ),
+            model=build_llm_model(self.config, self.llm_model, self.config.get_temperature("metric_implementer")),
             verbosity_level=self.config.agent_verbosity_level,
             tools=[],  # No tools - submission via additional_args
             add_base_tools=False,

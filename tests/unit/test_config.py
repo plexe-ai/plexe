@@ -5,26 +5,61 @@ import logging
 import pytest
 import yaml
 
-from plexe.config import Config, RoutingConfig, RoutingProviderConfig, get_routing_for_model, setup_logging
+from plexe.config import (
+    Config,
+    DEFAULT_LLM,
+    RoutingConfig,
+    RoutingProviderConfig,
+    get_routing_for_model,
+    setup_logging,
+)
 
 
 def test_get_routing_for_model_mapping_and_default():
     """Mapped models use provider config; others use default."""
     config = RoutingConfig(
-        default=RoutingProviderConfig(api_base="https://default", headers={"x": "1"}),
+        default=RoutingProviderConfig(api_base="https://default", api_key="default-key", headers={"x": "1"}),
         providers={
-            "p1": RoutingProviderConfig(api_base="https://p1", headers={"y": "2"}),
+            "p1": RoutingProviderConfig(api_base="https://p1", api_key="p1-key", headers={"y": "2"}),
         },
         models={"model-a": "p1"},
     )
 
-    api_base, headers = get_routing_for_model(config, "model-a")
+    api_base, headers, api_key = get_routing_for_model(config, "model-a")
     assert api_base == "https://p1"
     assert headers == {"y": "2"}
+    assert api_key == "p1-key"
 
-    api_base, headers = get_routing_for_model(config, "model-b")
+    api_base, headers, api_key = get_routing_for_model(config, "model-b")
     assert api_base == "https://default"
     assert headers == {"x": "1"}
+    assert api_key == "default-key"
+
+    assert get_routing_for_model(None, "model-a") == (None, {}, None)
+
+
+def test_get_llm_resolution(monkeypatch):
+    """Per-role override beats global llm, which beats the built-in default."""
+    for var in ("LLM", "PLEXE_LLM"):
+        monkeypatch.delenv(var, raising=False)
+
+    assert Config().get_llm("hypothesiser") == DEFAULT_LLM
+    assert Config(llm="openai/gpt-6-luna").get_llm("hypothesiser") == "openai/gpt-6-luna"
+    assert (
+        Config(llm="openai/gpt-6-luna", hypothesiser_llm="anthropic/claude-test").get_llm("hypothesiser")
+        == "anthropic/claude-test"
+    )
+    assert Config().get_llm("planner") == DEFAULT_LLM
+
+
+def test_plexe_llm_env_fallback(monkeypatch):
+    """PLEXE_LLM is honored when LLM is unset."""
+    monkeypatch.delenv("LLM", raising=False)
+    monkeypatch.setenv("PLEXE_LLM", "openai/glm-5.3")
+
+    from plexe.config import get_config
+
+    assert get_config().llm == "openai/glm-5.3"
 
 
 def test_temperature_fields_from_env(monkeypatch):

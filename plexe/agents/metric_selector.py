@@ -6,13 +6,12 @@ Selects appropriate evaluation metric based on task analysis using smolagents.
 
 import logging
 
-from plexe.utils.litellm_wrapper import PlexeLiteLLMModel
+from plexe.utils.llm import build_llm_model
 from smolagents import CodeAgent
 
 from plexe.models import BuildContext, Metric
 from plexe.config import Config, StandardMetric
 from plexe.utils.tracing import agent_span
-from plexe.config import get_routing_for_model
 from plexe.tools.submission import get_submit_metric_choice_tool
 
 logger = logging.getLogger(__name__)
@@ -28,7 +27,7 @@ class MetricSelectorAgent:
     def __init__(self, context: BuildContext, config: Config):
         self.context = context
         self.config = config
-        self.llm_model = config.metric_selection_llm
+        self.llm_model = config.get_llm("metric_selection")
 
     def _build_agent(self) -> CodeAgent:
         """Build CodeAgent with metric submission tool."""
@@ -36,9 +35,6 @@ class MetricSelectorAgent:
         from plexe.agents.utils import format_user_feedback_for_prompt
 
         feedback_section = format_user_feedback_for_prompt(self.context.scratch.get("_user_feedback"))
-
-        # Get routing configuration for this agent's model
-        api_base, headers = get_routing_for_model(self.config.routing_config, self.llm_model)
 
         return CodeAgent(
             name="MetricSelector",
@@ -72,12 +68,7 @@ class MetricSelectorAgent:
                 "- Only use custom metric names for truly unique business needs\n"
                 "- Your rationale should explain WHY this metric fits this specific task\n"
             ),
-            model=PlexeLiteLLMModel(
-                model_id=self.llm_model,
-                temperature=self.config.get_temperature("metric_selector"),
-                api_base=api_base,
-                extra_headers=headers,
-            ),
+            model=build_llm_model(self.config, self.llm_model, self.config.get_temperature("metric_selector")),
             verbosity_level=self.config.agent_verbosity_level,
             tools=[get_submit_metric_choice_tool(self.context)],
             add_base_tools=False,

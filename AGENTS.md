@@ -96,7 +96,7 @@ make test-quick
 
 - `plexe/workflow.py`: Main orchestrator (6 phases)
 - `plexe/main.py`: CLI entry point
-- `plexe/config.py`: Config dataclass + StandardMetric enum + LLM routing
+- `plexe/config.py`: Config dataclass + StandardMetric enum + LLM routing + per-role model resolution
 - `plexe/models.py`: Data models (BuildContext, Solution, Baseline, Hypothesis, Plan)
 - `plexe/helpers.py`: Metric computation and model type selection
 - `plexe/integrations/base.py`: WorkflowIntegration ABC
@@ -106,6 +106,7 @@ make test-quick
 - `plexe/search/tree_policy.py`: Search strategy
 - `plexe/agents/*.py`: 14 specialized agents
 - `plexe/templates/`: Code generation templates (training, inference, features, packaging)
+- `plexe/utils/llm.py`: Builds LiteLLM models with routing (base URL, API key, headers) applied
 - `plexe/utils/litellm_wrapper.py`: LLM wrapper with retries and optional `on_llm_call` hook
 - `plexe/utils/tooling.py`: `@agentinspectable` decorator for agent-callable functions
 

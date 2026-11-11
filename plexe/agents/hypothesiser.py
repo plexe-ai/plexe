@@ -6,11 +6,11 @@ Generates strategic hypotheses for next exploration based on insights and search
 
 import logging
 
-from plexe.utils.litellm_wrapper import PlexeLiteLLMModel
+from plexe.utils.llm import build_llm_model
 from smolagents import CodeAgent
 
 from plexe.models import BuildContext, Hypothesis
-from plexe.config import Config, get_routing_for_model
+from plexe.config import Config
 from plexe.tools.submission import get_save_hypothesis_tool
 from plexe.utils.tracing import agent_span
 from plexe.search.journal import SearchJournal
@@ -49,7 +49,7 @@ class HypothesiserAgent:
         self.context = context
         self.config = config
         self.expand_solution_id = expand_solution_id
-        self.llm_model = config.hypothesiser_llm
+        self.llm_model = config.get_llm("hypothesiser")
 
     def _build_agent(self) -> CodeAgent:
         """Build CodeAgent with hypothesis submission tool."""
@@ -119,18 +119,10 @@ class HypothesiserAgent:
             "Call save_hypothesis() with your decision, then call final_answer() to complete the task.\n"
         )
 
-        # Get routing configuration for this agent's model
-        api_base, headers = get_routing_for_model(self.config.routing_config, self.llm_model)
-
         return CodeAgent(
             name="Hypothesiser",
             instructions=instructions,
-            model=PlexeLiteLLMModel(
-                model_id=self.llm_model,
-                temperature=self.config.get_temperature("hypothesiser"),
-                api_base=api_base,
-                extra_headers=headers,
-            ),
+            model=build_llm_model(self.config, self.llm_model, self.config.get_temperature("hypothesiser")),
             verbosity_level=self.config.agent_verbosity_level,
             tools=[get_save_hypothesis_tool(self.context, self.expand_solution_id)],
             add_base_tools=False,

@@ -149,14 +149,39 @@ Plexe uses LLMs via [LiteLLM](https://docs.litellm.ai/docs/providers), so you ca
 
 ```yaml
 # Route different agents to different providers
-hypothesiser_llm: "openai/gpt-5-mini"
+llm: "openai/gpt-5-mini"   # default for all agents
 feature_processor_llm: "anthropic/claude-sonnet-4-5-20250929"
 model_definer_llm: "ollama/llama3"
 ```
 
+Set a single `llm` to choose the model for every agent; per-agent fields override it. You can also pass
+`--llm <model>` on the CLI or set `PLEXE_LLM` in the environment.
+
+#### OpenCode Go
+[OpenCode Go](https://opencode.ai/docs/console/go) is a subscription API gateway. Every Go text model works
+through its OpenAI-compatible endpoint, so no code changes are needed — just point routing at it:
+
+```yaml
+# config.yaml
+llm: "openai/gpt-6-luna"   # any bare Go model id, prefixed with openai/
+routing_config:
+  default:
+    api_base: "https://opencode.ai/inference/go/openai/v1"
+    api_key: "${OPENCODE_API_KEY}"
+```
+
+```bash
+export OPENCODE_API_KEY=oc_sk_...
+python -m plexe.main --train-dataset-uri data.parquet --intent "predict churn" --config-file config.yaml
+```
+
+Go model ids are listed at `https://opencode.ai/inference/go/v1/models` (e.g. `gpt-6-luna`, `glm-5.3`,
+`kimi-k3`, `qwen3.8-max`). Use `models:` under `routing_config` to mix OpenCode Go with direct
+OpenAI/Anthropic models.
+
 > [!NOTE]
-> Plexe *should* work with most LiteLLM providers, but we actively test only with `openai/*` and `anthropic/*`
-> models. If you encounter issues with other providers, please let us know.
+> Reasoning models on the gateway may reject `temperature`; set `litellm_drop_params: true` if a model errors.
+> Plexe actively tests only `openai/*` and `anthropic/*` models, but any LiteLLM-compatible provider should work.
 
 ### 2.6. 📊 Experiment Dashboard
 Visualize experiment results, search trees, and evaluation reports with the built-in Streamlit dashboard:
@@ -198,6 +223,7 @@ Requires Python >= 3.10, < 3.13.
 ```bash
 export OPENAI_API_KEY=<your-key>
 export ANTHROPIC_API_KEY=<your-key>
+export OPENCODE_API_KEY=<your-key>   # OpenCode Go subscription
 ```
 See [LiteLLM providers](https://docs.litellm.ai/docs/providers) for all supported providers.
 

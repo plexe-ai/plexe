@@ -9,14 +9,14 @@ from __future__ import annotations
 import logging
 from typing import TYPE_CHECKING
 
-from plexe.utils.litellm_wrapper import PlexeLiteLLMModel
+from plexe.utils.llm import build_llm_model
 from smolagents import CodeAgent
 
 if TYPE_CHECKING:
     from pyspark.sql import SparkSession
 
 from plexe.models import BuildContext
-from plexe.config import Config, get_routing_for_model
+from plexe.config import Config
 from plexe.tools.submission import get_register_statistical_profile_tool
 from plexe.utils.tracing import agent_span
 
@@ -35,7 +35,7 @@ class StatisticalAnalyserAgent:
         self.dataset_uri = dataset_uri
         self.context = context
         self.config = config
-        self.llm_model = config.statistical_analysis_llm
+        self.llm_model = config.get_llm("statistical_analysis")
 
     def _build_agent(self) -> CodeAgent:
         """Build CodeAgent with structured submission tool."""
@@ -43,9 +43,6 @@ class StatisticalAnalyserAgent:
         from plexe.agents.utils import format_user_feedback_for_prompt
 
         feedback_section = format_user_feedback_for_prompt(self.context.scratch.get("_user_feedback"))
-
-        # Get routing configuration for this agent's model
-        api_base, headers = get_routing_for_model(self.config.routing_config, self.llm_model)
 
         return CodeAgent(
             name="StatisticalAnalyser",
@@ -94,12 +91,7 @@ class StatisticalAnalyserAgent:
                 "- Adapt your analysis methods to what you see in the data (numbers vs paths vs text)\n"
                 "- Identify data quality issues that could affect modeling\n"
             ),
-            model=PlexeLiteLLMModel(
-                model_id=self.llm_model,
-                temperature=self.config.get_temperature("statistical_analyser"),
-                api_base=api_base,
-                extra_headers=headers,
-            ),
+            model=build_llm_model(self.config, self.llm_model, self.config.get_temperature("statistical_analyser")),
             verbosity_level=self.config.agent_verbosity_level,
             tools=[get_register_statistical_profile_tool(self.context)],
             add_base_tools=False,

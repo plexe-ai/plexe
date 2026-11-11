@@ -10,7 +10,7 @@ import logging
 from pathlib import Path
 from typing import TYPE_CHECKING
 
-from plexe.utils.litellm_wrapper import PlexeLiteLLMModel
+from plexe.utils.llm import build_llm_model
 from smolagents import CodeAgent
 
 if TYPE_CHECKING:
@@ -20,7 +20,6 @@ from plexe.models import BuildContext
 from plexe.config import Config
 from plexe.tools.submission import get_save_sample_uris_tool
 from plexe.utils.tracing import agent_span
-from plexe.config import get_routing_for_model
 
 logger = logging.getLogger(__name__)
 
@@ -47,13 +46,10 @@ class SamplingAgent:
         self.spark = spark
         self.context = context
         self.config = config
-        self.llm_model = config.dataset_splitting_llm  # Reuse same model
+        self.llm_model = config.get_llm("dataset_splitting")  # Reuse same model
 
     def _build_agent(self) -> CodeAgent:
         """Build CodeAgent with sampling tool."""
-        # Get routing configuration for this agent's model
-        api_base, headers = get_routing_for_model(self.config.routing_config, self.llm_model)
-
         return CodeAgent(
             name="Sampler",
             instructions=(
@@ -123,12 +119,7 @@ class SamplingAgent:
                 "- seed=42 for reproducibility\n"
                 "- Apply SAME strategy to both samples\n"
             ),
-            model=PlexeLiteLLMModel(
-                model_id=self.llm_model,
-                temperature=self.config.get_temperature("sampler"),
-                api_base=api_base,
-                extra_headers=headers,
-            ),
+            model=build_llm_model(self.config, self.llm_model, self.config.get_temperature("sampler")),
             verbosity_level=self.config.agent_verbosity_level,
             tools=[get_save_sample_uris_tool(self.context)],
             add_base_tools=False,
