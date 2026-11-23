@@ -51,7 +51,7 @@
 # LLM Settings (per agent role)
 # ------------------------------------------------------------
 
-# Global LLM for all agents (e.g. 'openai/gpt-6-luna'); per-agent fields override it
+# Global LLM for all agents (default: 'openai/gpt-6-luna' on OpenCode Go); per-agent fields override it
 # Type: string
 # Default: null
 # llm: null
@@ -279,12 +279,13 @@
 # LiteLLM Routing
 # ------------------------------------------------------------
 
-# Per-model LiteLLM routing configuration
+# Per-model LiteLLM routing configuration (default: OpenCode Go; set null to use LiteLLM defaults)
 # Type: RoutingConfig (object)
-# Default: null
+# Default: OpenCode Go default provider
 #
 # routing_config:
-#   # OpenCode Go: route every openai/* model to the Go plan
+#   # OpenCode Go is the default: every model without its own mapping is routed there
+#   # (api_key comes from $OPENCODE_API_KEY). Set routing_config: null for LiteLLM defaults.
 #   default:
 #     api_base: "https://opencode.ai/inference/go/openai/v1"
 #     api_key: "${OPENCODE_API_KEY}"

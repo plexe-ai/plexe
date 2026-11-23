@@ -52,6 +52,23 @@ def test_get_llm_resolution(monkeypatch):
     assert Config().get_llm("planner") == DEFAULT_LLM
 
 
+def test_default_provider_is_opencode_go(monkeypatch):
+    """Out of the box, agents use an OpenCode Go model routed to the Go gateway with the env key."""
+    monkeypatch.setenv("OPENCODE_API_KEY", "oc_sk_test")
+    monkeypatch.delenv("LLM", raising=False)
+    monkeypatch.delenv("PLEXE_LLM", raising=False)
+
+    config = Config()
+    model = config.get_llm("planner")
+
+    assert model == "openai/gpt-6-luna"
+    assert get_routing_for_model(config.routing_config, model) == (
+        "https://opencode.ai/inference/go/openai/v1",
+        {},
+        "oc_sk_test",
+    )
+
+
 def test_plexe_llm_env_fallback(monkeypatch):
     """PLEXE_LLM is honored when LLM is unset."""
     monkeypatch.delenv("LLM", raising=False)

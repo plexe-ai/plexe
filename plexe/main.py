@@ -8,7 +8,6 @@ Can be called:
 
 import os
 
-
 # CRITICAL: Set Keras backend BEFORE any imports (retrain.py imports keras at module level)
 os.environ["KERAS_BACKEND"] = "tensorflow"
 
@@ -376,7 +375,8 @@ if __name__ == "__main__":
     parser.add_argument(
         "--llm",
         type=str,
-        help="Default LiteLLM model for all agents (e.g. 'openai/gpt-6-luna'); config per-agent fields override it",
+        help="Default LiteLLM model for all agents (default: 'openai/gpt-6-luna' on OpenCode Go); "
+        "config per-agent fields override it",
     )
     parser.add_argument("--work-dir", type=Path, default=Path("/tmp/model_builder_v2"), help="Working directory")
     parser.add_argument("--enable-final-evaluation", action="store_true", help="Enable test set evaluation")

@@ -157,9 +157,21 @@ model_definer_llm: "ollama/llama3"
 Set a single `llm` to choose the model for every agent; per-agent fields override it. You can also pass
 `--llm <model>` on the CLI or set `PLEXE_LLM` in the environment.
 
+The built-in default is `openai/gpt-6-luna` on the OpenCode Go gateway, so plexe runs with just
+`OPENCODE_API_KEY` set and no config file.
+
 #### OpenCode Go
-[OpenCode Go](https://opencode.ai/docs/console/go) is a subscription API gateway. Every Go text model works
-through its OpenAI-compatible endpoint, so no code changes are needed — just point routing at it:
+[OpenCode Go](https://opencode.ai/docs/console/go) is a subscription API gateway and plexe's default provider.
+Every Go text model works through its OpenAI-compatible endpoint, so with `OPENCODE_API_KEY` exported plexe
+needs no config at all:
+
+```bash
+export OPENCODE_API_KEY=oc_sk_...
+python -m plexe.main --train-dataset-uri data.parquet --intent "predict churn"
+```
+
+To pick a different Go model or keep the other providers reachable, add routing to `config.yaml`
+(default routing points every model at the gateway, so direct OpenAI/Anthropic models need their own entry):
 
 ```yaml
 # config.yaml
@@ -168,11 +180,12 @@ routing_config:
   default:
     api_base: "https://opencode.ai/inference/go/openai/v1"
     api_key: "${OPENCODE_API_KEY}"
-```
-
-```bash
-export OPENCODE_API_KEY=oc_sk_...
-python -m plexe.main --train-dataset-uri data.parquet --intent "predict churn" --config-file config.yaml
+  providers:
+    direct:
+      api_base: "https://api.anthropic.com"
+      api_key: "${ANTHROPIC_API_KEY}"
+  models:
+    anthropic/claude-sonnet-4-5-20250929: direct
 ```
 
 Go model ids are listed at `https://opencode.ai/inference/go/v1/models` (e.g. `gpt-6-luna`, `glm-5.3`,
@@ -223,7 +236,7 @@ Requires Python >= 3.10, < 3.13.
 ```bash
 export OPENAI_API_KEY=<your-key>
 export ANTHROPIC_API_KEY=<your-key>
-export OPENCODE_API_KEY=<your-key>   # OpenCode Go subscription
+export OPENCODE_API_KEY=<your-key>   # OpenCode Go subscription (default provider)
 ```
 See [LiteLLM providers](https://docs.litellm.ai/docs/providers) for all supported providers.
 

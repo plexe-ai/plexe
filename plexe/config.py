@@ -19,7 +19,6 @@ from pydantic_settings import BaseSettings, SettingsConfigDict, PydanticBaseSett
 
 from plexe.models import DataLayout
 
-
 # configure warnings
 warnings.filterwarnings("ignore", category=FutureWarning)
 warnings.filterwarnings("ignore", category=DeprecationWarning)
@@ -73,8 +72,11 @@ def detect_installed_frameworks() -> list[str]:
 # Default model types (auto-detected from installed packages, user can override via --allowed-model-types)
 DEFAULT_MODEL_TYPES = detect_installed_frameworks()
 
+# OpenCode Go gateway (OpenAI-compatible, so Go model ids are prefixed with `openai/`)
+OPENCODE_GO_API_BASE = "https://opencode.ai/inference/go/openai/v1"
+
 # Default LLM used when neither a global `llm` nor a per-agent override is set
-DEFAULT_LLM = "anthropic/claude-sonnet-4-5-20250929"
+DEFAULT_LLM = "openai/gpt-6-luna"
 
 # Task-compatible model types based on data layout
 # Maps DataLayout enum to compatible model types
@@ -334,7 +336,7 @@ class Config(BaseSettings):
     # LLM settings (per agent role; null = inherit global `llm`)
     llm: str | None = Field(
         default=None,
-        description="Global LLM for all agents (e.g. 'openai/gpt-6-luna'); per-agent fields override it",
+        description="Global LLM for all agents (default: 'openai/gpt-6-luna' on OpenCode Go); per-agent fields override it",
     )
     statistical_analysis_llm: str | None = Field(
         default=None, description="LLM for statistical profiling agent (null = inherit global llm)"
@@ -392,7 +394,12 @@ class Config(BaseSettings):
     otel_headers: dict[str, str] = Field(default_factory=dict, description="Authentication headers for OTLP endpoint")
 
     # LiteLLM routing configuration
-    routing_config: RoutingConfig | None = Field(default=None, description="Per-model LiteLLM routing configuration")
+    routing_config: RoutingConfig | None = Field(
+        default_factory=lambda: RoutingConfig(
+            default=RoutingProviderConfig(api_base=OPENCODE_GO_API_BASE, api_key=os.getenv("OPENCODE_API_KEY"))
+        ),
+        description="Per-model LiteLLM routing configuration (default: OpenCode Go; set null to use LiteLLM defaults)",
+    )
 
     # LiteLLM global settings
     litellm_ssl_verify: bool = Field(default=True, description="Enable SSL certificate verification for LiteLLM")
@@ -520,9 +527,7 @@ class Config(BaseSettings):
 # ============================================
 
 
-def get_routing_for_model(
-    config: RoutingConfig | None, model_id: str
-) -> tuple[str | None, dict[str, str], str | None]:
+def get_routing_for_model(config: RoutingConfig | None, model_id: str) -> tuple[str | None, dict[str, str], str | None]:
     """
     Get routing configuration for a specific model ID.
 
